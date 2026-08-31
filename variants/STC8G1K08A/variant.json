@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "as_of": "2026-08-31",
+  "model": "STC8G1K08A",
+  "family": "STC8G",
+  "selection": "popular",
+  "popularity_rank": 6,
+  "compiler_target": "mcs51",
+  "experimental_compiler_target": false,
+  "experimental_compiler_targets": [],
+  "memory": {
+    "flash_bytes": 8192,
+    "maximum_code_bytes": 8192,
+    "idata_bytes": 256,
+    "xdata_bytes": 1024,
+    "edata_bytes": 0
+  },
+  "pinout": {
+    "encoding": "(port << 4) | bit",
+    "maximum_logical_io": 6,
+    "maximum_physical_io": 6,
+    "physical_alias_groups": [],
+    "port_masks": [
+      "0x00",
+      "0x00",
+      "0x00",
+      "0x0F",
+      "0x00",
+      "0x30",
+      "0x00",
+      "0x00"
+    ],
+    "package_dependent": false,
+    "startup_selector": null,
+    "analog_aliases_enabled": true
+  },
+  "peripherals": {
+    "uart1": true,
+    "uart1_buffered_rx": true,
+    "adc": {
+      "supported": true,
+      "layout": "modern_bc_adccfg",
+      "native_resolution_bits": 10,
+      "arduino_default_resolution_bits": 10,
+      "reference_modes": [
+        "DEFAULT"
+      ],
+      "channels": [
+        {
+          "alias": "A0",
+          "pin": "P3.0",
+          "channel": 0
+        },
+        {
+          "alias": "A1",
+          "pin": "P3.1",
+          "channel": 1
+        },
+        {
+          "alias": "A2",
+          "pin": "P3.2",
+          "channel": 2
+        },
+        {
+          "alias": "A3",
+          "pin": "P3.3",
+          "channel": 3
+        },
+        {
+          "alias": "A4",
+          "pin": "P5.4",
+          "channel": 4
+        },
+        {
+          "alias": "A5",
+          "pin": "P5.5",
+          "channel": 5
+        }
+      ]
+    }
+  },
+  "official_product_page": "https://www.stcmicro.com/cn/stc/stc8g1k08a.html",
+  "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks."
+}

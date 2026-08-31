@@ -1,0 +1,131 @@
+{
+  "schema_version": 2,
+  "as_of": "2026-08-31",
+  "model": "Ai8H2K32U",
+  "family": "AI8H",
+  "selection": "additional_common",
+  "popularity_rank": null,
+  "compiler_target": "mcs51",
+  "experimental_compiler_target": false,
+  "experimental_compiler_targets": [],
+  "memory": {
+    "flash_bytes": 32768,
+    "maximum_code_bytes": 32768,
+    "idata_bytes": 256,
+    "xdata_bytes": 1024,
+    "edata_bytes": 0,
+    "usb_ram_bytes": 1280
+  },
+  "pinout": {
+    "encoding": "(port << 4) | bit",
+    "maximum_logical_io": 28,
+    "maximum_physical_io": 28,
+    "physical_alias_groups": [],
+    "port_masks": [
+      "0x0F",
+      "0xFB",
+      "0xFF",
+      "0xFF",
+      "0x00",
+      "0x10",
+      "0x00",
+      "0x00"
+    ],
+    "package_dependent": true,
+    "startup_selector": "pswx1_bit0_clear_for_p5_4",
+    "analog_aliases_enabled": true
+  },
+  "peripherals": {
+    "uart1": true,
+    "uart1_buffered_rx": true,
+    "adc": {
+      "supported": true,
+      "layout": "modern_bc_adccfg",
+      "native_resolution_bits": 12,
+      "arduino_default_resolution_bits": 10,
+      "reference_modes": [
+        "DEFAULT"
+      ],
+      "channels": [
+        {
+          "alias": "A0",
+          "pin": "P1.0",
+          "channel": 0
+        },
+        {
+          "alias": "A1",
+          "pin": "P1.1",
+          "channel": 1
+        },
+        {
+          "alias": "A2",
+          "pin": "P5.4",
+          "channel": 2
+        },
+        {
+          "alias": "A3",
+          "pin": "P1.3",
+          "channel": 3
+        },
+        {
+          "alias": "A4",
+          "pin": "P1.4",
+          "channel": 4
+        },
+        {
+          "alias": "A5",
+          "pin": "P1.5",
+          "channel": 5
+        },
+        {
+          "alias": "A6",
+          "pin": "P1.6",
+          "channel": 6
+        },
+        {
+          "alias": "A7",
+          "pin": "P1.7",
+          "channel": 7
+        },
+        {
+          "alias": "A8",
+          "pin": "P3.0",
+          "channel": 8
+        },
+        {
+          "alias": "A9",
+          "pin": "P3.1",
+          "channel": 9
+        },
+        {
+          "alias": "A10",
+          "pin": "P3.2",
+          "channel": 10
+        },
+        {
+          "alias": "A11",
+          "pin": "P3.3",
+          "channel": 11
+        },
+        {
+          "alias": "A12",
+          "pin": "P3.4",
+          "channel": 12
+        },
+        {
+          "alias": "A13",
+          "pin": "P3.5",
+          "channel": 13
+        },
+        {
+          "alias": "A14",
+          "pin": "P3.6",
+          "channel": 14
+        }
+      ]
+    }
+  },
+  "official_product_page": "https://www.stcmicro.com/cn/ai/ai8h2k12u.html",
+  "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks.",
+  "data_quality_note": "P1.2 and P5.4 share one package pin; this static variant keeps P5.4 and excludes the duplicate P1.2 alias. The official IRC blind range from 32 to 37 MHz is omitted from the clock menu."
+}

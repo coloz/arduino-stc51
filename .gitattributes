@@ -1,0 +1,2 @@
+*.sh text eol=lf
+*.tar.bz2 binary

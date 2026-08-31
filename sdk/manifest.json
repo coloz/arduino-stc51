@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-08-31",
+  "description": "Pinned metadata for upstream STC development assets and the open Arduino compiler toolchain. Binary files are not vendored in this repository.",
+  "officialSources": {
+    "software": "https://www.stcai.com/gjrj",
+    "libraries": "https://www.stcai.com/khs",
+    "manuals": "https://www.stcai.com/sy"
+  },
+  "vendorAssets": [
+    {
+      "id": "aicube-isp-6.97",
+      "name": "AiCube-ISP",
+      "kind": "vendor-tool",
+      "version": "6.97",
+      "releaseDate": "2026-08-10",
+      "fileName": "AiCube-ISP-v6.97.zip",
+      "url": "https://www.stcaimcu.com/data/download/Tools/AiCube-ISP-v6.97.zip",
+      "size": 9323009,
+      "sha256": "008a899a4ef50e5033181d2f14fd042c7561e74fcaad3e17533b0ec701c0e88d",
+      "platforms": [
+        "windows"
+      ],
+      "notes": "Official configuration, ISP programming, remote-upgrade and debug utility. It is not a C compiler."
+    },
+    {
+      "id": "stc8g-stc8h-lib",
+      "name": "STC8G/STC8H library and demo code",
+      "kind": "vendor-sdk",
+      "version": "2025-02-05",
+      "versionSource": "latest date in the archive UPDATE-NOTE",
+      "releaseDate": "2025-02-05",
+      "fileName": "STC8G-STC8H-LIB-DEMO-CODE.zip",
+      "url": "https://www.stcaimcu.com/data/download/DemoCode/STC8G-STC8H-LIB-DEMO-CODE.zip",
+      "size": 8144262,
+      "sha256": "eeb621c651ba6c65e306a84fcb919ace4af0599d20e87304918dbcc393eec3fc",
+      "families": [
+        "STC8G",
+        "STC8H"
+      ],
+      "notes": "Keil-oriented source, prebuilt libraries and examples."
+    },
+    {
+      "id": "stc32g-lib",
+      "name": "STC32G software library",
+      "kind": "vendor-sdk",
+      "version": "2025-06-23",
+      "versionSource": "latest date in the archive UPDATE-NOTE",
+      "releaseDate": "2025-06-23",
+      "fileName": "STC32G-SOFTWARE-LIB.zip",
+      "url": "https://www.stcaimcu.com/data/download/DemoCode/STC32G-SOFTWARE-LIB.zip",
+      "size": 11230381,
+      "sha256": "21de48c004ecfc19f702d0ee7ad7d1528b0e9dd42004b96c99a9fcb0c8f7e4bf",
+      "families": [
+        "STC32G"
+      ],
+      "notes": "Keil C251-oriented source, prebuilt libraries and examples. Do not assume that its source or libraries are compatible with STC32CL."
+    },
+    {
+      "id": "ai8051u-lib",
+      "name": "AI8051U traditional-style software library",
+      "kind": "vendor-sdk",
+      "version": "2025-04-10",
+      "versionSource": "latest date in the archive UPDATE-NOTE",
+      "releaseDate": "2025-04-10",
+      "fileName": "AI8051U-SOFTWARE-LIB.zip",
+      "url": "https://www.stcaimcu.com/data/download/DemoCode/AI8051U-SOFTWARE-LIB.zip",
+      "size": 14206137,
+      "sha256": "4dafd661b87264ee5ed5e9b8c32af9b285427987d1d3c01f8b873cdd4a228d22",
+      "families": [
+        "AI8051U"
+      ],
+      "notes": "Traditional-style Keil C51/C251-oriented source, prebuilt libraries and examples."
+    },
+    {
+      "id": "ai8051u-innovative-32",
+      "name": "AI8051U innovative-style 32-bit library and demos",
+      "kind": "vendor-sdk",
+      "version": "2025-05-28",
+      "versionSource": "latest entry in the archive library update record and date on the official STC library page",
+      "releaseDate": "2025-05-28",
+      "fileName": "AI8051U专用库函数.zip",
+      "url": "https://www.stcaimcu.com/data/download/DemoCode/AI8051U%E4%B8%93%E7%94%A8%E5%BA%93%E5%87%BD%E6%95%B0.zip",
+      "size": 7149144,
+      "sha256": "f7e6a82e09ee404e25c598d59d9e311c3215ef97f3cbe8c2c8080f2b0d7c3b77",
+      "families": [
+        "AI8051U"
+      ],
+      "notes": "Innovative-style 32-bit reference source and examples for the vendor C251 workflow; not linked into the Arduino core."
+    },
+    {
+      "id": "ai8051u-innovative-8",
+      "name": "AI8051U innovative-style 8-bit library and demos",
+      "kind": "vendor-sdk",
+      "version": "2025-05-12",
+      "versionSource": "latest entry in the archive library update record and date on the official STC library page",
+      "releaseDate": "2025-05-12",
+      "fileName": "AI8051U-8bit专用库函数.zip",
+      "url": "https://www.stcaimcu.com/data/download/DemoCode/AI8051U-8bit%E4%B8%93%E7%94%A8%E5%BA%93%E5%87%BD%E6%95%B0.zip",
+      "size": 671560,
+      "sha256": "40ba43f9a52075b0f353c1fa6e6e116e752666db7f68a082f82ccae566e2a93b",
+      "families": [
+        "AI8051U"
+      ],
+      "notes": "Innovative-style 8-bit reference source and examples for the vendor C51 workflow; not linked into the Arduino core."
+    },
+    {
+      "id": "stc-usb-library",
+      "name": "STC USB CDC/HID library and demos",
+      "kind": "vendor-sdk",
+      "version": "2026-07-29",
+      "versionSource": "date published on the official STC library page and latest archive entries",
+      "releaseDate": "2026-07-29",
+      "fileName": "STC_USB_LIBRARY.zip",
+      "url": "https://www.stcaimcu.com/data/download/Library/STC_USB_LIBRARY.zip",
+      "size": 2382964,
+      "sha256": "3cbc0deb39b03724529790af11f679c1d83b68afa7a1f4610002555d7adcfc47",
+      "families": [
+        "STC8H",
+        "STC32G",
+        "AI8051U"
+      ],
+      "notes": "Current USB CDC/HID headers, prebuilt Keil/IAR/SDCC libraries and demos. It is a reference asset only and is not linked into the Arduino core."
+    }
+  ],
+  "compilerToolchains": [
+    {
+      "id": "sdcc-mcs251-windows-x64",
+      "name": "SDCC MCS-251 fork",
+      "kind": "compiler-toolchain",
+      "upstreamProject": "https://github.com/gevico/sdcc-c251",
+      "basedOn": "SDCC 4.6.0",
+      "version": "4.6.0-mcs251-20260804",
+      "tag": "v4.6.0-mcs251-20260804",
+      "releaseDate": "2026-08-04",
+      "commit": "b09075b6a93e6afe10645181e3aeff041ea37f87",
+      "fileName": "sdcc-mcs251-windows-x64-b09075b6a93e6afe10645181e3aeff041ea37f87.zip",
+      "url": "https://github.com/gevico/sdcc-c251/releases/download/v4.6.0-mcs251-20260804/sdcc-mcs251-windows-x64-b09075b6a93e6afe10645181e3aeff041ea37f87.zip",
+      "size": 27857837,
+      "sha256": "84c3ebecf56994d978c698e5001894cbcb7fbe4aa99772f571cee9be4704f2cb",
+      "host": "x86_64-mingw32",
+      "targets": [
+        "mcs51",
+        "mcs251"
+      ],
+      "mcs251Status": "experimental",
+      "notes": "Community fork, not an official STC compiler release. The MCS51 backend is the stable path; the MCS251 backend remains experimental."
+    }
+  ],
+  "redistribution": {
+    "vendorBinariesVendored": false,
+    "reason": "The redistribution terms for STC SDK archives and their proprietary prebuilt .LIB files were not clear enough to justify copying them into this repository.",
+    "downloadPolicy": "Opt-in only. Download from the recorded upstream URL and verify both exact byte length and SHA-256."
+  }
+}

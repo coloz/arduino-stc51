@@ -1,0 +1,299 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-compile:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: Validate generated metadata
+        shell: pwsh
+        run: |
+          ./scripts/package-platform.ps1 | Out-Host
+          ./scripts/check-repository.ps1
+
+      - name: Stage verified toolchain and platform
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Work = Join-Path $env:RUNNER_TEMP 'arduino-stc51-ci'
+          $Data = Join-Path $Work 'data'
+          $Platform = Join-Path $Data 'packages/arduino-stc51/hardware/mcs51/0.0.1'
+          $Downloads = Join-Path $Work 'downloads'
+          $Extract = Join-Path $Work 'extract'
+          New-Item -ItemType Directory -Force -Path $Platform,$Downloads,$Extract,$Data | Out-Null
+
+          $PlatformExtract = Join-Path $Extract 'platform'
+          New-Item -ItemType Directory -Force -Path $PlatformExtract | Out-Null
+          tar -xjf dist/arduino-stc51-0.0.1.tar.bz2 -C $PlatformExtract
+          if ($LASTEXITCODE -ne 0) { throw 'Platform archive extraction failed' }
+          Copy-Item -Recurse -Force "$PlatformExtract/arduino-stc51-0.0.1/*" -Destination $Platform
+
+          $Manifest = Get-Content -Raw -Encoding UTF8 tools/toolchain-manifest.json | ConvertFrom-Json
+          foreach ($Tool in $Manifest.tools) {
+            $System = @($Tool.systems | Where-Object { $_.host -match 'mingw32$' })[0]
+            if ($null -eq $System) { throw "No Windows system for $($Tool.id)" }
+            $Archive = Join-Path $Downloads $System.archiveFileName
+            Invoke-WebRequest -Uri $System.url -OutFile $Archive
+            if ((Get-Item -LiteralPath $Archive).Length -ne $System.size) {
+              throw "Size mismatch for $($Tool.id)"
+            }
+            $Hash = (Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($Hash -ne $System.sha256) { throw "SHA-256 mismatch for $($Tool.id)" }
+
+            $Destination = Join-Path $Extract $Tool.id
+            New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+            if ($Archive.EndsWith('.zip')) {
+              Expand-Archive -LiteralPath $Archive -DestinationPath $Destination
+            } else {
+              tar -xjf $Archive -C $Destination
+              if ($LASTEXITCODE -ne 0) { throw "Extraction failed for $($Tool.id)" }
+            }
+
+            $Source = Join-Path $Destination $System.archiveRoot
+            $Target = Join-Path $Data "packages/arduino-stc51/tools/$($Tool.packageName)/$($Tool.version)"
+            New-Item -ItemType Directory -Force -Path $Target | Out-Null
+            Copy-Item -Recurse -Force "$Source/*" -Destination $Target
+          }
+
+          New-Item -ItemType Directory -Force -Path (Join-Path $Work 'user/Smoke') | Out-Null
+          Copy-Item -Force (Join-Path $Platform 'examples/Smoke/Smoke.ino') -Destination (Join-Path $Work 'user/Smoke/Smoke.ino')
+
+          $DataConfig = $Data.Replace('\','/')
+          $DownloadDir = (Join-Path $Work 'arduino-downloads').Replace('\','/')
+          $User = (Join-Path $Work 'user').Replace('\','/')
+          @"
+          directories:
+            data: $DataConfig
+            downloads: $DownloadDir
+            user: $User
+          "@ | Set-Content -Encoding UTF8 (Join-Path $Work 'arduino-cli.yaml')
+
+          "STC_CI_WORK=$Work" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
+      - name: Compile every variant and AI dual mode
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Config = Join-Path $env:STC_CI_WORK 'arduino-cli.yaml'
+          $Sketch = Join-Path $env:STC_CI_WORK 'user/Smoke'
+
+          $Devices = (Get-Content -Raw -Encoding UTF8 tools/variants/devices.json | ConvertFrom-Json).devices
+          foreach ($Device in $Devices) {
+            $Build = Join-Path $env:STC_CI_WORK "build/$($Device.id)"
+            arduino-cli compile --clean --fqbn "arduino-stc51:mcs51:$($Device.id)" --build-path $Build --config-file $Config $Sketch
+            if ($LASTEXITCODE -ne 0) { throw "Compile failed: $($Device.model)" }
+            if (-not (Get-ChildItem -LiteralPath $Build -Filter '*.hex')) { throw "No HEX: $($Device.model)" }
+          }
+
+          $AiBuild = Join-Path $env:STC_CI_WORK 'build/ai8051u-mcs251'
+          arduino-cli compile --clean --fqbn 'arduino-stc51:mcs51:ai8051u_34k64:execution=mcs251' --build-path $AiBuild --config-file $Config $Sketch
+          if ($LASTEXITCODE -ne 0) { throw 'AI8051U MCS251 compile failed' }
+
+          $CompactSerialSketch = Join-Path $env:STC_CI_WORK 'data/packages/arduino-stc51/hardware/mcs51/0.0.1/examples/CompactSerialSmoke'
+          $CompactSerialBuild = Join-Path $env:STC_CI_WORK 'build/stc12c2052ad-compact-serial'
+          arduino-cli compile --clean --fqbn 'arduino-stc51:mcs51:stc12c2052ad' --build-path $CompactSerialBuild --config-file $Config $CompactSerialSketch
+          if ($LASTEXITCODE -ne 0) { throw 'STC12C2052AD compact Serial compile failed' }
+          if (-not (Get-ChildItem -LiteralPath $CompactSerialBuild -Filter '*.hex')) { throw 'No HEX: STC12C2052AD compact Serial' }
+
+          $CoreApiSketch = Join-Path $env:STC_CI_WORK 'data/packages/arduino-stc51/hardware/mcs51/0.0.1/examples/CoreAPISmoke'
+          foreach ($Probe in @(
+            @{ id = 'stc12c2052ad'; fqbn = 'arduino-stc51:mcs51:stc12c2052ad' },
+            @{ id = 'stc15f104w'; fqbn = 'arduino-stc51:mcs51:stc15f104w' },
+            @{ id = 'stc89c52rc'; fqbn = 'arduino-stc51:mcs51:stc89c52rc' },
+            @{ id = 'stc8h8k64u'; fqbn = 'arduino-stc51:mcs51:stc8h8k64u' }
+          )) {
+            $Build = Join-Path $env:STC_CI_WORK "build/core-api-$($Probe.id)"
+            arduino-cli compile --clean --fqbn $Probe.fqbn --build-path $Build --config-file $Config $CoreApiSketch
+            if ($LASTEXITCODE -ne 0) { throw "Core API probe failed: $($Probe.id)" }
+          }
+
+          $PlatformRoot = Join-Path $env:STC_CI_WORK 'data/packages/arduino-stc51/hardware/mcs51/0.0.1'
+          foreach ($LibraryProbe in @(
+            @{ name = 'Wire'; board = 'stc89c52rc'; example = 'MasterRegisterRead' },
+            @{ name = 'SPI'; board = 'stc8g1k08a'; example = 'SoftwareLoopback' },
+            @{ name = 'SoftwareSerial'; board = 'stc8h1k08'; example = 'PollingEcho' },
+            @{ name = 'LiquidCrystal'; board = 'stc8h8k64u'; example = 'HelloWorld' },
+            @{ name = 'Stepper'; board = 'stc8h8k64u'; example = 'OneRevolution' },
+            @{ name = 'SD'; board = 'stc8h8k64u'; example = 'ReadFile' },
+            @{ name = 'SD'; board = 'stc32g12k128'; example = 'ReadFile' }
+          )) {
+            $Build = Join-Path $env:STC_CI_WORK "build/library-$($LibraryProbe.name.ToLowerInvariant())-$($LibraryProbe.board)"
+            $Example = Join-Path $PlatformRoot "libraries/$($LibraryProbe.name)/examples/$($LibraryProbe.example)"
+            arduino-cli compile --clean --fqbn "arduino-stc51:mcs51:$($LibraryProbe.board)" `
+              --build-path $Build --config-file $Config $Example
+            if ($LASTEXITCODE -ne 0) { throw "$($LibraryProbe.name) example failed" }
+          }
+
+          arduino-cli compile --clean --fqbn 'arduino-stc51:mcs51:stc32g12k128' `
+            --build-path (Join-Path $env:STC_CI_WORK 'build/software-serial-mcs251') --config-file $Config `
+            (Join-Path $PlatformRoot 'libraries/SoftwareSerial/examples/PollingEcho')
+          if ($LASTEXITCODE -ne 0) { throw 'SoftwareSerial MCS251 example failed' }
+
+          $SixTBuild = Join-Path $env:STC_CI_WORK 'build/stc89-6t'
+          arduino-cli compile --clean --fqbn 'arduino-stc51:mcs51:stc89c52rc:machine=6t' --build-path $SixTBuild --config-file $Config $Sketch
+          if ($LASTEXITCODE -ne 0) { throw 'STC89 6T configuration failed' }
+
+          # A second build in a new directory exercises Arduino's cached core.a path.
+          $CacheBuild = Join-Path $env:STC_CI_WORK 'build/stc89-cache-hit'
+          arduino-cli compile --fqbn 'arduino-stc51:mcs51:stc89c52rc' --build-path $CacheBuild --config-file $Config $Sketch
+          if ($LASTEXITCODE -ne 0) { throw 'Cached core archive link failed' }
+
+          $Dirty = @(git status --porcelain)
+          if ($Dirty.Count -ne 0) { throw "Build polluted the repository:`n$($Dirty -join "`n")" }
+
+  compile-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            host: arm64-apple-darwin
+            executable_arch: arm64
+          - os: macos-15-intel
+            host: x86_64-apple-darwin
+            executable_arch: x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: Stage macOS platform and pinned tools
+        shell: pwsh
+        env:
+          STC_HOST: ${{ matrix.host }}
+          STC_EXECUTABLE_ARCH: ${{ matrix.executable_arch }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Work = Join-Path $env:RUNNER_TEMP 'arduino-stc51-macos-ci'
+          $Data = Join-Path $Work 'data'
+          $Platform = Join-Path $Data 'packages/arduino-stc51/hardware/mcs51/0.0.1'
+          $Downloads = Join-Path $Work 'downloads'
+          $Extract = Join-Path $Work 'extract'
+          New-Item -ItemType Directory -Force -Path $Platform,$Downloads,$Extract,$Data | Out-Null
+
+          $PlatformExtract = Join-Path $Extract 'platform'
+          New-Item -ItemType Directory -Force -Path $PlatformExtract | Out-Null
+          tar -xjf dist/arduino-stc51-0.0.1.tar.bz2 -C $PlatformExtract
+          if ($LASTEXITCODE -ne 0) { throw 'Platform archive extraction failed' }
+          Copy-Item -Recurse -Force "$PlatformExtract/arduino-stc51-0.0.1/*" -Destination $Platform
+
+          $Manifest = Get-Content -Raw -Encoding UTF8 tools/toolchain-manifest.json | ConvertFrom-Json
+          foreach ($Tool in $Manifest.tools) {
+            $System = @($Tool.systems | Where-Object host -eq $env:STC_HOST | Select-Object -First 1)[0]
+            if ($null -eq $System -and $env:STC_HOST -eq 'arm64-apple-darwin') {
+              # Arduino's documented Apple Silicon fallback for helper flavours.
+              $System = @($Tool.systems | Where-Object host -eq 'x86_64-apple-darwin' | Select-Object -First 1)[0]
+            }
+            if ($null -eq $System) { throw "No macOS system for $($Tool.id) on $env:STC_HOST" }
+
+            $Archive = Join-Path $Downloads $System.archiveFileName
+            $LocalArchive = Join-Path $PWD "dist/$($System.archiveFileName)"
+            if (Test-Path -LiteralPath $LocalArchive) {
+              Copy-Item -Force $LocalArchive $Archive
+            } else {
+              Invoke-WebRequest -Uri $System.url -OutFile $Archive
+            }
+            if ((Get-Item -LiteralPath $Archive).Length -ne [long]$System.size) {
+              throw "Size mismatch for $($Tool.id)"
+            }
+            $Hash = (Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($Hash -ne $System.sha256) { throw "SHA-256 mismatch for $($Tool.id)" }
+
+            $Destination = Join-Path $Extract $Tool.id
+            New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+            tar -xjf $Archive -C $Destination
+            if ($LASTEXITCODE -ne 0) { throw "Extraction failed for $($Tool.id)" }
+
+            $Source = Join-Path $Destination $System.archiveRoot
+            $Target = Join-Path $Data "packages/arduino-stc51/tools/$($Tool.packageName)/$($Tool.version)"
+            New-Item -ItemType Directory -Force -Path $Target | Out-Null
+            Copy-Item -Recurse -Force "$Source/*" -Destination $Target
+
+            if ($Tool.id -eq 'sdcc-mcs251') {
+              $Compiler = Join-Path $Target 'bin/sdcc'
+              $FileDescription = (& file $Compiler) -join "`n"
+              if ($FileDescription -notmatch [regex]::Escape($env:STC_EXECUTABLE_ARCH)) {
+                throw "Wrong compiler architecture: $FileDescription"
+              }
+              & $Compiler --version
+              if ($LASTEXITCODE -ne 0) { throw 'Packaged compiler cannot execute' }
+            }
+          }
+
+          $Sketch = Join-Path $Work 'user/Smoke'
+          New-Item -ItemType Directory -Force -Path $Sketch | Out-Null
+          Copy-Item -Force (Join-Path $Platform 'examples/Smoke/Smoke.ino') -Destination (Join-Path $Sketch 'Smoke.ino')
+
+          $DataConfig = $Data.Replace('\','/')
+          $DownloadDir = (Join-Path $Work 'arduino-downloads').Replace('\','/')
+          $User = (Join-Path $Work 'user').Replace('\','/')
+          @"
+          directories:
+            data: $DataConfig
+            downloads: $DownloadDir
+            user: $User
+          "@ | Set-Content -Encoding UTF8 (Join-Path $Work 'arduino-cli.yaml')
+
+          "STC_CI_WORK=$Work" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
+      - name: Compile every macOS variant, dual mode and cache
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Config = Join-Path $env:STC_CI_WORK 'arduino-cli.yaml'
+          $Sketch = Join-Path $env:STC_CI_WORK 'user/Smoke'
+          $Devices = (Get-Content -Raw -Encoding UTF8 tools/variants/devices.json | ConvertFrom-Json).devices
+
+          foreach ($Device in $Devices) {
+            $Build = Join-Path $env:STC_CI_WORK "build/$($Device.id)"
+            arduino-cli compile --clean --fqbn "arduino-stc51:mcs51:$($Device.id)" --build-path $Build --config-file $Config $Sketch
+            if ($LASTEXITCODE -ne 0) { throw "Compile failed: $($Device.model)" }
+            if (-not (Get-ChildItem -LiteralPath $Build -Filter '*.hex')) { throw "No HEX: $($Device.model)" }
+          }
+
+          $AiBuild = Join-Path $env:STC_CI_WORK 'build/ai8051u-mcs251'
+          arduino-cli compile --clean --fqbn 'arduino-stc51:mcs51:ai8051u_34k64:execution=mcs251' --build-path $AiBuild --config-file $Config $Sketch
+          if ($LASTEXITCODE -ne 0) { throw 'AI8051U MCS251 compile failed' }
+
+          $CompactSerialSketch = Join-Path $env:STC_CI_WORK 'data/packages/arduino-stc51/hardware/mcs51/0.0.1/examples/CompactSerialSmoke'
+          $CompactSerialBuild = Join-Path $env:STC_CI_WORK 'build/stc12c2052ad-compact-serial'
+          arduino-cli compile --clean --fqbn 'arduino-stc51:mcs51:stc12c2052ad' --build-path $CompactSerialBuild --config-file $Config $CompactSerialSketch
+          if ($LASTEXITCODE -ne 0) { throw 'STC12C2052AD compact Serial compile failed' }
+          if (-not (Get-ChildItem -LiteralPath $CompactSerialBuild -Filter '*.hex')) { throw 'No HEX: STC12C2052AD compact Serial' }
+
+          $PlatformRoot = Join-Path $env:STC_CI_WORK 'data/packages/arduino-stc51/hardware/mcs51/0.0.1'
+          foreach ($LibraryProbe in @(
+            @{ name = 'Wire'; board = 'stc89c52rc'; example = 'MasterRegisterRead' },
+            @{ name = 'SPI'; board = 'stc8g1k08a'; example = 'SoftwareLoopback' },
+            @{ name = 'SoftwareSerial'; board = 'stc8h1k08'; example = 'PollingEcho' },
+            @{ name = 'LiquidCrystal'; board = 'stc8h8k64u'; example = 'HelloWorld' },
+            @{ name = 'Stepper'; board = 'stc8h8k64u'; example = 'OneRevolution' },
+            @{ name = 'SD'; board = 'stc8h8k64u'; example = 'ReadFile' },
+            @{ name = 'SD'; board = 'stc32g12k128'; example = 'ReadFile' }
+          )) {
+            $Build = Join-Path $env:STC_CI_WORK "build/library-$($LibraryProbe.name.ToLowerInvariant())-$($LibraryProbe.board)"
+            $Example = Join-Path $PlatformRoot "libraries/$($LibraryProbe.name)/examples/$($LibraryProbe.example)"
+            arduino-cli compile --clean --fqbn "arduino-stc51:mcs51:$($LibraryProbe.board)" `
+              --build-path $Build --config-file $Config $Example
+            if ($LASTEXITCODE -ne 0) { throw "$($LibraryProbe.name) example failed" }
+          }
+
+          $CacheBuild = Join-Path $env:STC_CI_WORK 'build/stc89-cache-hit'
+          arduino-cli compile --fqbn 'arduino-stc51:mcs51:stc89c52rc' --build-path $CacheBuild --config-file $Config $Sketch
+          if ($LASTEXITCODE -ne 0) { throw 'Cached core archive link failed' }
+
+          $Dirty = @(git status --porcelain)
+          if ($Dirty.Count -ne 0) { throw "Build polluted the repository:`n$($Dirty -join "`n")" }

@@ -1,0 +1,50 @@
+{
+  "schema_version": 2,
+  "as_of": "2026-08-31",
+  "model": "STC15F104W",
+  "family": "STC15",
+  "selection": "additional_common",
+  "popularity_rank": null,
+  "compiler_target": "mcs51",
+  "experimental_compiler_target": false,
+  "experimental_compiler_targets": [],
+  "memory": {
+    "flash_bytes": 4096,
+    "maximum_code_bytes": 4096,
+    "idata_bytes": 128,
+    "xdata_bytes": 0,
+    "edata_bytes": 0
+  },
+  "pinout": {
+    "encoding": "(port << 4) | bit",
+    "maximum_logical_io": 6,
+    "maximum_physical_io": 6,
+    "physical_alias_groups": [],
+    "port_masks": [
+      "0x00",
+      "0x00",
+      "0x00",
+      "0x3F",
+      "0x00",
+      "0x00",
+      "0x00",
+      "0x00"
+    ],
+    "package_dependent": false,
+    "startup_selector": null,
+    "analog_aliases_enabled": false
+  },
+  "peripherals": {
+    "uart1": false,
+    "uart1_buffered_rx": false,
+    "adc": {
+      "supported": false,
+      "layout": "none",
+      "native_resolution_bits": 0,
+      "channels": []
+    }
+  },
+  "official_product_page": "https://www.stcmicro.com/cn/stc/stc15f101w.html",
+  "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks.",
+  "data_quality_note": "The official product page calls the 128-byte SRAM XRAM; the family memory summary used by this core exposes the small-memory IDATA view."
+}

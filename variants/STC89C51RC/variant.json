@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "as_of": "2026-08-31",
+  "model": "STC89C51RC",
+  "family": "STC89",
+  "selection": "additional_common",
+  "popularity_rank": null,
+  "compiler_target": "mcs51",
+  "experimental_compiler_target": false,
+  "experimental_compiler_targets": [],
+  "memory": {
+    "flash_bytes": 4096,
+    "maximum_code_bytes": 4096,
+    "idata_bytes": 256,
+    "xdata_bytes": 256,
+    "edata_bytes": 0
+  },
+  "pinout": {
+    "encoding": "(port << 4) | bit",
+    "maximum_logical_io": 39,
+    "maximum_physical_io": 39,
+    "physical_alias_groups": [],
+    "port_masks": [
+      "0xFF",
+      "0xFF",
+      "0xFF",
+      "0xFF",
+      "0x7F",
+      "0x00",
+      "0x00",
+      "0x00"
+    ],
+    "package_dependent": true,
+    "startup_selector": null,
+    "analog_aliases_enabled": false
+  },
+  "peripherals": {
+    "uart1": true,
+    "uart1_buffered_rx": true,
+    "adc": {
+      "supported": false,
+      "layout": "none",
+      "native_resolution_bits": 0,
+      "channels": []
+    }
+  },
+  "official_product_page": "https://www.stcmicro.com/cn/stc/stc89c51rc.html",
+  "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks."
+}

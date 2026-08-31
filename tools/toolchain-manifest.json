@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 2,
+  "asOf": "2026-08-31",
+  "hostSupport": "Windows x64, macOS Apple Silicon (arm64) and macOS Intel (x86_64)",
+  "tools": [
+    {
+      "id": "sdcc-mcs251",
+      "packageName": "sdcc-mcs251",
+      "version": "4.6.0-mcs251-20260804",
+      "purpose": "Primary compiler, assembler, archiver and linker for both -mmcs51 and experimental -mmcs251",
+      "upstream": "https://github.com/gevico/sdcc-c251",
+      "sourceTag": "v4.6.0-mcs251-20260804",
+      "sourceCommit": "b09075b6a93e6afe10645181e3aeff041ea37f87",
+      "license": "GPL; see README.md, COPYING and COPYING3 in each archive",
+      "systems": [
+        {
+          "host": "x86_64-mingw32",
+          "url": "https://github.com/gevico/sdcc-c251/releases/download/v4.6.0-mcs251-20260804/sdcc-mcs251-windows-x64-b09075b6a93e6afe10645181e3aeff041ea37f87.zip",
+          "archiveFileName": "sdcc-mcs251-windows-x64-b09075b6a93e6afe10645181e3aeff041ea37f87.zip",
+          "archiveRoot": "sdcc-mcs251",
+          "size": 27857837,
+          "sha256": "84c3ebecf56994d978c698e5001894cbcb7fbe4aa99772f571cee9be4704f2cb",
+          "knownIssue": "The bundled sdar.exe misses libintl-8.dll, libzstd.dll and zlib1.dll; Windows recipes use the separately pinned archive helper."
+        },
+        {
+          "host": "arm64-apple-darwin",
+          "url": "https://raw.githubusercontent.com/coloz/arduino-stc51/main/dist/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+          "archiveFileName": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+          "archiveRoot": "sdcc-mcs251",
+          "size": 8671734,
+          "sha256": "3caab45f23f86561b1134613ac7634acd37f7f85b2911399b94e0b1134814363",
+          "buildHost": "macOS 15.7.1 arm64, Apple clang 17.0.0"
+        },
+        {
+          "host": "x86_64-apple-darwin",
+          "url": "https://raw.githubusercontent.com/coloz/arduino-stc51/main/dist/sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+          "archiveFileName": "sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+          "archiveRoot": "sdcc-mcs251",
+          "size": 8657582,
+          "sha256": "ff69d7a2f91c4e117fce24a5f584d7f15894db097d9fa489f95cd3de1942f3fb",
+          "buildHost": "Cross-built and executed on macOS 15.7.1 arm64 with Apple clang 17.0.0"
+        }
+      ]
+    },
+    {
+      "id": "mcs51-tools",
+      "packageName": "MCS51Tools",
+      "version": "2026.07.10",
+      "purpose": "Windows BusyBox shell used to run the repository's POSIX Arduino wrappers; the macOS flavour satisfies the platform dependency but is not executed",
+      "upstream": "https://github.com/DeqingSun/ch55xduino",
+      "license": "Mixed upstream tool licenses; see the archives and CH55xDuino repository",
+      "systems": [
+        {
+          "host": "i686-mingw32",
+          "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.26/ch55xduino-tools_mingw32-2026.07.10.tar.bz2",
+          "archiveFileName": "ch55xduino-tools_mingw32-2026.07.10.tar.bz2",
+          "archiveRoot": "tools",
+          "size": 698817,
+          "sha256": "df874247dfeb44b23aae3c0da813363bb156e802c4d29a3cba975027ee14bc63"
+        },
+        {
+          "host": "x86_64-apple-darwin",
+          "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.26/ch55xduino-tools_macosx-2026.07.10.tar.bz2",
+          "archiveFileName": "ch55xduino-tools_macosx-2026.07.10.tar.bz2",
+          "archiveRoot": "tools",
+          "size": 54816,
+          "sha256": "dd57aac57b551da76d78af8daa7af9243ea554237381c6638011ce98061a85a3"
+        }
+      ]
+    },
+    {
+      "id": "mcs51-archive-tools",
+      "packageName": "MCS51ArchiveTools",
+      "version": "build.13407_4",
+      "purpose": "Windows compatibility-tested sdar used only to create Arduino core.a archives; macOS recipes use the primary native toolchain's sdar",
+      "upstream": "https://github.com/DeqingSun/ch55xduino",
+      "license": "sdar is GPL-3.0-or-later per its --version output; the unchanged upstream bundles contain mixed SDCC component licenses",
+      "compatibility": "The Windows helper was verified to archive SDCC 4.6 MCS51 and MCS251 .rel objects; the 4.6 compiler/linker remains the active ABI toolchain.",
+      "systems": [
+        {
+          "host": "i686-mingw32",
+          "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.20/sdcc-mcs51-i586-mingw32msvc-20220422-13407_4.tar.bz2",
+          "archiveFileName": "sdcc-mcs51-i586-mingw32msvc-20220422-13407_4.tar.bz2",
+          "archiveRoot": "sdcc",
+          "size": 2776415,
+          "sha256": "dac0abbbe932997409cadc404fc0922f297f56ffd6cf309c70f9a2c1191c03bb"
+        },
+        {
+          "host": "x86_64-apple-darwin",
+          "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.20/sdcc-mcs51-x86_64-apple-macosx-20220422-13407_4.tar.bz2",
+          "archiveFileName": "sdcc-mcs51-x86_64-apple-macosx-20220422-13407_4.tar.bz2",
+          "archiveRoot": "sdcc",
+          "size": 2988423,
+          "sha256": "95380334bf51cf8e29e2654b59c8840528f94dc7367d411bb66efe48d5260746"
+        }
+      ]
+    }
+  ]
+}

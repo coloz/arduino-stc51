@@ -1,0 +1,141 @@
+{
+  "packages": [
+    {
+      "name": "arduino-stc51",
+      "maintainer": "arduino-stc51 contributors",
+      "websiteURL": "https://github.com/coloz/arduino-stc51",
+      "email": "",
+      "help": {
+        "online": "https://github.com/coloz/arduino-stc51/issues"
+      },
+      "platforms": [
+        {
+          "name": "arduino-stc51 (MCS51 + experimental MCS251)",
+          "architecture": "mcs51",
+          "version": "0.0.1",
+          "category": "Contributed",
+          "url": "https://raw.githubusercontent.com/coloz/arduino-stc51/main/dist/arduino-stc51-0.0.1.tar.bz2",
+          "archiveFileName": "arduino-stc51-0.0.1.tar.bz2",
+          "checksum": "SHA-256:28961da62a3d4b70b15ea5768b16844dda0d8b2ce15d0222a8bd23d6e5f0a26c",
+          "size": "92888",
+          "help": {
+            "online": "https://github.com/coloz/arduino-stc51/blob/main/README.md"
+          },
+          "boards": [
+            { "name": "STC89C52RC" },
+            { "name": "STC8H8K64U" },
+            { "name": "STC15F2K60S2" },
+            { "name": "STC32G12K128 (experimental MCS251)" },
+            { "name": "STC8H1K08" },
+            { "name": "STC8G1K08A" },
+            { "name": "STC12C5A60S2" },
+            { "name": "STC15W408AS" },
+            { "name": "STC8G1K08" },
+            { "name": "STC8G2K64S4" },
+            { "name": "STC32G8K64 (experimental MCS251)" },
+            { "name": "STC32CL8K64 (experimental MCS251)" },
+            { "name": "AI8051U-34K64" },
+            { "name": "STC89C51RC" },
+            { "name": "STC89C58RD+" },
+            { "name": "STC12C2052AD" },
+            { "name": "STC15F104W" },
+            { "name": "STC15W4K32S4" },
+            { "name": "STC8A8K64S4A12" },
+            { "name": "STC8C2K64S4" },
+            { "name": "STC8H1K28" },
+            { "name": "STC8H3K64S4" },
+            { "name": "STC32G12K64 (experimental MCS251)" },
+            { "name": "Ai8H2K12U" },
+            { "name": "Ai8H2K32U" }
+          ],
+          "toolsDependencies": [
+            {
+              "name": "sdcc-mcs251",
+              "version": "4.6.0-mcs251-20260804",
+              "packager": "arduino-stc51"
+            },
+            {
+              "name": "MCS51Tools",
+              "version": "2026.07.10",
+              "packager": "arduino-stc51"
+            },
+            {
+              "name": "MCS51ArchiveTools",
+              "version": "build.13407_4",
+              "packager": "arduino-stc51"
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "sdcc-mcs251",
+          "version": "4.6.0-mcs251-20260804",
+          "systems": [
+            {
+              "host": "x86_64-mingw32",
+              "url": "https://github.com/gevico/sdcc-c251/releases/download/v4.6.0-mcs251-20260804/sdcc-mcs251-windows-x64-b09075b6a93e6afe10645181e3aeff041ea37f87.zip",
+              "archiveFileName": "sdcc-mcs251-windows-x64-b09075b6a93e6afe10645181e3aeff041ea37f87.zip",
+              "checksum": "SHA-256:84c3ebecf56994d978c698e5001894cbcb7fbe4aa99772f571cee9be4704f2cb",
+              "size": "27857837"
+            },
+            {
+              "host": "arm64-apple-darwin",
+              "url": "https://raw.githubusercontent.com/coloz/arduino-stc51/main/dist/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+              "archiveFileName": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+              "checksum": "SHA-256:3caab45f23f86561b1134613ac7634acd37f7f85b2911399b94e0b1134814363",
+              "size": "8671734"
+            },
+            {
+              "host": "x86_64-apple-darwin",
+              "url": "https://raw.githubusercontent.com/coloz/arduino-stc51/main/dist/sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+              "archiveFileName": "sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+              "checksum": "SHA-256:ff69d7a2f91c4e117fce24a5f584d7f15894db097d9fa489f95cd3de1942f3fb",
+              "size": "8657582"
+            }
+          ]
+        },
+        {
+          "name": "MCS51Tools",
+          "version": "2026.07.10",
+          "systems": [
+            {
+              "host": "i686-mingw32",
+              "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.26/ch55xduino-tools_mingw32-2026.07.10.tar.bz2",
+              "archiveFileName": "ch55xduino-tools_mingw32-2026.07.10.tar.bz2",
+              "checksum": "SHA-256:df874247dfeb44b23aae3c0da813363bb156e802c4d29a3cba975027ee14bc63",
+              "size": "698817"
+            },
+            {
+              "host": "x86_64-apple-darwin",
+              "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.26/ch55xduino-tools_macosx-2026.07.10.tar.bz2",
+              "archiveFileName": "ch55xduino-tools_macosx-2026.07.10.tar.bz2",
+              "checksum": "SHA-256:dd57aac57b551da76d78af8daa7af9243ea554237381c6638011ce98061a85a3",
+              "size": "54816"
+            }
+          ]
+        },
+        {
+          "name": "MCS51ArchiveTools",
+          "version": "build.13407_4",
+          "systems": [
+            {
+              "host": "i686-mingw32",
+              "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.20/sdcc-mcs51-i586-mingw32msvc-20220422-13407_4.tar.bz2",
+              "archiveFileName": "sdcc-mcs51-i586-mingw32msvc-20220422-13407_4.tar.bz2",
+              "checksum": "SHA-256:dac0abbbe932997409cadc404fc0922f297f56ffd6cf309c70f9a2c1191c03bb",
+              "size": "2776415"
+            },
+            {
+              "host": "x86_64-apple-darwin",
+              "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.20/sdcc-mcs51-x86_64-apple-macosx-20220422-13407_4.tar.bz2",
+              "archiveFileName": "sdcc-mcs51-x86_64-apple-macosx-20220422-13407_4.tar.bz2",
+              "checksum": "SHA-256:95380334bf51cf8e29e2654b59c8840528f94dc7367d411bb66efe48d5260746",
+              "size": "2988423"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

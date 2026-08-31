@@ -159,7 +159,7 @@ SBIT(WR,SFR_P3,6);       //外部数据存储器的写信号
 SBIT(RD,SFR_P3,7);       //外部数据存储器的读信号
 
 /////////////////////////////////
-#define SFR_P4 0xc0
+#define SFR_P4 0xe8
 
 SFR(P4,SFR_P4);             //I/O端口4              Bit7    Bit6    Bit5    Bit4    Bit3    Bit2    Bit1    Bit0
                             //位描述                P4.7    P4.6    P4.5    P4.4    P4.3    P4.2    P4.1    P4.0
@@ -218,9 +218,9 @@ SBIT(PT0, SFR_IP, 1);           //定时器0中断优先级控制低位
 SBIT(PX0, SFR_IP, 0);           //外部中断0中断优先级控制低位
 
 /////////////////////////////////
-#define SFR_XICON 0xe8
+#define SFR_XICON 0xc0
 
-SFR(XICON,0xe8);                //辅助中断使能寄存器    Bit7    Bit6    Bit5    Bit4    Bit3    Bit2    Bit1    Bit0
+SFR(XICON,SFR_XICON);           //辅助中断使能寄存器    Bit7    Bit6    Bit5    Bit4    Bit3    Bit2    Bit1    Bit0
                                 //位描述                PX3     EX3     IE3     IT3     PX2     EX2     IE2     IT2
                                 //初始值=0000,0000      0       0       0       0       0       0       0       0
 
