@@ -3,11 +3,18 @@
  *
  * Small-memory, plain-C SD card support for the arduino-stc51 core.
  *
- * This API deliberately does not expose Arduino's C++ File/Stream classes.
- * It owns one card and one open root-directory file at a time.
+ * The default profile exposes the retained plain-C facade.  The opt-in C++
+ * profile routes to File/SDClass while preserving the backend's one-card and
+ * one-open-root-file constraints.
  */
 #ifndef STC_SD_H
 #define STC_SD_H
+
+#if defined(__cplusplus) && defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
+
+#include "SDClass.h"
+
+#else
 
 #include <Arduino.h>
 #include <SPI.h>
@@ -76,6 +83,9 @@ extern "C" {
 #define SD_ERROR_NOT_A_FILE        15u
 #define SD_ERROR_READ_ONLY         16u
 #define SD_ERROR_BAD_CLUSTER       17u
+#define SD_ERROR_NO_SPACE          18u
+#define SD_ERROR_DIRECTORY_FULL    19u
+#define SD_ERROR_UNSUPPORTED       20u
 
 /*
  * Select all four software-SPI pins. A failed call preserves the current
@@ -104,6 +114,9 @@ uint8_t SD_writeBlock(unsigned long sector, const uint8_t *buffer)
 /* Root directory only; ASCII short 8.3 names, optionally prefixed by '/'. */
 uint8_t SD_exists(const char *name) STC_SD_REENTRANT;
 uint8_t SD_open(const char *name, uint8_t mode) STC_SD_REENTRANT;
+size_t SD_write(uint8_t value) STC_SD_REENTRANT;
+size_t SD_writeBytes(const uint8_t *buffer, size_t length)
+                     STC_SD_REENTRANT;
 int SD_read(void) STC_SD_REENTRANT;
 size_t SD_readBytes(uint8_t *buffer, size_t length) STC_SD_REENTRANT;
 int SD_peek(void) STC_SD_REENTRANT;
@@ -111,7 +124,17 @@ unsigned long SD_available(void) STC_SD_REENTRANT;
 uint8_t SD_seek(unsigned long position) STC_SD_REENTRANT;
 unsigned long SD_position(void) STC_SD_REENTRANT;
 unsigned long SD_size(void) STC_SD_REENTRANT;
+uint8_t SD_flush(void) STC_SD_REENTRANT;
 void SD_close(void) STC_SD_REENTRANT;
+uint8_t SD_remove(const char *name) STC_SD_REENTRANT;
+uint8_t SD_mkdir(const char *name) STC_SD_REENTRANT;
+uint8_t SD_rmdir(const char *name) STC_SD_REENTRANT;
+
+#if defined(STC_SD_HOST_TEST) && STC_SD_HOST_TEST
+/* Test-only mount entry point. Sector I/O is supplied by the host fixture. */
+uint8_t SD_testMount(void) STC_SD_REENTRANT;
+void SD_testReset(void) STC_SD_REENTRANT;
+#endif
 
 typedef struct {
     uint8_t (*setPins)(uint8_t mosi_pin, uint8_t miso_pin,
@@ -129,6 +152,9 @@ typedef struct {
                           STC_SD_REENTRANT;
     uint8_t (*exists)(const char *name) STC_SD_REENTRANT;
     uint8_t (*open)(const char *name, uint8_t mode) STC_SD_REENTRANT;
+    size_t (*write)(uint8_t value) STC_SD_REENTRANT;
+    size_t (*writeBytes)(const uint8_t *buffer, size_t length)
+                         STC_SD_REENTRANT;
     int (*read)(void) STC_SD_REENTRANT;
     size_t (*readBytes)(uint8_t *buffer, size_t length)
                         STC_SD_REENTRANT;
@@ -137,7 +163,11 @@ typedef struct {
     uint8_t (*seek)(unsigned long position) STC_SD_REENTRANT;
     unsigned long (*position)(void) STC_SD_REENTRANT;
     unsigned long (*size)(void) STC_SD_REENTRANT;
+    uint8_t (*flush)(void) STC_SD_REENTRANT;
     void (*close)(void) STC_SD_REENTRANT;
+    uint8_t (*remove)(const char *name) STC_SD_REENTRANT;
+    uint8_t (*mkdir)(const char *name) STC_SD_REENTRANT;
+    uint8_t (*rmdir)(const char *name) STC_SD_REENTRANT;
 } STCSDClass;
 
 extern STC_SD_CODE const STCSDClass SD;
@@ -145,5 +175,7 @@ extern STC_SD_CODE const STCSDClass SD;
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* C facade / C++ class routing */
 
 #endif

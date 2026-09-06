@@ -1,7 +1,7 @@
 #include "Arduino.h"
 #include "stc_sfr.h"
 
-static void (*stc_external_callbacks[2])(void);
+#include "WInterrupts_private.h"
 
 static uint8_t stc_interrupt_lock(void)
 {
@@ -74,23 +74,3 @@ void detachInterrupt(uint8_t interrupt_number)
     stc_external_callbacks[interrupt_number] = 0;
     stc_interrupt_unlock(interrupt_state);
 }
-
-#if STC_CORE_HAS_INT0
-void stc_external0_isr(void) __interrupt (0)
-{
-    void (*callback)(void) = stc_external_callbacks[0];
-    if (callback != 0) {
-        callback();
-    }
-}
-#endif
-
-#if STC_CORE_HAS_INT1
-void stc_external1_isr(void) __interrupt (2)
-{
-    void (*callback)(void) = stc_external_callbacks[1];
-    if (callback != 0) {
-        callback();
-    }
-}
-#endif

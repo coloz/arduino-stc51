@@ -13,6 +13,7 @@
 #define STC_NUM_BONDED_DIGITAL_PINS 45U
 #define STC_VARIANT_PIN_ALIAS_GROUP_COUNT 0U
 #define STC_PINOUT_IS_PACKAGE_DEPENDENT 1
+#define STC_VARIANT_HAS_SEPARATE_PULLUP 0
 #define STC_VARIANT_HAS_UART1 1
 #define STC_VARIANT_SERIAL_BUFFERED_RX 1
 #define STC_VARIANT_PINMUX_PSWX1_BIT0_CLEAR 0
@@ -24,6 +25,10 @@
 #define PIN_VALID_MASK_P5 0x1FU
 #define PIN_VALID_MASK_P6 0x00U
 #define PIN_VALID_MASK_P7 0x00U
+#define PIN_VALID_MASK_P8 0x00U
+#define PIN_VALID_MASK_P9 0x00U
+#define PIN_VALID_MASK_PA 0x00U
+#define PIN_VALID_MASK_PB 0x00U
 #define STC_VARIANT_PINS_SHARE_PHYSICAL_PAD(left, right) (0)
 #define STC_VARIANT_PHYSICAL_ALIAS(pin) (NOT_A_PIN)
 #define STC_VARIANT_HAS_ADC 1
@@ -34,7 +39,7 @@
 #define NUM_ANALOG_INPUTS 15
 #define A0 P1_0
 #define A1 P1_1
-#define A2 P1_2
+#define A2 P5_4
 #define A3 P1_3
 #define A4 P1_4
 #define A5 P1_5
@@ -52,7 +57,7 @@
 #define analogInputToDigitalPin(index) \
   (((index) == (0U)) ? (P1_0) : \
    ((index) == (1U)) ? (P1_1) : \
-   ((index) == (2U)) ? (P1_2) : \
+   ((index) == (2U)) ? (P5_4) : \
    ((index) == (3U)) ? (P1_3) : \
    ((index) == (4U)) ? (P1_4) : \
    ((index) == (5U)) ? (P1_5) : \
@@ -69,7 +74,7 @@
 #define digitalPinToAnalogInput(pin) \
   (((pin) == (P1_0)) ? (0U) : \
    ((pin) == (P1_1)) ? (1U) : \
-   ((pin) == (P1_2)) ? (2U) : \
+   ((pin) == (P5_4)) ? (2U) : \
    ((pin) == (P1_3)) ? (3U) : \
    ((pin) == (P1_4)) ? (4U) : \
    ((pin) == (P1_5)) ? (5U) : \
@@ -86,7 +91,7 @@
 #define STC_VARIANT_ADC_PIN_TO_CHANNEL(pin) \
   (((pin) == (P1_0)) ? (0U) : \
    ((pin) == (P1_1)) ? (1U) : \
-   ((pin) == (P1_2)) ? (2U) : \
+   ((pin) == (P5_4)) ? (2U) : \
    ((pin) == (P1_3)) ? (3U) : \
    ((pin) == (P1_4)) ? (4U) : \
    ((pin) == (P1_5)) ? (5U) : \

@@ -69,6 +69,40 @@ unsigned long micros(void)
 
 void delayMicroseconds(unsigned int microseconds)
 {
+#if STC_CORE_HAS_TIMER01_16BIT_AUTO_RELOAD
+    uint32_t remaining;
+    uint16_t previous;
+    uint16_t current;
+    uint16_t elapsed;
+
+    if (microseconds == 0u) {
+        return;
+    }
+    /* micros() can account for only one pending TF0. During a transaction
+     * that masks interrupts, delays longer than one Timer0 period must not
+     * depend on the ISR's millisecond count. Accumulate coherent counter
+     * deltas instead. Timer0 must be running (as after init()). A preempting
+     * ISR can lengthen this busy wait, but cannot make it return early.
+     * Round up so fractional timer ticks do not shorten the requested wait.
+     */
+    remaining = ((uint32_t)microseconds * STC_TIMER0_TICKS_PER_MS + 999UL) /
+        1000UL;
+    previous = stc_timer0_read();
+    while (remaining != 0UL) {
+        current = stc_timer0_read();
+        if (current >= previous) {
+            elapsed = current - previous;
+        } else {
+            elapsed = (uint16_t)(STC_TIMER0_TICKS_PER_MS -
+                (uint16_t)(previous - current));
+        }
+        if ((uint32_t)elapsed >= remaining) {
+            break;
+        }
+        remaining -= elapsed;
+        previous = current;
+    }
+#else
     unsigned long start;
 
     if (microseconds == 0u) {
@@ -77,4 +111,5 @@ void delayMicroseconds(unsigned int microseconds)
     start = micros();
     while ((unsigned long)(micros() - start) < (unsigned long)microseconds) {
     }
+#endif
 }

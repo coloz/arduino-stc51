@@ -1,10 +1,14 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Clean-room SPI SD-card and read-only FAT16/FAT32 implementation for the
+ * Clean-room SPI SD-card and FAT16/FAT32 implementation for the
  * arduino-stc51 plain-C core. No code from Arduino's C++ SD/SdFat stack is used.
  */
 #include "SD.h"
+
+/* Use the native SPI_* entry points below, not the C SPI function table.
+ * In a mixed C/C++ build the public SPI symbol belongs to SPIClass, whose
+ * object representation is not a STCSPIClass function-pointer table. */
 
 #if defined(__SDCC)
 # define STC_SD_XDATA __xdata
@@ -51,6 +55,12 @@
 #define SD_ATTRIBUTE_DIRECTORY  0x10u
 #define SD_ATTRIBUTE_VOLUME_ID  0x08u
 #define SD_ATTRIBUTE_LONG_NAME  0x0fu
+#define SD_ATTRIBUTE_ARCHIVE    0x20u
+#define SD_ATTRIBUTE_READ_ONLY  0x01u
+
+#define SD_MODE_WRITE           0x02u
+#define SD_MODE_CREATE          0x04u
+#define SD_MODE_APPEND          0x10u
 
 typedef struct {
     uint8_t mosi_pin;
@@ -71,6 +81,7 @@ typedef struct {
     unsigned int root_entry_count;
     unsigned long volume_start;
     unsigned long volume_sectors;
+    unsigned long fat_base_start;
     unsigned long fat_start;
     unsigned long fat_sectors;
     unsigned long root_dir_start;
@@ -78,11 +89,20 @@ typedef struct {
     unsigned long data_start;
     unsigned long cluster_count;
     unsigned long root_cluster;
+    unsigned long allocation_hint;
+    uint8_t active_fat;
+    uint8_t fat_mirroring;
 
     uint8_t cache_valid;
+    uint8_t cache_dirty;
     unsigned long cache_sector;
 
     uint8_t file_open;
+    uint8_t file_writable;
+    uint8_t file_metadata_dirty;
+    uint8_t file_name[11];
+    unsigned long file_dir_sector;
+    unsigned int file_dir_offset;
     unsigned long file_first_cluster;
     unsigned long file_size;
     unsigned long file_position;
@@ -90,10 +110,24 @@ typedef struct {
     unsigned long file_cluster_index;
 } STCSDState;
 
+typedef struct {
+    unsigned long sector;
+    unsigned long cluster;
+    unsigned long size;
+    unsigned int offset;
+    uint8_t attribute;
+} STCSDDirEntry;
+
 /* The library owns exactly one sector cache and keeps all bulky state out of
  * scarce DATA/IDATA. The public header enforces a 1 KiB XDATA floor. */
 static STC_SD_XDATA uint8_t sd_sector[SD_SECTOR_SIZE];
 static STC_SD_XDATA STCSDState sd_state;
+
+#if defined(STC_SD_HOST_TEST) && STC_SD_HOST_TEST
+extern uint8_t STC_SD_testReadBlock(unsigned long sector, uint8_t *buffer);
+extern uint8_t STC_SD_testWriteBlock(unsigned long sector,
+                                     const uint8_t *buffer);
+#endif
 
 static void sd_set_error(uint8_t error)
 {
@@ -114,6 +148,10 @@ static void sd_load_default_pins(void)
 static void sd_clear_file(void)
 {
     sd_state.file_open = 0u;
+    sd_state.file_writable = 0u;
+    sd_state.file_metadata_dirty = 0u;
+    sd_state.file_dir_sector = 0UL;
+    sd_state.file_dir_offset = 0u;
     sd_state.file_first_cluster = 0UL;
     sd_state.file_size = 0UL;
     sd_state.file_position = 0UL;
@@ -130,6 +168,7 @@ static void sd_clear_volume(void)
     sd_state.root_entry_count = 0u;
     sd_state.volume_start = 0UL;
     sd_state.volume_sectors = 0UL;
+    sd_state.fat_base_start = 0UL;
     sd_state.fat_start = 0UL;
     sd_state.fat_sectors = 0UL;
     sd_state.root_dir_start = 0UL;
@@ -137,7 +176,11 @@ static void sd_clear_volume(void)
     sd_state.data_start = 0UL;
     sd_state.cluster_count = 0UL;
     sd_state.root_cluster = 0UL;
+    sd_state.allocation_hint = 2UL;
+    sd_state.active_fat = 0u;
+    sd_state.fat_mirroring = 1u;
     sd_state.cache_valid = 0u;
+    sd_state.cache_dirty = 0u;
     sd_state.cache_sector = 0UL;
     sd_clear_file();
 }
@@ -180,7 +223,7 @@ static void sd_deselect(void)
 {
     if (sd_state.spi_active != 0u) {
         digitalWrite(sd_state.cs_pin, HIGH);
-        (void)SPI.transfer(0xffu);
+        (void)SPI_transfer(0xffu);
     }
 }
 
@@ -191,7 +234,7 @@ static uint8_t sd_wait_ready(void)
 
     while ((attempts < SD_READY_ATTEMPT_LIMIT) &&
            (sd_time_expired(started, SD_READY_TIMEOUT_MS) == 0u)) {
-        if (SPI.transfer(0xffu) == 0xffu) {
+        if (SPI_transfer(0xffu) == 0xffu) {
             return 1u;
         }
         ++attempts;
@@ -207,7 +250,7 @@ static uint8_t sd_wait_r1(void)
 
     while ((attempts < SD_R1_ATTEMPT_LIMIT) &&
            (sd_time_expired(started, SD_R1_TIMEOUT_MS) == 0u)) {
-        response = SPI.transfer(0xffu);
+        response = SPI_transfer(0xffu);
         if ((response & 0x80u) == 0u) {
             return response;
         }
@@ -216,6 +259,7 @@ static uint8_t sd_wait_r1(void)
     return 0xffu;
 }
 
+#if !defined(STC_SD_HOST_TEST) || !STC_SD_HOST_TEST
 static uint8_t sd_wait_data_token(void)
 {
     unsigned int attempts = 0u;
@@ -224,7 +268,7 @@ static uint8_t sd_wait_data_token(void)
 
     while ((attempts < SD_TOKEN_ATTEMPT_LIMIT) &&
            (sd_time_expired(started, SD_TOKEN_TIMEOUT_MS) == 0u)) {
-        token = SPI.transfer(0xffu);
+        token = SPI_transfer(0xffu);
         if (token != 0xffu) {
             break;
         }
@@ -232,6 +276,7 @@ static uint8_t sd_wait_data_token(void)
     }
     return token;
 }
+#endif
 
 /* Leaves CS asserted only after receiving an R1 response. Any timeout path
  * releases CS before returning. */
@@ -242,7 +287,7 @@ static uint8_t sd_send_command(uint8_t command, unsigned long argument)
 
     /* Another SPI client may have changed clock, bit order, or mode since the
      * preceding SD operation. Reassert the card transaction on every command. */
-    SPI.beginTransaction((sd_state.card_ready != 0u) ?
+    SPI_beginTransaction((sd_state.card_ready != 0u) ?
                          SD_DATA_CLOCK_HZ : SD_INIT_CLOCK_HZ,
                          MSBFIRST, SPI_MODE0);
     digitalWrite(sd_state.cs_pin, LOW);
@@ -258,12 +303,12 @@ static uint8_t sd_send_command(uint8_t command, unsigned long argument)
         crc = 0x87u;
     }
 
-    (void)SPI.transfer((uint8_t)(0x40u | command));
-    (void)SPI.transfer((uint8_t)(argument >> 24));
-    (void)SPI.transfer((uint8_t)(argument >> 16));
-    (void)SPI.transfer((uint8_t)(argument >> 8));
-    (void)SPI.transfer((uint8_t)argument);
-    (void)SPI.transfer(crc);
+    (void)SPI_transfer((uint8_t)(0x40u | command));
+    (void)SPI_transfer((uint8_t)(argument >> 24));
+    (void)SPI_transfer((uint8_t)(argument >> 16));
+    (void)SPI_transfer((uint8_t)(argument >> 8));
+    (void)SPI_transfer((uint8_t)argument);
+    (void)SPI_transfer(crc);
 
     response = sd_wait_r1();
     if (response == 0xffu) {
@@ -285,7 +330,7 @@ static uint8_t sd_initialize_card(void)
     digitalWrite(sd_state.cs_pin, HIGH);
     delay(1UL);
     for (index = 0u; index < 10u; ++index) {
-        (void)SPI.transfer(0xffu);
+        (void)SPI_transfer(0xffu);
     }
 
     attempts = 0u;
@@ -307,7 +352,7 @@ static uint8_t sd_initialize_card(void)
     response = sd_send_command(SD_CMD8_SEND_IF_COND, 0x000001aaUL);
     if (response == SD_R1_IDLE_STATE) {
         for (index = 0u; index < 4u; ++index) {
-            r7[index] = SPI.transfer(0xffu);
+            r7[index] = SPI_transfer(0xffu);
         }
         sd_deselect();
         if ((r7[2] != 0x01u) || (r7[3] != 0xaau)) {
@@ -365,7 +410,7 @@ static uint8_t sd_initialize_card(void)
             return 0u;
         }
         for (index = 0u; index < 4u; ++index) {
-            r7[index] = SPI.transfer(0xffu);
+            r7[index] = SPI_transfer(0xffu);
         }
         sd_deselect();
         if ((r7[0] & 0x80u) == 0u) {
@@ -395,6 +440,7 @@ static uint8_t sd_initialize_card(void)
     return 1u;
 }
 
+#if !defined(STC_SD_HOST_TEST) || !STC_SD_HOST_TEST
 static uint8_t sd_sector_argument(unsigned long sector,
                                   unsigned long *argument)
 {
@@ -409,9 +455,26 @@ static uint8_t sd_sector_argument(unsigned long sector,
     *argument = sector << 9;
     return 1u;
 }
+#endif
 
 static uint8_t sd_read_block_internal(unsigned long sector, uint8_t *buffer)
 {
+#if defined(STC_SD_HOST_TEST) && STC_SD_HOST_TEST
+    if (sd_state.card_ready == 0u) {
+        sd_set_error(SD_ERROR_NOT_INITIALIZED);
+        return 0u;
+    }
+    if (buffer == NULL) {
+        sd_set_error(SD_ERROR_INVALID_ARGUMENT);
+        return 0u;
+    }
+    if (STC_SD_testReadBlock(sector, buffer) == 0u) {
+        sd_set_error(SD_ERROR_READ_TOKEN);
+        return 0u;
+    }
+    sd_set_error(SD_ERROR_NONE);
+    return 1u;
+#else
     unsigned long argument;
     unsigned int index;
     uint8_t response;
@@ -447,18 +510,35 @@ static uint8_t sd_read_block_internal(unsigned long sector, uint8_t *buffer)
     }
 
     for (index = 0u; index < SD_SECTOR_SIZE; ++index) {
-        buffer[index] = SPI.transfer(0xffu);
+        buffer[index] = SPI_transfer(0xffu);
     }
-    (void)SPI.transfer(0xffu);
-    (void)SPI.transfer(0xffu);
+    (void)SPI_transfer(0xffu);
+    (void)SPI_transfer(0xffu);
     sd_deselect();
     sd_set_error(SD_ERROR_NONE);
     return 1u;
+#endif
 }
 
 static uint8_t sd_write_block_internal(unsigned long sector,
                                        const uint8_t *buffer)
 {
+#if defined(STC_SD_HOST_TEST) && STC_SD_HOST_TEST
+    if (sd_state.card_ready == 0u) {
+        sd_set_error(SD_ERROR_NOT_INITIALIZED);
+        return 0u;
+    }
+    if (buffer == NULL) {
+        sd_set_error(SD_ERROR_INVALID_ARGUMENT);
+        return 0u;
+    }
+    if (STC_SD_testWriteBlock(sector, buffer) == 0u) {
+        sd_set_error(SD_ERROR_WRITE_REJECTED);
+        return 0u;
+    }
+    sd_set_error(SD_ERROR_NONE);
+    return 1u;
+#else
     unsigned long argument;
     unsigned int index;
     uint8_t response;
@@ -486,15 +566,15 @@ static uint8_t sd_write_block_internal(unsigned long sector,
         return 0u;
     }
 
-    (void)SPI.transfer(0xffu);
-    (void)SPI.transfer(SD_DATA_START_TOKEN);
+    (void)SPI_transfer(0xffu);
+    (void)SPI_transfer(SD_DATA_START_TOKEN);
     for (index = 0u; index < SD_SECTOR_SIZE; ++index) {
-        (void)SPI.transfer(buffer[index]);
+        (void)SPI_transfer(buffer[index]);
     }
-    (void)SPI.transfer(0xffu);
-    (void)SPI.transfer(0xffu);
+    (void)SPI_transfer(0xffu);
+    (void)SPI_transfer(0xffu);
 
-    data_response = (uint8_t)(SPI.transfer(0xffu) & 0x1fu);
+    data_response = (uint8_t)(SPI_transfer(0xffu) & 0x1fu);
     if (data_response != SD_WRITE_DATA_ACCEPTED) {
         sd_deselect();
         sd_set_error(SD_ERROR_WRITE_REJECTED);
@@ -515,7 +595,7 @@ static uint8_t sd_write_block_internal(unsigned long sector,
         }
         return 0u;
     }
-    card_status = SPI.transfer(0xffu);
+    card_status = SPI_transfer(0xffu);
     sd_deselect();
     if (card_status != 0u) {
         sd_set_error(SD_ERROR_WRITE_STATUS);
@@ -524,6 +604,7 @@ static uint8_t sd_write_block_internal(unsigned long sector,
 
     sd_set_error(SD_ERROR_NONE);
     return 1u;
+#endif
 }
 
 /* FAT fields are decoded byte by byte. This is required for the big-endian
@@ -601,18 +682,57 @@ static uint8_t sd_mbr_partition_type_supported(uint8_t type)
     }
 }
 
+static uint8_t sd_flush_cache(void)
+{
+    if ((sd_state.cache_valid == 0u) ||
+        (sd_state.cache_dirty == 0u)) {
+        return 1u;
+    }
+    if (sd_write_block_internal(sd_state.cache_sector, sd_sector) == 0u) {
+        return 0u;
+    }
+    sd_state.cache_dirty = 0u;
+    return 1u;
+}
+
+static uint8_t sd_prepare_reconfiguration(void) STC_SD_REENTRANT
+{
+    if (sd_state.file_open != 0u) {
+        SD_close();
+        if (sd_state.last_error != SD_ERROR_NONE) {
+            return 0u;
+        }
+    }
+    return sd_flush_cache();
+}
+
+static uint8_t sd_store_loaded_sector(void)
+{
+    if (sd_state.cache_valid == 0u) {
+        sd_set_error(SD_ERROR_INVALID_ARGUMENT);
+        return 0u;
+    }
+    sd_state.cache_dirty = 1u;
+    return sd_flush_cache();
+}
+
 static uint8_t sd_load_sector(unsigned long sector)
 {
     if ((sd_state.cache_valid != 0u) &&
         (sd_state.cache_sector == sector)) {
         return 1u;
     }
+    if (sd_flush_cache() == 0u) {
+        return 0u;
+    }
     if (sd_read_block_internal(sector, sd_sector) == 0u) {
         sd_state.cache_valid = 0u;
+        sd_state.cache_dirty = 0u;
         return 0u;
     }
     sd_state.cache_sector = sector;
     sd_state.cache_valid = 1u;
+    sd_state.cache_dirty = 0u;
     return 1u;
 }
 
@@ -635,7 +755,7 @@ static uint8_t sd_parse_volume(unsigned long volume_start,
     unsigned long fat_relative;
     unsigned long value;
     unsigned long volume_end;
-    unsigned int fat32_flags;
+    unsigned int fat32_flags = 0u;
     uint8_t active_fat = 0u;
     uint8_t fat_type;
 
@@ -725,10 +845,13 @@ static uint8_t sd_parse_volume(unsigned long volume_start,
         return 0u;
     }
 
+    if (sd_add_u32(volume_start, (unsigned long)reserved,
+                   &sd_state.fat_base_start) == 0u) {
+        sd_set_error(SD_ERROR_BAD_VOLUME);
+        return 0u;
+    }
     fat_relative = fat_sectors * (unsigned long)active_fat;
-    if (sd_add_u32((unsigned long)reserved, fat_relative,
-                   &fat_relative) == 0u ||
-        sd_add_u32(volume_start, fat_relative, &value) == 0u) {
+    if (sd_add_u32(sd_state.fat_base_start, fat_relative, &value) == 0u) {
         sd_set_error(SD_ERROR_BAD_VOLUME);
         return 0u;
     }
@@ -760,10 +883,15 @@ static uint8_t sd_parse_volume(unsigned long volume_start,
     sd_state.root_dir_sectors = root_dir_sectors;
     sd_state.sectors_per_cluster = sectors_per_cluster;
     sd_state.fat_count = fat_count;
+    sd_state.active_fat = active_fat;
+    sd_state.fat_mirroring = ((fat_type == SD_FAT32) &&
+                              ((fat32_flags & 0x0080u) != 0u)) ? 0u : 1u;
     sd_state.root_entry_count = root_entries;
     sd_state.cluster_count = cluster_count;
     sd_state.fat_type = fat_type;
+    sd_state.allocation_hint = 2UL;
     sd_state.cache_valid = 0u;
+    sd_state.cache_dirty = 0u;
     sd_state.mounted = 1u;
     sd_set_error(SD_ERROR_NONE);
     return 1u;
@@ -921,6 +1049,299 @@ static uint8_t sd_next_cluster(unsigned long cluster,
     return 1u;
 }
 
+static void sd_store_le16(uint8_t *target, unsigned int value)
+{
+    target[0] = (uint8_t)(value & 0xffu);
+    target[1] = (uint8_t)((value >> 8) & 0xffu);
+}
+
+static void sd_store_le32(uint8_t *target, unsigned long value)
+{
+    target[0] = (uint8_t)(value & 0xffUL);
+    target[1] = (uint8_t)((value >> 8) & 0xffUL);
+    target[2] = (uint8_t)((value >> 16) & 0xffUL);
+    target[3] = (uint8_t)((value >> 24) & 0xffUL);
+}
+
+static uint8_t sd_fat_entry_location(unsigned long fat_start,
+                                     unsigned long cluster,
+                                     unsigned long *sector,
+                                     unsigned int *offset) STC_SD_REENTRANT
+{
+    unsigned long byte_offset;
+
+    if ((cluster < 2UL) ||
+        (cluster > (sd_state.cluster_count + 1UL))) {
+        sd_set_error(SD_ERROR_BAD_CLUSTER);
+        return 0u;
+    }
+    if (sd_state.fat_type == SD_FAT16) {
+        byte_offset = cluster << 1;
+    } else {
+        if (cluster > 0x3fffffffUL) {
+            sd_set_error(SD_ERROR_BAD_CLUSTER);
+            return 0u;
+        }
+        byte_offset = cluster << 2;
+    }
+    if ((byte_offset / SD_SECTOR_SIZE) >= sd_state.fat_sectors ||
+        sd_add_u32(fat_start, byte_offset / SD_SECTOR_SIZE,
+                   sector) == 0u) {
+        sd_set_error(SD_ERROR_BAD_CLUSTER);
+        return 0u;
+    }
+    *offset = (unsigned int)(byte_offset & 0x01ffUL);
+    return 1u;
+}
+
+static uint8_t sd_read_fat_entry(unsigned long cluster,
+                                 unsigned long *value) STC_SD_REENTRANT
+{
+    unsigned long sector;
+    unsigned int offset;
+
+    if ((value == NULL) ||
+        (sd_fat_entry_location(sd_state.fat_start, cluster,
+                               &sector, &offset) == 0u) ||
+        (sd_load_sector(sector) == 0u)) {
+        if (value == NULL) {
+            sd_set_error(SD_ERROR_INVALID_ARGUMENT);
+        }
+        return 0u;
+    }
+    if (sd_state.fat_type == SD_FAT16) {
+        *value = (unsigned long)sd_load_le16(&sd_sector[offset]);
+    } else {
+        *value = sd_load_le32(&sd_sector[offset]) & 0x0fffffffUL;
+    }
+    return 1u;
+}
+
+static uint8_t sd_fat_value_is_end(unsigned long value)
+{
+    return (sd_state.fat_type == SD_FAT16) ?
+        ((value >= 0xfff8UL) ? 1u : 0u) :
+        ((value >= 0x0ffffff8UL) ? 1u : 0u);
+}
+
+static unsigned long sd_fat_end_marker(void)
+{
+    return (sd_state.fat_type == SD_FAT16) ?
+        0xffffUL : 0x0fffffffUL;
+}
+
+static uint8_t sd_write_fat_entry(unsigned long cluster,
+                                  unsigned long value) STC_SD_REENTRANT
+{
+    unsigned long sectors[2];
+    unsigned long originals[2];
+    unsigned long raw;
+    unsigned long start;
+    unsigned int offsets[2];
+    uint8_t copies;
+    uint8_t copy;
+    uint8_t actual_copy;
+    uint8_t written = 0u;
+    uint8_t saved_error = SD_ERROR_BAD_CLUSTER;
+
+    copies = (sd_state.fat_mirroring != 0u) ? sd_state.fat_count : 1u;
+    if ((copies == 0u) || (copies > 2u)) {
+        sd_set_error(SD_ERROR_BAD_VOLUME);
+        return 0u;
+    }
+
+    /* Capture each exact on-disk value first. FAT32 reserves its high nibble,
+     * which is preserved independently in every mirror. */
+    for (copy = 0u; copy < copies; ++copy) {
+        actual_copy = (sd_state.fat_mirroring != 0u) ?
+            copy : sd_state.active_fat;
+        start = sd_state.fat_base_start +
+            ((unsigned long)actual_copy * sd_state.fat_sectors);
+        if ((sd_fat_entry_location(start, cluster, &sectors[copy],
+                                   &offsets[copy]) == 0u) ||
+            (sd_load_sector(sectors[copy]) == 0u)) {
+            return 0u;
+        }
+        originals[copy] = (sd_state.fat_type == SD_FAT16) ?
+            (unsigned long)sd_load_le16(&sd_sector[offsets[copy]]) :
+            sd_load_le32(&sd_sector[offsets[copy]]);
+    }
+
+    for (copy = 0u; copy < copies; ++copy) {
+        if (sd_load_sector(sectors[copy]) == 0u) {
+            saved_error = sd_state.last_error;
+            break;
+        }
+        if (sd_state.fat_type == SD_FAT16) {
+            sd_store_le16(&sd_sector[offsets[copy]],
+                          (unsigned int)(value & 0xffffUL));
+        } else {
+            raw = (originals[copy] & 0xf0000000UL) |
+                (value & 0x0fffffffUL);
+            sd_store_le32(&sd_sector[offsets[copy]], raw);
+        }
+        if (sd_store_loaded_sector() == 0u) {
+            saved_error = sd_state.last_error;
+            /* A rejected single-block write cannot be treated as a cache that
+             * is safe to carry into a different mirror or metadata sector. */
+            sd_state.cache_dirty = 0u;
+            sd_state.cache_valid = 0u;
+            break;
+        }
+        ++written;
+    }
+    if (written == copies) {
+        return 1u;
+    }
+
+    /* Best-effort rollback keeps a failure in the second FAT copy from being
+     * reported as success with knowingly divergent mirrors. */
+    while (written != 0u) {
+        --written;
+        if (sd_load_sector(sectors[written]) != 0u) {
+            if (sd_state.fat_type == SD_FAT16) {
+                sd_store_le16(&sd_sector[offsets[written]],
+                              (unsigned int)originals[written]);
+            } else {
+                sd_store_le32(&sd_sector[offsets[written]],
+                              originals[written]);
+            }
+            if (sd_store_loaded_sector() == 0u) {
+                sd_state.cache_dirty = 0u;
+                sd_state.cache_valid = 0u;
+            }
+        }
+    }
+    sd_set_error(saved_error);
+    return 0u;
+}
+
+static uint8_t sd_zero_cluster(unsigned long cluster) STC_SD_REENTRANT
+{
+    unsigned long first_sector;
+    unsigned int index;
+    uint8_t sector_index;
+
+    if ((sd_cluster_to_sector(cluster, &first_sector) == 0u) ||
+        (sd_flush_cache() == 0u)) {
+        return 0u;
+    }
+    for (index = 0u; index < SD_SECTOR_SIZE; ++index) {
+        sd_sector[index] = 0u;
+    }
+    sd_state.cache_valid = 0u;
+    sd_state.cache_dirty = 0u;
+    for (sector_index = 0u;
+         sector_index < sd_state.sectors_per_cluster;
+         ++sector_index) {
+        if (sd_write_block_internal(first_sector +
+                                    (unsigned long)sector_index,
+                                    sd_sector) == 0u) {
+            return 0u;
+        }
+    }
+    return 1u;
+}
+
+static uint8_t sd_allocate_cluster(unsigned long *allocated) STC_SD_REENTRANT
+{
+    unsigned long candidate;
+    unsigned long maximum = sd_state.cluster_count + 1UL;
+    unsigned long scanned;
+    unsigned long value;
+    uint8_t saved_error;
+
+    if (allocated == NULL) {
+        sd_set_error(SD_ERROR_INVALID_ARGUMENT);
+        return 0u;
+    }
+    candidate = sd_state.allocation_hint;
+    if ((candidate < 2UL) || (candidate > maximum)) {
+        candidate = 2UL;
+    }
+    for (scanned = 0UL; scanned < sd_state.cluster_count; ++scanned) {
+        if (sd_read_fat_entry(candidate, &value) == 0u) {
+            return 0u;
+        }
+        if (value == 0UL) {
+            if (sd_write_fat_entry(candidate, sd_fat_end_marker()) == 0u) {
+                return 0u;
+            }
+            if (sd_zero_cluster(candidate) == 0u) {
+                saved_error = sd_state.last_error;
+                (void)sd_write_fat_entry(candidate, 0UL);
+                sd_set_error(saved_error);
+                return 0u;
+            }
+            *allocated = candidate;
+            sd_state.allocation_hint = (candidate == maximum) ?
+                2UL : candidate + 1UL;
+            return 1u;
+        }
+        candidate = (candidate == maximum) ? 2UL : candidate + 1UL;
+    }
+    sd_set_error(SD_ERROR_NO_SPACE);
+    return 0u;
+}
+
+static uint8_t sd_extend_cluster(unsigned long tail,
+                                 unsigned long *allocated) STC_SD_REENTRANT
+{
+    unsigned long fresh;
+    uint8_t saved_error;
+
+    if (sd_allocate_cluster(&fresh) == 0u) {
+        return 0u;
+    }
+    if (sd_write_fat_entry(tail, fresh) == 0u) {
+        saved_error = sd_state.last_error;
+        (void)sd_write_fat_entry(fresh, 0UL);
+        sd_set_error(saved_error);
+        return 0u;
+    }
+    *allocated = fresh;
+    return 1u;
+}
+
+static uint8_t sd_release_cluster_chain(unsigned long first) STC_SD_REENTRANT
+{
+    unsigned long current = first;
+    unsigned long next;
+    unsigned long hops = 0UL;
+    unsigned long value;
+    uint8_t is_end;
+
+    if (first == 0UL) {
+        return 1u;
+    }
+    while (hops < sd_state.cluster_count) {
+        if (sd_read_fat_entry(current, &value) == 0u) {
+            return 0u;
+        }
+        is_end = sd_fat_value_is_end(value);
+        next = value;
+        if ((is_end == 0u) &&
+            ((next < 2UL) ||
+             (next > (sd_state.cluster_count + 1UL)))) {
+            sd_set_error(SD_ERROR_BAD_CLUSTER);
+            return 0u;
+        }
+        if (sd_write_fat_entry(current, 0UL) == 0u) {
+            return 0u;
+        }
+        if (current < sd_state.allocation_hint) {
+            sd_state.allocation_hint = current;
+        }
+        if (is_end != 0u) {
+            return 1u;
+        }
+        current = next;
+        ++hops;
+    }
+    sd_set_error(SD_ERROR_BAD_CLUSTER);
+    return 0u;
+}
+
 static uint8_t sd_short_name_character_valid(uint8_t value)
 {
     if ((value <= 0x20u) || (value >= 0x7fu)) {
@@ -1006,7 +1427,7 @@ static uint8_t sd_format_short_name(const char *name, uint8_t *formatted)
 /* 0: continue, 1: found, 2: end marker. */
 static uint8_t sd_search_loaded_directory_sector(
     const uint8_t *target, unsigned int entry_limit,
-    unsigned long *cluster, unsigned long *size, uint8_t *attribute)
+    unsigned long sector_number, STCSDDirEntry *found) STC_SD_REENTRANT
 {
     unsigned int entry;
     unsigned int offset;
@@ -1041,16 +1462,19 @@ static uint8_t sd_search_loaded_directory_sector(
             }
         }
         if (match != 0u) {
-            *cluster = (unsigned long)
+            found->sector = sector_number;
+            found->offset = offset;
+            found->cluster = (unsigned long)
                 sd_load_le16(&sd_sector[offset + SD_DIR_CLUSTER_LOW]);
             if (sd_state.fat_type == SD_FAT32) {
-                *cluster |= ((unsigned long)
+                found->cluster |= ((unsigned long)
                     sd_load_le16(&sd_sector[offset + SD_DIR_CLUSTER_HIGH]))
                     << 16;
-                *cluster &= 0x0fffffffUL;
+                found->cluster &= 0x0fffffffUL;
             }
-            *size = sd_load_le32(&sd_sector[offset + SD_DIR_FILE_SIZE]);
-            *attribute = attr;
+            found->size = sd_load_le32(
+                &sd_sector[offset + SD_DIR_FILE_SIZE]);
+            found->attribute = attr;
             return 1u;
         }
     }
@@ -1058,9 +1482,7 @@ static uint8_t sd_search_loaded_directory_sector(
 }
 
 static uint8_t sd_find_root_entry(const uint8_t *target,
-                                  unsigned long *cluster,
-                                  unsigned long *size,
-                                  uint8_t *attribute)
+                                  STCSDDirEntry *found) STC_SD_REENTRANT
 {
     unsigned long sector;
     unsigned long cluster_value;
@@ -1084,7 +1506,7 @@ static uint8_t sd_find_root_entry(const uint8_t *target,
             limit = (remaining_entries > SD_DIR_ENTRIES_PER_SECTOR) ?
                 SD_DIR_ENTRIES_PER_SECTOR : remaining_entries;
             result = sd_search_loaded_directory_sector(
-                target, limit, cluster, size, attribute);
+                target, limit, sector, found);
             if (result == 1u) {
                 return 1u;
             }
@@ -1119,7 +1541,7 @@ static uint8_t sd_find_root_entry(const uint8_t *target,
             ++sectors_scanned;
             result = sd_search_loaded_directory_sector(
                 target, SD_DIR_ENTRIES_PER_SECTOR,
-                cluster, size, attribute);
+                cluster_sector + (unsigned long)sector_in_cluster, found);
             if (result == 1u) {
                 return 1u;
             }
@@ -1143,13 +1565,259 @@ static uint8_t sd_find_root_entry(const uint8_t *target,
     return 0u;
 }
 
-static uint8_t sd_prepare_file_sector(void)
+static uint8_t sd_find_root_slot(STCSDDirEntry *slot) STC_SD_REENTRANT
+{
+    unsigned long sector;
+    unsigned long cluster_value;
+    unsigned long cluster_sector;
+    unsigned long next_cluster;
+    unsigned long hops = 0UL;
+    unsigned long sectors_scanned = 0UL;
+    unsigned int remaining_entries;
+    unsigned int limit;
+    unsigned int entry;
+    unsigned int offset;
+    uint8_t sector_in_cluster;
+    uint8_t is_end;
+    uint8_t have_deleted = 0u;
+
+    if (sd_state.fat_type == SD_FAT16) {
+        remaining_entries = sd_state.root_entry_count;
+        sector = sd_state.root_dir_start;
+        while (remaining_entries != 0u) {
+            if (sd_load_sector(sector) == 0u) {
+                return 0u;
+            }
+            limit = (remaining_entries > SD_DIR_ENTRIES_PER_SECTOR) ?
+                SD_DIR_ENTRIES_PER_SECTOR : remaining_entries;
+            for (entry = 0u; entry < limit; ++entry) {
+                offset = entry * SD_DIR_ENTRY_SIZE;
+                if (sd_sector[offset] == 0x00u) {
+                    slot->sector = sector;
+                    slot->offset = offset;
+                    return 1u;
+                }
+                if ((sd_sector[offset] == 0xe5u) &&
+                    (have_deleted == 0u)) {
+                    slot->sector = sector;
+                    slot->offset = offset;
+                    have_deleted = 1u;
+                }
+            }
+            remaining_entries -= limit;
+            ++sector;
+        }
+        if (have_deleted != 0u) {
+            return 1u;
+        }
+        sd_set_error(SD_ERROR_DIRECTORY_FULL);
+        return 0u;
+    }
+
+    cluster_value = sd_state.root_cluster;
+    while (hops < sd_state.cluster_count) {
+        if (sd_cluster_to_sector(cluster_value, &cluster_sector) == 0u) {
+            return 0u;
+        }
+        for (sector_in_cluster = 0u;
+             sector_in_cluster < sd_state.sectors_per_cluster;
+             ++sector_in_cluster) {
+            if (sectors_scanned >= SD_ROOT_SCAN_SECTOR_LIMIT) {
+                sd_set_error(SD_ERROR_DIRECTORY_FULL);
+                return 0u;
+            }
+            sector = cluster_sector + (unsigned long)sector_in_cluster;
+            if (sd_load_sector(sector) == 0u) {
+                return 0u;
+            }
+            ++sectors_scanned;
+            for (entry = 0u; entry < SD_DIR_ENTRIES_PER_SECTOR; ++entry) {
+                offset = entry * SD_DIR_ENTRY_SIZE;
+                if (sd_sector[offset] == 0x00u) {
+                    slot->sector = sector;
+                    slot->offset = offset;
+                    return 1u;
+                }
+                if ((sd_sector[offset] == 0xe5u) &&
+                    (have_deleted == 0u)) {
+                    slot->sector = sector;
+                    slot->offset = offset;
+                    have_deleted = 1u;
+                }
+            }
+        }
+        if (sd_next_cluster(cluster_value, &next_cluster, &is_end) == 0u) {
+            return 0u;
+        }
+        if (is_end != 0u) {
+            if (have_deleted != 0u) {
+                return 1u;
+            }
+            if (sd_extend_cluster(cluster_value, &next_cluster) == 0u) {
+                return 0u;
+            }
+            if (sd_cluster_to_sector(next_cluster, &slot->sector) == 0u) {
+                return 0u;
+            }
+            slot->offset = 0u;
+            return 1u;
+        }
+        cluster_value = next_cluster;
+        ++hops;
+    }
+    sd_set_error(SD_ERROR_DIRECTORY_FULL);
+    return 0u;
+}
+
+static uint8_t sd_create_root_entry(const uint8_t *target,
+                                    STCSDDirEntry *created) STC_SD_REENTRANT
+{
+    STCSDDirEntry slot;
+    unsigned int index;
+
+    if (sd_find_root_slot(&slot) == 0u ||
+        sd_load_sector(slot.sector) == 0u) {
+        return 0u;
+    }
+    for (index = 0u; index < SD_DIR_ENTRY_SIZE; ++index) {
+        sd_sector[slot.offset + index] = 0u;
+    }
+    for (index = 0u; index < 11u; ++index) {
+        sd_sector[slot.offset + index] = target[index];
+    }
+    sd_sector[slot.offset + SD_DIR_ATTRIBUTE] = SD_ATTRIBUTE_ARCHIVE;
+    if (sd_store_loaded_sector() == 0u) {
+        return 0u;
+    }
+    created->sector = slot.sector;
+    created->offset = slot.offset;
+    created->cluster = 0UL;
+    created->size = 0UL;
+    created->attribute = SD_ATTRIBUTE_ARCHIVE;
+    return 1u;
+}
+
+static uint8_t sd_update_open_file_metadata(void) STC_SD_REENTRANT
+{
+    unsigned int index;
+    unsigned int offset;
+
+    if (sd_state.file_metadata_dirty == 0u) {
+        return 1u;
+    }
+    if (sd_load_sector(sd_state.file_dir_sector) == 0u) {
+        return 0u;
+    }
+    offset = sd_state.file_dir_offset;
+    if ((offset > (SD_SECTOR_SIZE - SD_DIR_ENTRY_SIZE)) ||
+        (sd_sector[offset] == 0x00u) ||
+        (sd_sector[offset] == 0xe5u)) {
+        sd_set_error(SD_ERROR_NOT_FOUND);
+        return 0u;
+    }
+    for (index = 0u; index < 11u; ++index) {
+        if (sd_sector[offset + index] != sd_state.file_name[index]) {
+            sd_set_error(SD_ERROR_NOT_FOUND);
+            return 0u;
+        }
+    }
+    sd_store_le16(&sd_sector[offset + SD_DIR_CLUSTER_LOW],
+                  (unsigned int)(sd_state.file_first_cluster & 0xffffUL));
+    if (sd_state.fat_type == SD_FAT32) {
+        sd_store_le16(&sd_sector[offset + SD_DIR_CLUSTER_HIGH],
+                      (unsigned int)((sd_state.file_first_cluster >> 16) &
+                                     0x0fffUL));
+    }
+    sd_store_le32(&sd_sector[offset + SD_DIR_FILE_SIZE], sd_state.file_size);
+    if (sd_store_loaded_sector() == 0u) {
+        return 0u;
+    }
+    sd_state.file_metadata_dirty = 0u;
+    return 1u;
+}
+
+static uint8_t sd_get_file_cluster(unsigned long target_index,
+                                   uint8_t allocate,
+                                   unsigned long *cluster) STC_SD_REENTRANT
+{
+    unsigned long next_cluster;
+    uint8_t is_end;
+
+    if ((cluster == NULL) || (target_index >= sd_state.cluster_count)) {
+        sd_set_error((cluster == NULL) ? SD_ERROR_INVALID_ARGUMENT :
+                     SD_ERROR_NO_SPACE);
+        return 0u;
+    }
+    if (sd_state.file_first_cluster < 2UL) {
+        if ((allocate == 0u) ||
+            (sd_allocate_cluster(&sd_state.file_first_cluster) == 0u)) {
+            if (allocate == 0u) {
+                sd_set_error(SD_ERROR_BAD_CLUSTER);
+            }
+            return 0u;
+        }
+        sd_state.file_cluster = sd_state.file_first_cluster;
+        sd_state.file_cluster_index = 0UL;
+        sd_state.file_metadata_dirty = 1u;
+    }
+    if ((sd_state.file_cluster < 2UL) ||
+        (target_index < sd_state.file_cluster_index)) {
+        sd_state.file_cluster = sd_state.file_first_cluster;
+        sd_state.file_cluster_index = 0UL;
+    }
+    while (sd_state.file_cluster_index < target_index) {
+        if (sd_next_cluster(sd_state.file_cluster, &next_cluster,
+                            &is_end) == 0u) {
+            return 0u;
+        }
+        if (is_end != 0u) {
+            if ((allocate == 0u) ||
+                (sd_extend_cluster(sd_state.file_cluster,
+                                   &next_cluster) == 0u)) {
+                if (allocate == 0u) {
+                    sd_set_error(SD_ERROR_BAD_CLUSTER);
+                }
+                return 0u;
+            }
+        }
+        sd_state.file_cluster = next_cluster;
+        ++sd_state.file_cluster_index;
+    }
+    *cluster = sd_state.file_cluster;
+    return 1u;
+}
+
+static uint8_t sd_validate_cluster_chain(unsigned long first)
+    STC_SD_REENTRANT
+{
+    unsigned long current = first;
+    unsigned long next;
+    unsigned long hops = 0UL;
+    uint8_t is_end;
+
+    if (first == 0UL) {
+        return 1u;
+    }
+    while (hops < sd_state.cluster_count) {
+        if (sd_next_cluster(current, &next, &is_end) == 0u) {
+            return 0u;
+        }
+        if (is_end != 0u) {
+            return 1u;
+        }
+        current = next;
+        ++hops;
+    }
+    sd_set_error(SD_ERROR_BAD_CLUSTER);
+    return 0u;
+}
+
+static uint8_t sd_prepare_file_sector(void) STC_SD_REENTRANT
 {
     unsigned long cluster_bytes;
     unsigned long target_cluster_index;
-    unsigned long next_cluster;
+    unsigned long cluster;
     unsigned long sector;
-    uint8_t is_end;
 
     if ((sd_state.file_open == 0u) ||
         (sd_state.file_position >= sd_state.file_size)) {
@@ -1164,25 +1832,33 @@ static uint8_t sd_prepare_file_sector(void)
         return 0u;
     }
 
-    if ((sd_state.file_cluster < 2UL) ||
-        (target_cluster_index < sd_state.file_cluster_index)) {
-        sd_state.file_cluster = sd_state.file_first_cluster;
-        sd_state.file_cluster_index = 0UL;
+    if ((sd_get_file_cluster(target_cluster_index, 0u, &cluster) == 0u) ||
+        (sd_cluster_to_sector(cluster, &sector) == 0u)) {
+        return 0u;
     }
-    while (sd_state.file_cluster_index < target_cluster_index) {
-        if (sd_next_cluster(sd_state.file_cluster, &next_cluster,
-                            &is_end) == 0u) {
-            return 0u;
-        }
-        if (is_end != 0u) {
-            sd_set_error(SD_ERROR_BAD_CLUSTER);
-            return 0u;
-        }
-        sd_state.file_cluster = next_cluster;
-        ++sd_state.file_cluster_index;
-    }
+    sector += (sd_state.file_position / SD_SECTOR_SIZE) %
+        (unsigned long)sd_state.sectors_per_cluster;
+    return sd_load_sector(sector);
+}
 
-    if (sd_cluster_to_sector(sd_state.file_cluster, &sector) == 0u) {
+static uint8_t sd_prepare_write_sector(void) STC_SD_REENTRANT
+{
+    unsigned long cluster_bytes;
+    unsigned long target_cluster_index;
+    unsigned long cluster;
+    unsigned long sector;
+
+    if ((sd_state.file_open == 0u) ||
+        (sd_state.file_writable == 0u)) {
+        sd_set_error((sd_state.file_open == 0u) ?
+                     SD_ERROR_NOT_INITIALIZED : SD_ERROR_READ_ONLY);
+        return 0u;
+    }
+    cluster_bytes = (unsigned long)sd_state.sectors_per_cluster *
+        (unsigned long)SD_SECTOR_SIZE;
+    target_cluster_index = sd_state.file_position / cluster_bytes;
+    if ((sd_get_file_cluster(target_cluster_index, 1u, &cluster) == 0u) ||
+        (sd_cluster_to_sector(cluster, &sector) == 0u)) {
         return 0u;
     }
     sector += (sd_state.file_position / SD_SECTOR_SIZE) %
@@ -1197,6 +1873,10 @@ uint8_t SD_setPins(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
 
     if (validation != SD_ERROR_NONE) {
         sd_set_error(validation);
+        return 0u;
+    }
+    if ((sd_state.spi_active != 0u) &&
+        (sd_prepare_reconfiguration() == 0u)) {
         return 0u;
     }
     if (sd_state.spi_active != 0u) {
@@ -1223,6 +1903,10 @@ uint8_t SD_begin(uint8_t cs_pin) STC_SD_REENTRANT
         sd_set_error(validation);
         return 0u;
     }
+    if ((sd_state.spi_active != 0u) &&
+        (sd_prepare_reconfiguration() == 0u)) {
+        return 0u;
+    }
     if (sd_state.spi_active != 0u) {
         SD_end();
     }
@@ -1232,18 +1916,18 @@ uint8_t SD_begin(uint8_t cs_pin) STC_SD_REENTRANT
     sd_state.card_type = SD_CARD_NONE;
     sd_clear_volume();
 
-    SPI.setPins(sd_state.mosi_pin, sd_state.miso_pin,
+    SPI_setPins(sd_state.mosi_pin, sd_state.miso_pin,
                 sd_state.sck_pin, sd_state.cs_pin);
     digitalWrite(sd_state.cs_pin, HIGH);
-    SPI.begin();
-    SPI.beginTransaction(SD_INIT_CLOCK_HZ, MSBFIRST, SPI_MODE0);
+    SPI_begin();
+    SPI_beginTransaction(SD_INIT_CLOCK_HZ, MSBFIRST, SPI_MODE0);
     sd_state.spi_active = 1u;
 
     if (sd_initialize_card() == 0u) {
         saved_error = sd_state.last_error;
         sd_deselect();
-        SPI.endTransaction();
-        SPI.end();
+        SPI_endTransaction();
+        SPI_end();
         sd_state.spi_active = 0u;
         sd_state.card_ready = 0u;
         sd_state.card_type = SD_CARD_NONE;
@@ -1252,7 +1936,7 @@ uint8_t SD_begin(uint8_t cs_pin) STC_SD_REENTRANT
         return 0u;
     }
 
-    SPI.beginTransaction(SD_DATA_CLOCK_HZ, MSBFIRST, SPI_MODE0);
+    SPI_beginTransaction(SD_DATA_CLOCK_HZ, MSBFIRST, SPI_MODE0);
     if (sd_mount() == 0u) {
         /* The card remains available to readBlock/writeBlock so a caller can
          * inspect a non-FAT or damaged layout after begin() reports failure. */
@@ -1270,17 +1954,51 @@ uint8_t SD_beginDefault(void) STC_SD_REENTRANT
 
 void SD_end(void) STC_SD_REENTRANT
 {
+    uint8_t saved_error = SD_ERROR_NONE;
+
+    if (sd_state.file_open != 0u) {
+        SD_close();
+        saved_error = sd_state.last_error;
+    } else if (sd_flush_cache() == 0u) {
+        saved_error = sd_state.last_error;
+    }
+#if !defined(STC_SD_HOST_TEST) || !STC_SD_HOST_TEST
     if (sd_state.spi_active != 0u) {
         sd_deselect();
-        SPI.endTransaction();
-        SPI.end();
+        SPI_endTransaction();
+        SPI_end();
     }
+#endif
     sd_state.spi_active = 0u;
     sd_state.card_ready = 0u;
     sd_state.card_type = SD_CARD_NONE;
     sd_clear_volume();
-    sd_set_error(SD_ERROR_NONE);
+    sd_set_error(saved_error);
 }
+
+#if defined(STC_SD_HOST_TEST) && STC_SD_HOST_TEST
+uint8_t SD_testMount(void) STC_SD_REENTRANT
+{
+    sd_clear_volume();
+    sd_state.spi_active = 1u;
+    sd_state.card_ready = 1u;
+    sd_state.card_type = SD_CARD_SDHC;
+    return sd_mount();
+}
+
+void SD_testReset(void) STC_SD_REENTRANT
+{
+    unsigned int index;
+    uint8_t *state = (uint8_t *)&sd_state;
+
+    for (index = 0u; index < (unsigned int)sizeof(sd_state); ++index) {
+        state[index] = 0u;
+    }
+    for (index = 0u; index < SD_SECTOR_SIZE; ++index) {
+        sd_sector[index] = 0u;
+    }
+}
+#endif
 
 uint8_t SD_cardType(void) STC_SD_REENTRANT
 {
@@ -1300,24 +2018,35 @@ uint8_t SD_error(void) STC_SD_REENTRANT
 uint8_t SD_readBlock(unsigned long sector, uint8_t *buffer)
                      STC_SD_REENTRANT
 {
-    return sd_read_block_internal(sector, buffer);
+    uint8_t result;
+
+    if (sd_flush_cache() == 0u) {
+        return 0u;
+    }
+    result = sd_read_block_internal(sector, buffer);
+    sd_state.cache_valid = 0u;
+    sd_state.cache_dirty = 0u;
+    return result;
 }
 
 uint8_t SD_writeBlock(unsigned long sector, const uint8_t *buffer)
                       STC_SD_REENTRANT
 {
-    uint8_t result = sd_write_block_internal(sector, buffer);
+    uint8_t result;
 
+    if (sd_flush_cache() == 0u) {
+        return 0u;
+    }
+    result = sd_write_block_internal(sector, buffer);
     sd_state.cache_valid = 0u;
+    sd_state.cache_dirty = 0u;
     return result;
 }
 
 uint8_t SD_exists(const char *name) STC_SD_REENTRANT
 {
     uint8_t target[11];
-    unsigned long cluster;
-    unsigned long size;
-    uint8_t attribute;
+    STCSDDirEntry entry;
 
     if (sd_state.mounted == 0u) {
         sd_set_error(SD_ERROR_NOT_INITIALIZED);
@@ -1327,12 +2056,9 @@ uint8_t SD_exists(const char *name) STC_SD_REENTRANT
         sd_set_error(SD_ERROR_INVALID_ARGUMENT);
         return 0u;
     }
-    if (sd_find_root_entry(target, &cluster, &size, &attribute) == 0u) {
+    if (sd_find_root_entry(target, &entry) == 0u) {
         return 0u;
     }
-    (void)cluster;
-    (void)size;
-    (void)attribute;
     sd_set_error(SD_ERROR_NONE);
     return 1u;
 }
@@ -1340,46 +2066,137 @@ uint8_t SD_exists(const char *name) STC_SD_REENTRANT
 uint8_t SD_open(const char *name, uint8_t mode) STC_SD_REENTRANT
 {
     uint8_t target[11];
-    unsigned long cluster;
-    unsigned long size;
-    uint8_t attribute;
+    uint8_t writable;
+    uint8_t index;
+    STCSDDirEntry entry;
 
     if (sd_state.mounted == 0u) {
         sd_set_error(SD_ERROR_NOT_INITIALIZED);
         return 0u;
     }
-    if (mode != FILE_READ) {
-        sd_set_error(((mode == FILE_WRITE) || ((mode & 0x02u) != 0u)) ?
-                     SD_ERROR_READ_ONLY : SD_ERROR_INVALID_ARGUMENT);
+    writable = ((mode & SD_MODE_WRITE) != 0u) ? 1u : 0u;
+    if ((mode != FILE_READ) &&
+        ((writable == 0u) || ((mode & 0xe8u) != 0u))) {
+        sd_set_error(SD_ERROR_INVALID_ARGUMENT);
         return 0u;
     }
     if (sd_format_short_name(name, target) == 0u) {
         sd_set_error(SD_ERROR_INVALID_ARGUMENT);
         return 0u;
     }
-    sd_clear_file();
-    if (sd_find_root_entry(target, &cluster, &size, &attribute) == 0u) {
-        return 0u;
+    if (sd_state.file_open != 0u) {
+        SD_close();
+        if (sd_state.last_error != SD_ERROR_NONE) {
+            return 0u;
+        }
     }
-    if ((attribute & SD_ATTRIBUTE_DIRECTORY) != 0u) {
+    if (sd_find_root_entry(target, &entry) == 0u) {
+        if ((writable == 0u) || ((mode & SD_MODE_CREATE) == 0u)) {
+            return 0u;
+        }
+        if (sd_state.last_error != SD_ERROR_NOT_FOUND) {
+            return 0u;
+        }
+        if (sd_create_root_entry(target, &entry) == 0u) {
+            return 0u;
+        }
+    }
+    if ((entry.attribute & SD_ATTRIBUTE_DIRECTORY) != 0u) {
         sd_set_error(SD_ERROR_NOT_A_FILE);
         return 0u;
     }
-    if ((size != 0UL) &&
-        ((cluster < 2UL) ||
-         (cluster > (sd_state.cluster_count + 1UL)))) {
+    if ((writable != 0u) &&
+        ((entry.attribute & SD_ATTRIBUTE_READ_ONLY) != 0u)) {
+        sd_set_error(SD_ERROR_READ_ONLY);
+        return 0u;
+    }
+    if ((entry.size != 0UL) &&
+        ((entry.cluster < 2UL) ||
+         (entry.cluster > (sd_state.cluster_count + 1UL)))) {
         sd_set_error(SD_ERROR_BAD_CLUSTER);
         return 0u;
     }
 
     sd_state.file_open = 1u;
-    sd_state.file_first_cluster = cluster;
-    sd_state.file_size = size;
-    sd_state.file_position = 0UL;
-    sd_state.file_cluster = cluster;
+    sd_state.file_writable = writable;
+    sd_state.file_metadata_dirty = 0u;
+    sd_state.file_dir_sector = entry.sector;
+    sd_state.file_dir_offset = entry.offset;
+    for (index = 0u; index < 11u; ++index) {
+        sd_state.file_name[index] = target[index];
+    }
+    sd_state.file_first_cluster = entry.cluster;
+    sd_state.file_size = entry.size;
+    sd_state.file_position = ((writable != 0u) &&
+                              ((mode & SD_MODE_APPEND) != 0u)) ?
+        entry.size : 0UL;
+    sd_state.file_cluster = entry.cluster;
     sd_state.file_cluster_index = 0UL;
     sd_set_error(SD_ERROR_NONE);
     return 1u;
+}
+
+size_t SD_write(uint8_t value) STC_SD_REENTRANT
+{
+    return SD_writeBytes(&value, 1u);
+}
+
+size_t SD_writeBytes(const uint8_t *buffer, size_t length)
+                     STC_SD_REENTRANT
+{
+    size_t count = 0u;
+    size_t chunk;
+    unsigned int offset;
+    unsigned int index;
+
+    if (sd_state.file_open == 0u) {
+        sd_set_error(SD_ERROR_NOT_INITIALIZED);
+        return 0u;
+    }
+    if (sd_state.file_writable == 0u) {
+        sd_set_error(SD_ERROR_READ_ONLY);
+        return 0u;
+    }
+    if ((buffer == NULL) && (length != 0u)) {
+        sd_set_error(SD_ERROR_INVALID_ARGUMENT);
+        return 0u;
+    }
+    while (count < length) {
+        if (sd_state.file_position >= SD_UINT32_MAX) {
+            sd_set_error(SD_ERROR_NO_SPACE);
+            break;
+        }
+        if (sd_prepare_write_sector() == 0u) {
+            break;
+        }
+        offset = (unsigned int)(sd_state.file_position & 0x01ffUL);
+        chunk = (size_t)(SD_SECTOR_SIZE - offset);
+        if (chunk > (length - count)) {
+            chunk = length - count;
+        }
+        if ((unsigned long)chunk >
+            (SD_UINT32_MAX - sd_state.file_position)) {
+            chunk = (size_t)(SD_UINT32_MAX - sd_state.file_position);
+        }
+        if (chunk == 0u) {
+            sd_set_error(SD_ERROR_NO_SPACE);
+            break;
+        }
+        for (index = 0u; index < (unsigned int)chunk; ++index) {
+            sd_sector[offset + index] = buffer[count + (size_t)index];
+        }
+        sd_state.cache_dirty = 1u;
+        sd_state.file_position += (unsigned long)chunk;
+        count += chunk;
+        if (sd_state.file_position > sd_state.file_size) {
+            sd_state.file_size = sd_state.file_position;
+            sd_state.file_metadata_dirty = 1u;
+        }
+    }
+    if (count == length) {
+        sd_set_error(SD_ERROR_NONE);
+    }
+    return count;
 }
 
 int SD_peek(void) STC_SD_REENTRANT
@@ -1474,12 +2291,108 @@ unsigned long SD_size(void) STC_SD_REENTRANT
     return (sd_state.file_open != 0u) ? sd_state.file_size : 0UL;
 }
 
+uint8_t SD_flush(void) STC_SD_REENTRANT
+{
+    if (sd_state.file_open == 0u) {
+        sd_set_error(SD_ERROR_NOT_INITIALIZED);
+        return 0u;
+    }
+    if ((sd_flush_cache() == 0u) ||
+        (sd_update_open_file_metadata() == 0u)) {
+        return 0u;
+    }
+    sd_set_error(SD_ERROR_NONE);
+    return 1u;
+}
+
 void SD_close(void) STC_SD_REENTRANT
 {
+    if ((sd_state.file_open != 0u) && (SD_flush() == 0u)) {
+        /* Keep the backend state live so an explicit second close/flush, or
+         * the next open/remove operation, can retry without orphaning a newly
+         * allocated chain whose directory metadata is still pending. */
+        return;
+    }
     sd_clear_file();
     sd_set_error(SD_ERROR_NONE);
 }
 
+uint8_t SD_remove(const char *name) STC_SD_REENTRANT
+{
+    uint8_t target[11];
+    uint8_t index;
+    uint8_t saved_error;
+    STCSDDirEntry entry;
+
+    if (sd_state.mounted == 0u) {
+        sd_set_error(SD_ERROR_NOT_INITIALIZED);
+        return 0u;
+    }
+    if (sd_format_short_name(name, target) == 0u) {
+        sd_set_error(SD_ERROR_INVALID_ARGUMENT);
+        return 0u;
+    }
+    if (sd_state.file_open != 0u) {
+        SD_close();
+        if (sd_state.last_error != SD_ERROR_NONE) {
+            return 0u;
+        }
+    }
+    if (sd_find_root_entry(target, &entry) == 0u) {
+        return 0u;
+    }
+    if ((entry.attribute & SD_ATTRIBUTE_DIRECTORY) != 0u) {
+        sd_set_error(SD_ERROR_NOT_A_FILE);
+        return 0u;
+    }
+    if ((entry.cluster != 0UL) &&
+        (((entry.cluster < 2UL) ||
+          (entry.cluster > (sd_state.cluster_count + 1UL))) ||
+         (sd_validate_cluster_chain(entry.cluster) == 0u))) {
+        if (sd_state.last_error == SD_ERROR_NONE) {
+            sd_set_error(SD_ERROR_BAD_CLUSTER);
+        }
+        return 0u;
+    }
+    if (sd_load_sector(entry.sector) == 0u) {
+        return 0u;
+    }
+    for (index = 0u; index < 11u; ++index) {
+        if (sd_sector[entry.offset + index] != target[index]) {
+            sd_set_error(SD_ERROR_NOT_FOUND);
+            return 0u;
+        }
+    }
+    sd_sector[entry.offset] = 0xe5u;
+    if (sd_store_loaded_sector() == 0u) {
+        return 0u;
+    }
+    if (entry.cluster != 0UL) {
+        if (sd_release_cluster_chain(entry.cluster) == 0u) {
+            saved_error = sd_state.last_error;
+            sd_set_error(saved_error);
+            return 0u;
+        }
+    }
+    sd_set_error(SD_ERROR_NONE);
+    return 1u;
+}
+
+uint8_t SD_mkdir(const char *name) STC_SD_REENTRANT
+{
+    (void)name;
+    sd_set_error(SD_ERROR_UNSUPPORTED);
+    return 0u;
+}
+
+uint8_t SD_rmdir(const char *name) STC_SD_REENTRANT
+{
+    (void)name;
+    sd_set_error(SD_ERROR_UNSUPPORTED);
+    return 0u;
+}
+
+#if !defined(STCXX_CPP_CORE) || !STCXX_CPP_CORE
 STC_SD_CODE const STCSDClass SD = {
     SD_setPins,
     SD_begin,
@@ -1492,6 +2405,8 @@ STC_SD_CODE const STCSDClass SD = {
     SD_writeBlock,
     SD_exists,
     SD_open,
+    SD_write,
+    SD_writeBytes,
     SD_read,
     SD_readBytes,
     SD_peek,
@@ -1499,5 +2414,10 @@ STC_SD_CODE const STCSDClass SD = {
     SD_seek,
     SD_position,
     SD_size,
-    SD_close
+    SD_flush,
+    SD_close,
+    SD_remove,
+    SD_mkdir,
+    SD_rmdir
 };
+#endif

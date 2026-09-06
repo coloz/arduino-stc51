@@ -13,6 +13,7 @@
 #define STC_NUM_BONDED_DIGITAL_PINS 17U
 #define STC_VARIANT_PIN_ALIAS_GROUP_COUNT 2U
 #define STC_PINOUT_IS_PACKAGE_DEPENDENT 1
+#define STC_VARIANT_HAS_SEPARATE_PULLUP 0
 #define STC_VARIANT_HAS_UART1 1
 #define STC_VARIANT_SERIAL_BUFFERED_RX 1
 #define STC_VARIANT_PINMUX_PSWX1_BIT0_CLEAR 0
@@ -24,6 +25,10 @@
 #define PIN_VALID_MASK_P5 0x10U
 #define PIN_VALID_MASK_P6 0x00U
 #define PIN_VALID_MASK_P7 0x00U
+#define PIN_VALID_MASK_P8 0x00U
+#define PIN_VALID_MASK_P9 0x00U
+#define PIN_VALID_MASK_PA 0x00U
+#define PIN_VALID_MASK_PB 0x00U
 #define STC_VARIANT_PINS_SHARE_PHYSICAL_PAD(left, right) \
   (((((left) == (P1_4)) && ((right) == (P0_2))) || (((left) == (P0_2)) && ((right) == (P1_4)))) || \
    ((((left) == (P1_5)) && ((right) == (P0_3))) || (((left) == (P0_3)) && ((right) == (P1_5)))))

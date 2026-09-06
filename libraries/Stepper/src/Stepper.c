@@ -9,12 +9,22 @@
 #define STEPPER_MAX_STEPS_PER_REVOLUTION 65535UL
 #define STEPPER_WAIT_CHUNK_US 60000u
 
-static uint8_t stepper_pins[STEPPER_PIN_COUNT_5];
-static uint8_t stepper_pin_count;
-static uint8_t stepper_phase;
-static unsigned int stepper_steps_per_revolution;
-static unsigned long stepper_step_delay_us;
-static unsigned long stepper_last_step_time;
+static STCStepperState stepper_default_state;
+static STCStepperState *stepper_current = &stepper_default_state;
+#define stepper_pins (stepper_current->pins)
+#define stepper_pin_count (stepper_current->pin_count)
+#define stepper_phase (stepper_current->phase)
+#define stepper_steps_per_revolution (stepper_current->steps_per_revolution)
+#define stepper_step_delay_us (stepper_current->step_delay_us)
+#define stepper_last_step_time (stepper_current->last_step_time)
+
+STCStepperState *Stepper_selectContext(STCStepperState *context)
+    STC_STEPPER_REENTRANT
+{
+    STCStepperState *previous = stepper_current;
+    stepper_current = context != NULL ? context : &stepper_default_state;
+    return previous;
+}
 
 static uint8_t stepper_pins_conflict(uint8_t left, uint8_t right)
 {

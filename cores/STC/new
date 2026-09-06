@@ -1,0 +1,6 @@
+#ifndef STC_CORE_NEW_FORWARD_H
+#define STC_CORE_NEW_FORWARD_H
+
+#include "cpp/new"
+
+#endif

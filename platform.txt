@@ -2,7 +2,7 @@
 # See docs/toolchain-and-sdk.md for compiler provenance and support boundaries.
 
 name=arduino-stc51
-version=0.0.1
+version=0.0.2
 
 compiler.warning_flags=--less-pedantic
 compiler.warning_flags.none=--less-pedantic
@@ -24,10 +24,12 @@ compiler.dep.flags=-MMD
 compiler.c.flags=-c --std-sdcc11 --opt-code-size -Ddouble=float --model-{build.memory_model} {compiler.warning_flags}
 compiler.c.elf.cmd=sdcc
 compiler.c.elf.wrapper=sdcc-link.sh
-compiler.c.elf.flags=--code-size {upload.maximum_size} --xram-size {upload.maximum_xdata_size} --model-{build.memory_model}
+compiler.c.elf.flags=--code-size {upload.maximum_size} --xram-size {upload.maximum_xdata_size} --model-{build.memory_model} {build.link_flags}
 
-# Arduino sketches use a .cpp extension, but this is intentionally a plain-C
-# core. MCS51Tools converts the generated sketch to C before invoking SDCC.
+# Plain-C remains the default. Every explicit cppcore=enabled/12 MHz profile
+# routes genuine .cpp translation units through the locked WSL
+# Clang/LLVM-CBE bridge, selecting the independent MCS51 or MCS251 ABI from
+# the board execution profile.
 compiler.cpp.cmd=sdcc
 compiler.cpp.wrapper=sdcc.sh
 compiler.cpp.flags={compiler.c.flags}
@@ -41,24 +43,28 @@ compiler.ar.flags=rcs
 compiler.systemincludes="-I{runtime.tools.sdcc-mcs251.path}/include" "-I{runtime.tools.sdcc-mcs251.path}/include/mcs51"
 
 build.extra_flags=
+build.link_flags=
+build.cpp_core_flags=
+build.cpp_link_flags=
+build.cpp_target_link_flags=
 compiler.c.extra_flags=
 compiler.c.elf.extra_flags=
 compiler.cpp.extra_flags=
 compiler.S.extra_flags=
 compiler.ar.extra_flags=
 
-recipe.c.o.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-compile.sh" "{compiler.path}/{compiler.c.cmd}" "{source_file}" "{object_file}" re1 {compiler.dep.flags} {compiler.c.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.c.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
+recipe.c.o.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-compile.sh" "{compiler.path}/{compiler.c.cmd}" "{source_file}" "{object_file}" re1 {compiler.dep.flags} {compiler.c.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.c.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
 
-recipe.cpp.o.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-compile.sh" "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{object_file}" re2 {compiler.dep.flags} {compiler.cpp.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
+recipe.cpp.o.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-compile.sh" "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{object_file}" re2 {compiler.dep.flags} {compiler.cpp.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
 
 recipe.S.o.pattern="{compiler.path}/{compiler.c.cmd}" {compiler.S.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.S.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
 
 # The MCS251 release's sdar is missing runtime DLLs. A separately pinned,
 # working SDCC archive helper creates core.a; compilation and linking still use
-# SDCC 4.6.0 / MCS251 exclusively.
+# patched SDCC 4.6.0 with the board-selected MCS51 or MCS251 backend.
 recipe.ar.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-archive.sh" "{compiler.ar.path}/{compiler.ar.cmd}" "{archive_file_path}" "{object_file}" {compiler.ar.flags} {compiler.ar.extra_flags}
 
-recipe.c.combine.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-link.sh" "{compiler.path}/{compiler.c.elf.cmd}" {build.target} {compiler.c.elf.flags} {compiler.c.elf.extra_flags} {object_files} "{build.path}/{archive_file}" --out-fmt-ihx -o "{build.path}/{build.project_name}.hex"
+recipe.c.combine.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-link.sh" "{compiler.path}/{compiler.c.elf.cmd}" {build.target} {compiler.c.elf.flags} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.cpp_link_flags} {build.cpp_target_link_flags} {compiler.c.elf.extra_flags} {object_files} "{build.path}/{archive_file}" --out-fmt-ihx -o "{build.path}/{build.project_name}.hex"
 
 recipe.output.tmp_file={build.project_name}.hex
 recipe.output.save_file={build.project_name}.{build.variant}.hex
@@ -71,9 +77,9 @@ recipe.size.regex.data=^STC_RAM_BYTES ([0-9]+)$
 
 # Arduino CLI/IDE library discovery and prototype generation.
 preproc.includes.flags=-M -MG -MP
-recipe.preproc.includes="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-compile.sh" "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{preprocessed_file_path}" re11 {preproc.includes.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
+recipe.preproc.includes="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-compile.sh" "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{preprocessed_file_path}" re11 {preproc.includes.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
 preproc.macros.flags=-E -dM
-recipe.preproc.macros="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-compile.sh" "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{preprocessed_file_path}" re12 {preproc.macros.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
+recipe.preproc.macros="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-compile.sh" "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{preprocessed_file_path}" re12 {preproc.macros.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
 
 # STC's current AiCube-ISP is intentionally not bundled or automated. Export
 # the compiled HEX and program it with the verified version in sdk/manifest.json.

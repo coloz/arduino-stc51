@@ -1,27 +1,7 @@
 #include "Arduino.h"
+#include "HardwareSerial_private.h"
 #include "stc_sfr.h"
-
-#ifndef STC_CORE_SERIAL_BUFFERED_RX
-# define STC_CORE_SERIAL_BUFFERED_RX 1
-#endif
-
-#if (STC_CORE_SERIAL_BUFFERED_RX != 0) && \
-    (STC_CORE_SERIAL_BUFFERED_RX != 1)
-# error "STC_CORE_SERIAL_BUFFERED_RX must be 0 or 1"
-#endif
-
-#ifndef SERIAL_RX_BUFFER_SIZE
-# ifdef SERIAL_BUFFER_SIZE
-#  define SERIAL_RX_BUFFER_SIZE SERIAL_BUFFER_SIZE
-# else
-#  define SERIAL_RX_BUFFER_SIZE 16u
-# endif
-#endif
-
-#if STC_CORE_SERIAL_BUFFERED_RX && \
-    ((SERIAL_RX_BUFFER_SIZE < 2) || (SERIAL_RX_BUFFER_SIZE > 255))
-# error "SERIAL_RX_BUFFER_SIZE must be between 2 and 255 bytes"
-#endif
+#include "wiring_digital_private.h"
 
 /*
  * STC89 parts can be configured by the ISP for a non-default machine-cycle
@@ -53,19 +33,7 @@
 __sfr __at (0x8f) STC_SERIAL_INTCLKO;
 # endif
 
-static volatile uint8_t serial_started;
-
 # if STC_CORE_SERIAL_BUFFERED_RX
-
-#  if defined(STC_XDATA_BYTES) && (STC_XDATA_BYTES > 0)
-static __xdata uint8_t serial_rx_buffer[SERIAL_RX_BUFFER_SIZE];
-#  else
-static uint8_t serial_rx_buffer[SERIAL_RX_BUFFER_SIZE];
-#  endif
-static volatile uint8_t serial_rx_head;
-static volatile uint8_t serial_rx_tail;
-static volatile uint8_t serial_rx_overflow;
-static volatile uint8_t serial_tx_complete = 1u;
 
 /* Timer1 and UART1 routing state temporarily owned by buffered Serial. */
 static uint8_t serial_saved_tmod;
@@ -189,48 +157,19 @@ static uint8_t stc_serial_calculate_reload(unsigned long baud,
 
 static void stc_serial_reset_rx(void)
 {
-    serial_rx_head = 0u;
-    serial_rx_tail = 0u;
-    serial_rx_overflow = 0u;
+    stc_uart1_rx_head = 0u;
+    stc_uart1_rx_tail = 0u;
+    stc_uart1_rx_overflow = 0u;
 }
 
 static void stc_serial_wait_for_tx(void)
 {
-    while (serial_tx_complete == 0u) {
+    while (stc_uart1_tx_complete == 0u) {
         /* Also service TI by polling so writes work with EA disabled. */
         if ((SCON & STC_SCON_TI) != 0u) {
             SCON &= (uint8_t)~STC_SCON_TI;
-            serial_tx_complete = 1u;
+            stc_uart1_tx_complete = 1u;
         }
-    }
-}
-
-void stc_uart1_isr(void) __interrupt (4)
-{
-    uint8_t status = SCON;
-
-    if ((status & STC_SCON_RI) != 0u) {
-        uint8_t value = SBUF;
-        uint8_t next;
-
-        SCON &= (uint8_t)~STC_SCON_RI;
-        if (serial_started != 0u) {
-            next = (uint8_t)(serial_rx_head + 1u);
-            if (next >= (uint8_t)SERIAL_RX_BUFFER_SIZE) {
-                next = 0u;
-            }
-            if (next == serial_rx_tail) {
-                serial_rx_overflow = 1u;
-            } else {
-                serial_rx_buffer[serial_rx_head] = value;
-                serial_rx_head = next;
-            }
-        }
-    }
-
-    if ((status & STC_SCON_TI) != 0u) {
-        SCON &= (uint8_t)~STC_SCON_TI;
-        serial_tx_complete = 1u;
     }
 }
 
@@ -362,6 +301,35 @@ static uint8_t stc_serial_calculate_reload(unsigned long baud,
 # endif /* STC_CORE_SERIAL_BUFFERED_RX */
 #endif /* STC_CORE_HAS_UART1 */
 
+static void stc_serial_configure_uart1_pins(void)
+{
+#if STC_CORE_HAS_UART1
+    uint8_t saved_ea = (uint8_t)(IE & STC_IE_EA);
+
+    IE &= (uint8_t)~STC_IE_EA;
+
+    /* Match pinMode(P3.0, INPUT_PULLUP) without linking all digital APIs. */
+    P3 |= 0x01u;
+# if STC_CORE_HAS_PORT_MODE
+#  if STC_CORE_HAS_SEPARATE_PULLUP
+    P3M1 = (uint8_t)((P3M1 & (uint8_t)~0x03u) | 0x01u);
+    P3PU = (uint8_t)((P3PU & (uint8_t)~0x03u) | 0x01u);
+#  else
+    P3M1 &= (uint8_t)~0x03u;
+#  endif
+    /* Match pinMode(P3.1, OUTPUT), preserving the existing TX latch. */
+    P3M0 = (uint8_t)((P3M0 & (uint8_t)~0x03u) | 0x02u);
+# endif
+    __stc_digital_input_pins[3] =
+        (uint8_t)((__stc_digital_input_pins[3] | 0x01u) &
+                  (uint8_t)~0x02u);
+
+    if (saved_ea != 0u) {
+        IE |= STC_IE_EA;
+    }
+#endif
+}
+
 void Serial_begin(unsigned long baud)
 {
 #if STC_CORE_HAS_UART1
@@ -372,7 +340,7 @@ void Serial_begin(unsigned long baud)
         return;
     }
 
-    if (serial_started != 0u) {
+    if (stc_uart1_started != 0u) {
         Serial_end();
     }
 
@@ -428,22 +396,15 @@ void Serial_begin(unsigned long baud)
 # endif
 
 # if STC_CORE_SERIAL_BUFFERED_RX
-    pinMode(STC_PIN(3u, 0u), INPUT_PULLUP);
-    pinMode(STC_PIN(3u, 1u), OUTPUT);
+    stc_serial_configure_uart1_pins();
     stc_serial_reset_rx();
-    serial_tx_complete = 1u;
+    stc_uart1_tx_complete = 1u;
 # else
-    /* Compact profile: avoid pulling the complete digital-I/O translation
-     * unit into a 2 KiB image. RXD is quasi-input, TXD is push-pull. */
-    P3 |= 0x03u;
-#  if STC_CORE_HAS_PORT_MODE
-    P3M1 &= (uint8_t)~0x03u;
-    P3M0 = (uint8_t)((P3M0 & (uint8_t)~0x03u) | 0x02u);
-#  endif
+    stc_serial_configure_uart1_pins();
     serial_peek_valid = 0u;
 # endif
     SCON = STC_SCON_MODE1 | STC_SCON_REN;
-    serial_started = 1u;
+    stc_uart1_started = 1u;
 # if STC_CORE_SERIAL_BUFFERED_RX
     IE |= STC_IE_ES;
 # endif
@@ -456,7 +417,7 @@ void Serial_begin(unsigned long baud)
 void Serial_end(void)
 {
 #if STC_CORE_HAS_UART1
-    if (serial_started == 0u) {
+    if (stc_uart1_started == 0u) {
         return;
     }
 
@@ -466,11 +427,11 @@ void Serial_end(void)
     IE &= (uint8_t)~STC_IE_ES;
     TCON &= (uint8_t)~(STC_TCON_TR1 | STC_SERIAL_TF1);
     SCON &= (uint8_t)~(STC_SCON_REN | STC_SCON_RI | STC_SCON_TI);
-    serial_started = 0u;
+    stc_uart1_started = 0u;
 
 # if STC_CORE_SERIAL_BUFFERED_RX
     stc_serial_reset_rx();
-    serial_tx_complete = 1u;
+    stc_uart1_tx_complete = 1u;
 
     TMOD = (uint8_t)((TMOD & 0x0fu) | (serial_saved_tmod & 0xf0u));
     TH1 = serial_saved_th1;
@@ -505,13 +466,13 @@ void Serial_end(void)
 int Serial_available(void)
 {
 #if STC_CORE_HAS_UART1
-    if (serial_started == 0u) {
+    if (stc_uart1_started == 0u) {
         return 0;
     }
 # if STC_CORE_SERIAL_BUFFERED_RX
     {
-        uint8_t head = serial_rx_head;
-        uint8_t tail = serial_rx_tail;
+        uint8_t head = stc_uart1_rx_head;
+        uint8_t tail = stc_uart1_rx_tail;
 
         if (head >= tail) {
             return (int)(head - tail);
@@ -539,9 +500,9 @@ int Serial_availableForWrite(void)
 {
 #if STC_CORE_HAS_UART1
 # if STC_CORE_SERIAL_BUFFERED_RX
-    return ((serial_started != 0u) && (serial_tx_complete != 0u)) ? 1 : 0;
+    return ((stc_uart1_started != 0u) && (stc_uart1_tx_complete != 0u)) ? 1 : 0;
 # else
-    return (serial_started != 0u) ? 1 : 0;
+    return (stc_uart1_started != 0u) ? 1 : 0;
 # endif
 #else
     return 0;
@@ -552,10 +513,10 @@ int Serial_peek(void)
 {
 #if STC_CORE_HAS_UART1
 # if STC_CORE_SERIAL_BUFFERED_RX
-    if ((serial_started == 0u) || (serial_rx_head == serial_rx_tail)) {
+    if ((stc_uart1_started == 0u) || (stc_uart1_rx_head == stc_uart1_rx_tail)) {
         return -1;
     }
-    return (int)serial_rx_buffer[serial_rx_tail];
+    return (int)stc_uart1_rx_buffer[stc_uart1_rx_tail];
 # else
     if (Serial_available() == 0) {
         return -1;
@@ -574,19 +535,19 @@ int Serial_read(void)
     uint8_t tail;
     uint8_t value;
 
-    if ((serial_started == 0u) || (serial_rx_head == serial_rx_tail)) {
+    if ((stc_uart1_started == 0u) || (stc_uart1_rx_head == stc_uart1_rx_tail)) {
         return -1;
     }
-    tail = serial_rx_tail;
-    value = serial_rx_buffer[tail];
+    tail = stc_uart1_rx_tail;
+    value = stc_uart1_rx_buffer[tail];
     ++tail;
     if (tail >= (uint8_t)SERIAL_RX_BUFFER_SIZE) {
         tail = 0u;
     }
-    serial_rx_tail = tail;
+    stc_uart1_rx_tail = tail;
     return (int)value;
 # else
-    if (serial_started == 0u) {
+    if (stc_uart1_started == 0u) {
         return -1;
     }
     if (serial_peek_valid != 0u) {
@@ -628,12 +589,12 @@ size_t Serial_readBytes(void *buffer, size_t length) __reentrant
 size_t Serial_write(uint8_t value)
 {
 #if STC_CORE_HAS_UART1
-    if (serial_started == 0u) {
+    if (stc_uart1_started == 0u) {
         return 0u;
     }
 # if STC_CORE_SERIAL_BUFFERED_RX
     stc_serial_wait_for_tx();
-    serial_tx_complete = 0u;
+    stc_uart1_tx_complete = 0u;
     SCON &= (uint8_t)~STC_SCON_TI;
     SBUF = value;
     stc_serial_wait_for_tx();
@@ -654,7 +615,7 @@ size_t Serial_write(uint8_t value)
 void Serial_flush(void)
 {
 #if STC_CORE_HAS_UART1 && STC_CORE_SERIAL_BUFFERED_RX
-    if (serial_started != 0u) {
+    if (stc_uart1_started != 0u) {
         stc_serial_wait_for_tx();
     }
 #endif
@@ -667,8 +628,8 @@ bool Serial_overflow(void)
     uint8_t result;
 
     IE &= (uint8_t)~STC_IE_EA;
-    result = serial_rx_overflow;
-    serial_rx_overflow = 0u;
+    result = stc_uart1_rx_overflow;
+    stc_uart1_rx_overflow = 0u;
     if (saved_ea != 0u) {
         IE |= STC_IE_EA;
     }

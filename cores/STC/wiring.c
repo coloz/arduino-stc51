@@ -1,4 +1,5 @@
 #include "Arduino.h"
+#include "stc_isr_context.h"
 #include "stc_sfr.h"
 
 /*
@@ -39,16 +40,38 @@ static void stc_timer0_load(void)
 
 void stc_timer0_isr(void) __interrupt (1)
 {
+    STC_ISR_CONTEXT_ENTER();
 #if !STC_CORE_HAS_TIMER01_16BIT_AUTO_RELOAD
     /* Mode 1 has no hardware reload on STC89/STC12. */
     stc_timer0_load();
 #endif
     TCON &= (uint8_t)~STC_TCON_TF0;
     ++stc_timer0_millis_count;
+    STC_ISR_CONTEXT_LEAVE();
 }
 
 void init(void)
 {
+#if STC_CORE_HAS_PORT8 || STC_CORE_HAS_PORT9 || \
+    STC_CORE_HAS_PORTA || STC_CORE_HAS_PORTB
+    /*
+     * This target uses a linear 24-bit data map. Enabling EAXFR once exposes
+     * the independent 0x7e0000 XFR region without aliasing its internal XRAM.
+     */
+    P_SW2 |= STC_P_SW2_EAXFR;
+    CKCON = 0u;
+    TM0PS = 0u;
+# if F_CPU <= 64000000UL
+    WTST = 1u;
+# elif F_CPU <= 90000000UL
+    WTST = 2u;
+# elif F_CPU <= 120000000UL
+    WTST = 3u;
+# else
+    WTST = 4u;
+# endif
+#endif
+
 #if STC_CORE_PINMUX_PSWX1_BIT0_CLEAR
     uint8_t saved_p_sw2 = P_SW2;
 

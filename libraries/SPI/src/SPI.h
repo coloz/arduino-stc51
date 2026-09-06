@@ -1,14 +1,30 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Pure-C Arduino-style software SPI master.
+ * Arduino-style software SPI master with C and C++ profile routing.
  *
  * The SPI object is a const table of function pointers so a C sketch can use
- * SPI.begin(), SPI.transfer(), and similar syntax.  It is not source-compatible
- * with the C++ Arduino SPISettings/SPIClass API.
+ * SPI.begin(), SPI.transfer(), and similar syntax.  The opt-in C++ profile
+ * routes this public header to the SPISettings/SPIClass wrapper.
  */
 #ifndef STC_SOFTWARE_SPI_H
 #define STC_SOFTWARE_SPI_H
+
+#ifndef SPI_HAS_TRANSACTION
+# define SPI_HAS_TRANSACTION 1
+#endif
+#ifndef SPI_HAS_NOTUSINGINTERRUPT
+# define SPI_HAS_NOTUSINGINTERRUPT 1
+#endif
+#ifndef SPI_ATOMIC_VERSION
+# define SPI_ATOMIC_VERSION 1
+#endif
+
+#if defined(__cplusplus) && defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
+
+#include <cpp/SPIClass.h>
+
+#else
 
 #include <Arduino.h>
 
@@ -67,7 +83,11 @@ void SPI_begin(void) STC_SPI_REENTRANT;
 void SPI_setPins(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
                  uint8_t ss_pin) STC_SPI_REENTRANT;
 void SPI_beginTransaction(unsigned long clock_hz, uint8_t bit_order,
-                          uint8_t data_mode) STC_SPI_REENTRANT;
+                           uint8_t data_mode) STC_SPI_REENTRANT;
+void SPI_setSettings(unsigned long clock_hz, uint8_t bit_order,
+                     uint8_t data_mode) STC_SPI_REENTRANT;
+void SPI_usingInterrupt(uint8_t interrupt_number) STC_SPI_REENTRANT;
+void SPI_notUsingInterrupt(uint8_t interrupt_number) STC_SPI_REENTRANT;
 uint8_t SPI_transfer(uint8_t value) STC_SPI_REENTRANT;
 void SPI_transferBuffer(uint8_t *buffer, size_t length) STC_SPI_REENTRANT;
 void SPI_endTransaction(void) STC_SPI_REENTRANT;
@@ -83,6 +103,10 @@ typedef struct {
     void (*transferBuffer)(uint8_t *buffer, size_t length) STC_SPI_REENTRANT;
     void (*endTransaction)(void) STC_SPI_REENTRANT;
     void (*end)(void) STC_SPI_REENTRANT;
+    void (*usingInterrupt)(uint8_t interrupt_number) STC_SPI_REENTRANT;
+    void (*notUsingInterrupt)(uint8_t interrupt_number) STC_SPI_REENTRANT;
+    void (*setSettings)(unsigned long clock_hz, uint8_t bit_order,
+                        uint8_t data_mode) STC_SPI_REENTRANT;
 } STCSPIClass;
 
 extern const STCSPIClass SPI;
@@ -90,5 +114,7 @@ extern const STCSPIClass SPI;
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* C facade / C++ class routing */
 
 #endif

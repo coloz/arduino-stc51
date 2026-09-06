@@ -12,21 +12,17 @@
 #define LCD_MAX_ROWS         4u
 #define LCD_DDRAM_CHARACTERS 80u
 
-typedef struct {
-    uint8_t rs_pin;
-    uint8_t rw_pin;
-    uint8_t enable_pin;
-    uint8_t data_pins[8];
-    uint8_t columns;
-    uint8_t rows;
-    uint8_t display_function;
-    uint8_t display_control;
-    uint8_t display_mode;
-    uint8_t flags;
-} LiquidCrystalState;
+static STCLiquidCrystalState lcd_default_state;
+static STCLiquidCrystalState *lcd_current = &lcd_default_state;
+#define lcd_state (*lcd_current)
 
-/* One instance keeps the C API small and uses 17 bytes of persistent RAM. */
-static LiquidCrystalState lcd_state;
+STCLiquidCrystalState *LiquidCrystal_selectContext(STCLiquidCrystalState *context)
+    STC_LIQUIDCRYSTAL_REENTRANT
+{
+    STCLiquidCrystalState *previous = lcd_current;
+    lcd_current = context != NULL ? context : &lcd_default_state;
+    return previous;
+}
 
 static uint8_t lcd_is_ready(void)
 {
@@ -322,6 +318,7 @@ uint8_t LiquidCrystal_beginWithCharSize(uint8_t columns, uint8_t rows,
 
     lcd_state.columns = columns;
     lcd_state.rows = rows;
+    LiquidCrystal_setRowOffsets(0x00, 0x40, columns, 0x40 + columns);
     lcd_state.display_function &= LCD_8BITMODE;
     if (rows > 1u) {
         lcd_state.display_function |= LCD_2LINE;
@@ -401,8 +398,6 @@ void LiquidCrystal_home(void) STC_LIQUIDCRYSTAL_REENTRANT
 void LiquidCrystal_setCursor(uint8_t column, uint8_t row)
                              STC_LIQUIDCRYSTAL_REENTRANT
 {
-    uint8_t offset;
-
     if (lcd_is_ready() == 0u) {
         return;
     }
@@ -410,21 +405,18 @@ void LiquidCrystal_setCursor(uint8_t column, uint8_t row)
         row = (uint8_t)(lcd_state.rows - 1u);
     }
 
-    switch (row) {
-    case 1u:
-        offset = 0x40u;
-        break;
-    case 2u:
-        offset = lcd_state.columns;
-        break;
-    case 3u:
-        offset = (uint8_t)(0x40u + lcd_state.columns);
-        break;
-    default:
-        offset = 0u;
-        break;
-    }
-    LiquidCrystal_command((uint8_t)(LCD_SETDDRAMADDR | (column + offset)));
+    LiquidCrystal_command((uint8_t)(LCD_SETDDRAMADDR |
+                                    (column + lcd_state.row_offsets[row])));
+}
+
+void LiquidCrystal_setRowOffsets(int row0, int row1, int row2, int row3)
+                                  STC_LIQUIDCRYSTAL_REENTRANT
+{
+    /* Match the public Arduino API's conversion to an 8-bit DDRAM offset. */
+    lcd_state.row_offsets[0] = (uint8_t)row0;
+    lcd_state.row_offsets[1] = (uint8_t)row1;
+    lcd_state.row_offsets[2] = (uint8_t)row2;
+    lcd_state.row_offsets[3] = (uint8_t)row3;
 }
 
 void LiquidCrystal_noDisplay(void) STC_LIQUIDCRYSTAL_REENTRANT
@@ -626,5 +618,6 @@ STC_LIQUID_CRYSTAL_CODE const STCLiquidCrystalClass LiquidCrystal = {
     LiquidCrystal_command,
     LiquidCrystal_write,
     LiquidCrystal_print,
-    LiquidCrystal_println
+    LiquidCrystal_println,
+    LiquidCrystal_setRowOffsets
 };

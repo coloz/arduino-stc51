@@ -1,5 +1,7 @@
 #include "Arduino.h"
 
+#if !defined(STCXX_CPP_CORE) || !STCXX_CPP_CORE
+
 size_t Serial_printNumber(long value, uint8_t base) __reentrant
 {
     static __code const char digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -47,3 +49,5 @@ size_t Serial_printlnNumber(long value, uint8_t base) __reentrant
     count += Serial_write((uint8_t)'\n');
     return count;
 }
+
+#endif

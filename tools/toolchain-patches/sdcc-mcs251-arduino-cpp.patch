@@ -1,0 +1,1127 @@
+diff --git a/sdas/linksrc/Makefile.in b/sdas/linksrc/Makefile.in
+index aa255f9..f1370f1 100644
+--- a/sdas/linksrc/Makefile.in
++++ b/sdas/linksrc/Makefile.in
+@@ -63,10 +63,12 @@ transform       = @program_transform_name@
+ 
+ # Compiling entire program or any subproject
+ # ------------------------------------------
+-all: sdcc-ld8051 sdcc-ldz80 sdcc-ldgb sdcc-ld6808 sdcc-ldstm8 sdcc-ldpdk sdcc-ldf8
++all: sdcc-ld8051 sdcc-ldmcs251 sdcc-ldz80 sdcc-ldgb sdcc-ld6808 sdcc-ldstm8 sdcc-ldpdk sdcc-ldf8
+ 
+ sdcc-ld8051: checkconf $(ASLINK)
+ 
++sdcc-ldmcs251: checkconf $(top_builddir)/bin/sdldmcs251$(EXEEXT)
++
+ sdcc-ldz80: checkconf $(top_builddir)/bin/sdldz80$(EXEEXT)
+ 
+ sdcc-ldgb: checkconf $(top_builddir)/bin/sdldgb$(EXEEXT)
+@@ -79,7 +81,7 @@ sdcc-ldf8: checkconf $(top_builddir)/bin/sdldf8$(EXEEXT)
+ 
+ sdcc-ldpdk: checkconf $(top_builddir)/bin/sdldpdk$(EXEEXT)
+ 
+-$(top_builddir)/bin/sdldz80$(EXEEXT) $(top_builddir)/bin/sdldgb$(EXEEXT) $(top_builddir)/bin/sdldstm8$(EXEEXT) $(top_builddir)/bin/sdld6808$(EXEEXT) $(top_builddir)/bin/sdldpdk$(EXEEXT) $(top_builddir)/bin/sdldf8$(EXEEXT): $(ASLINK)
++$(top_builddir)/bin/sdldmcs251$(EXEEXT) $(top_builddir)/bin/sdldz80$(EXEEXT) $(top_builddir)/bin/sdldgb$(EXEEXT) $(top_builddir)/bin/sdldstm8$(EXEEXT) $(top_builddir)/bin/sdld6808$(EXEEXT) $(top_builddir)/bin/sdldpdk$(EXEEXT) $(top_builddir)/bin/sdldf8$(EXEEXT): $(ASLINK)
+ 	cp -p $(ASLINK) $@
+ 
+ $(ASLINK): $(LKOBJECTS)
+@@ -90,6 +92,11 @@ $(ASLINK): $(LKOBJECTS)
+ install: all installdirs
+ 	$(INSTALL) $(top_builddir)/bin/sdld$(EXEEXT) $(DESTDIR)$(bindir)/`echo 'sdld' | sed '$(transform)'`$(EXEEXT)
+ 	$(STRIP) $(DESTDIR)$(bindir)/`echo 'sdld' | sed '$(transform)'`$(EXEEXT)
++	if [ "`grep mcs251 $(top_builddir)/ports.build`" = "mcs251" ]; \
++	then \
++	  $(INSTALL) $(top_builddir)/bin/sdldmcs251$(EXEEXT) $(DESTDIR)$(bindir)/`echo 'sdldmcs251' | sed '$(transform)'`$(EXEEXT); \
++	  $(STRIP) $(DESTDIR)$(bindir)/`echo 'sdldmcs251' | sed '$(transform)'`$(EXEEXT); \
++	fi
+ 	if [ "`grep stm8 $(top_builddir)/ports.build`" = "stm8" ]; \
+ 	then \
+ 	  $(INSTALL) $(top_builddir)/bin/sdldstm8$(EXEEXT) $(DESTDIR)$(bindir)/`echo 'sdldstm8' | sed '$(transform)'`$(EXEEXT); \
+@@ -126,7 +133,7 @@ install: all installdirs
+ # Deleting all the installed files
+ # --------------------------------
+ uninstall:
+-	for ld in $(top_builddir)/bin/sdld $(top_builddir)/bin/sdldz80 $(top_builddir)/bin/sdldgb $(top_builddir)/bin/sdldstm8 $(top_builddir)/bin/sdld6808 $(top_builddir)/bin/sdldpdk $(top_builddir)/bin/sdldf8; \
++	for ld in $(top_builddir)/bin/sdld $(top_builddir)/bin/sdldmcs251 $(top_builddir)/bin/sdldz80 $(top_builddir)/bin/sdldgb $(top_builddir)/bin/sdldstm8 $(top_builddir)/bin/sdld6808 $(top_builddir)/bin/sdldpdk $(top_builddir)/bin/sdldf8; \
+ 	do \
+ 	  rm -f $(DESTDIR)$(bindir)/`echo \`basename $$ld\` | sed '$(transform)'`$(EXEEXT); \
+ 	done
+diff --git a/sdas/linksrc/aslink.h b/sdas/linksrc/aslink.h
+index 0a41abb..dd2107f 100644
+--- a/sdas/linksrc/aslink.h
++++ b/sdas/linksrc/aslink.h
+@@ -1174,8 +1174,8 @@ extern  char *sdld_output;      /*      output file name, --output argument
+ extern char *optsdcc;
+ extern char *optsdcc_module;
+ /* sdld 8015 specific */
+-extern  char    idatamap[256];  /*      ' ' means unused
+-                                 */
++#define SDLD_MAX_IRAM_SIZE 0x10000u
++extern  char    idatamap[SDLD_MAX_IRAM_SIZE]; /* ' ' means unused */
+ /* end sdld 8051 specific */
+ /* end sdld specific */
+ 
+diff --git a/sdas/linksrc/lkarea.c b/sdas/linksrc/lkarea.c
+index 75f6004..8d98472 100644
+--- a/sdas/linksrc/lkarea.c
++++ b/sdas/linksrc/lkarea.c
+@@ -794,7 +794,7 @@ void lnkarea2 (void)
+         struct area *gs0_ap = NULL;
+         struct sym *sp_dseg_s=NULL, *sp_dseg_l=NULL;
+ 
+-        memset(idatamap, ' ', 256);
++        memset(idatamap, ' ', sizeof(idatamap));
+         memset(codemap8051, 0, sizeof(codemap8051));
+         memset(xdatamap, 0, sizeof(xdatamap));
+ 
+@@ -952,12 +952,23 @@ a_uint lnksect2 (struct area *tap, int locIndex)
+         /*Notice that only ISEG and SSEG can be in the indirectly addressable internal RAM*/
+         if( (!strcmp(tap->a_id, "ISEG")) || (!strcmp(tap->a_id, "SSEG")) )
+         {
+-                ramstart = iram_start;
+-
+-                if ((iram_size <= 0) || (ramstart + iram_size > 0x100))
+-                        ramlimit = 0x100;
++                if (TARGET_IS_MCS251 && !strcmp(tap->a_id, "SSEG") && iram_size > 0x100)
++                {
++                        /* SPX addresses the complete EDATA stack.  Respect an
++                           explicit SSEG base instead of searching from the
++                           first legacy-IRAM hole. */
++                        ramstart = tap->a_bset ? tap->a_addr : 0x100;
++                        ramlimit = iram_size;
++                }
+                 else
+-                        ramlimit = ramstart + iram_size;
++                {
++                        ramstart = iram_start;
++
++                        if ((iram_size <= 0) || (ramstart + iram_size > 0x100))
++                                ramlimit = 0x100;
++                        else
++                                ramlimit = ramstart + iram_size;
++                }
+ 	}
+         else
+         {
+@@ -1307,4 +1318,3 @@ a_uint lnksect2 (struct area *tap, int locIndex)
+         return addr;
+ }
+ /* end sdld specific */
+-
+diff --git a/sdas/linksrc/lkdata.c b/sdas/linksrc/lkdata.c
+index 758824a..9fb6fd9 100644
+--- a/sdas/linksrc/lkdata.c
++++ b/sdas/linksrc/lkdata.c
+@@ -602,7 +602,7 @@ struct	lbfile	*lbfhead;	/*	pointer to the first
+ 				 *	library file structure
+ 				 */
+ /* sdld 8051 specific */
+-char idatamap[256];
++char idatamap[SDLD_MAX_IRAM_SIZE];
+ /* end sdld 8051 specific */
+ 
+ /*
+diff --git a/sdas/linksrc/lkmain.c b/sdas/linksrc/lkmain.c
+index 0a7e1f4..ad60551 100644
+--- a/sdas/linksrc/lkmain.c
++++ b/sdas/linksrc/lkmain.c
+@@ -96,7 +96,11 @@ void Areas51 (void)
+ 	}
+ 
+         sp = lkpsym("l_IRAM", 1);
+-        sp->s_addr = ((iram_size>0) && (iram_size<=0x100)) ? iram_size : 0x0100;
++        if (TARGET_IS_MCS251 && iram_size > 0 &&
++            iram_size <= SDLD_MAX_IRAM_SIZE)
++                sp->s_addr = iram_size;
++        else
++                sp->s_addr = ((iram_size>0) && (iram_size<=0x100)) ? iram_size : 0x0100;
+         sp->s_axp = NULL;
+         sp->s_type |= S_DEF;
+ }
+@@ -997,7 +1001,10 @@ parse()
+                                                 if (ip && *ip)
+                                                 {
+                                                         stacksize = expr(0);
+-                                                        if (stacksize > 256) stacksize = 256;
++                                                        if (TARGET_IS_MCS251 && stacksize > (int)SDLD_MAX_IRAM_SIZE)
++                                                                stacksize = (int)SDLD_MAX_IRAM_SIZE;
++                                                        else if (!TARGET_IS_MCS251 && stacksize > 256)
++                                                                stacksize = 256;
+                                                         else if (stacksize < 0) stacksize = 0;
+                                                 }
+ 						return(0);
+@@ -1606,8 +1613,12 @@ iramsav()
+         iram_size = expr(0);    /* evaluate size expression */
+   else
+         iram_size = 128;                /* Default is 128 (0x80) bytes */
+-  if ((iram_size<=0) || (iram_size>256))
++  if (TARGET_IS_MCS251) {
++        if ((iram_size <= 0) || (iram_size > SDLD_MAX_IRAM_SIZE))
++                iram_size = 0x100;
++  } else if ((iram_size<=0) || (iram_size>256)) {
+         iram_size = 128;                /* Default is 128 (0x80) bytes */
++  }
+ }
+ 
+ /*Similar to iramsav but for xram memory*/
+diff --git a/sdas/linksrc/lkmem.c b/sdas/linksrc/lkmem.c
+index a4bb3b9..fcb4cab 100644
+--- a/sdas/linksrc/lkmem.c
++++ b/sdas/linksrc/lkmem.c
+@@ -502,6 +502,9 @@ int summary2(struct area * areap)
+     _Mem XRam= {0xffff, 0, 0, 65536, "EXTERNAL RAM",    0x0100};
+     _Mem Rom=  {0xffff, 0, 0, 65536, "ROM/EPROM/FLASH", 0x0200};
+ 
++    if (TARGET_IS_MCS251)
++        Stack.Start = SDLD_MAX_IRAM_SIZE;
++
+     if(rflag) /*For the DS390*/
+     {
+         XRam.Max=0x1000000; /*24 bits*/
+@@ -585,19 +588,33 @@ int summary2(struct area * areap)
+     }
+     fprintf(of, "\n0-3:Reg Banks, T:Bit regs, a-z:Data, B:Bits, Q:Overlay, I:iData, S:Stack, A:Absolute\n");
+ 
+-    for(j=0; j<256; j++)
++    /* The synthetic SSEG allocation is recorded in the global stacksize.
++     * For a very large overlay area the representative area node may keep a
++     * zero a_size even though its final address (and the map) are correct.
++     * Therefore use the linker's authoritative -S value for MCS251 while
++     * retaining the area node as the source of the explicitly-bound base. */
++    if (TARGET_IS_MCS251 && iram_size > 0x100 && stacksize > 0 &&
++        Stack.Start < SDLD_MAX_IRAM_SIZE)
++    {
++        Stack_Start = Stack.Start;
++        Stack_Size = stacksize;
++    }
++    else
+     {
+-        if(idatamap[j]=='S')
++        for(j=0; j<256; j++)
+         {
+-            Stack_Start=j;
+-            break;
++            if(idatamap[j]=='S')
++            {
++                Stack_Start=j;
++                break;
++            }
+         }
+-    }
+ 
+-    for(j=Stack_Start, Stack_Size=0; j<((iram_size)?iram_size:256); j++)
+-    {
+-        if(idatamap[j]=='S') Stack_Size++;
+-        else break;
++        for(j=Stack_Start, Stack_Size=0; j<((iram_size)?iram_size:256); j++)
++        {
++            if(idatamap[j]=='S') Stack_Size++;
++            else break;
++        }
+     }
+ 
+     xp=areap;
+@@ -614,9 +631,16 @@ int summary2(struct area * areap)
+     }
+ 
+     /*Report the position of the begining of the stack*/
+-    if(Stack_Start!=256 && Stack_Size > 0)
+-        fprintf(of, "\n%s starts at: 0x%02lx (sp set to 0x%02lx) with %ld bytes available.",
+-            rflag ? "16 bit mode initial stack" : "Stack", Stack_Start, Stack_Start-1, Stack_Size);
++    if(Stack_Size > 0 &&
++       ((TARGET_IS_MCS251 && Stack_Start < SDLD_MAX_IRAM_SIZE) ||
++        (!TARGET_IS_MCS251 && Stack_Start != 256))) {
++        if (TARGET_IS_MCS251)
++            fprintf(of, "\nStack starts at: 0x%04lx (spx set to 0x%04lx) with %ld bytes available.",
++                Stack_Start, Stack_Start-1, Stack_Size);
++        else
++            fprintf(of, "\n%s starts at: 0x%02lx (sp set to 0x%02lx) with %ld bytes available.",
++                rflag ? "16 bit mode initial stack" : "Stack", Stack_Start, Stack_Start-1, Stack_Size);
++    }
+     else
+         fprintf(of, "\nNo clue at where the stack begins and ends!");
+ 
+@@ -716,4 +740,3 @@ int summary2(struct area * areap)
+     return 0;
+   }
+ }
+-
+diff --git a/sdas/linksrc/sdld.c b/sdas/linksrc/sdld.c
+index 123bd9a..b2b8812 100644
+--- a/sdas/linksrc/sdld.c
++++ b/sdas/linksrc/sdld.c
+@@ -73,6 +73,7 @@ sdld_init (char *path)
+     { "z80",  TARGET_ID_Z80,  },
+     { "z180", TARGET_ID_Z180, },
+     { "8051", TARGET_ID_8051, },
++    { "mcs251", TARGET_ID_MCS251, },
+     { "6808", TARGET_ID_6808, },
+     { "stm8", TARGET_ID_STM8, },
+     { "pdk",  TARGET_ID_PDK,  },
+@@ -144,5 +145,5 @@ int
+ is_sdld_target_8051_like(void)
+ {
+   check_init();
+-  return target == TARGET_ID_8051;
++  return target == TARGET_ID_8051 || target == TARGET_ID_MCS251;
+ }
+diff --git a/sdas/linksrc/sdld.h b/sdas/linksrc/sdld.h
+index e2ddfcf..12bf896 100644
+--- a/sdas/linksrc/sdld.h
++++ b/sdas/linksrc/sdld.h
+@@ -24,6 +24,7 @@ enum sdld_target_e {
+   TARGET_ID_Z80,
+   TARGET_ID_Z180,
+   TARGET_ID_8051,
++  TARGET_ID_MCS251,
+   TARGET_ID_6808,
+   TARGET_ID_STM8,
+   TARGET_ID_PDK,
+@@ -43,7 +44,8 @@ int is_sdld_target_8051_like(void);
+ #define TARGET_IS_GB	(get_sdld_target() == TARGET_ID_GB)
+ #define TARGET_IS_Z80   (get_sdld_target() == TARGET_ID_Z80)
+ #define TARGET_IS_Z180  (get_sdld_target() == TARGET_ID_Z180)
+-#define TARGET_IS_8051  (get_sdld_target() == TARGET_ID_8051)
++#define TARGET_IS_8051  is_sdld_target_8051_like()
++#define TARGET_IS_MCS251 (get_sdld_target() == TARGET_ID_MCS251)
+ #define TARGET_IS_6808  (get_sdld_target() == TARGET_ID_6808)
+ #define TARGET_IS_STM8  (get_sdld_target() == TARGET_ID_STM8)
+ #define TARGET_IS_PDK                      \
+diff --git a/src/SDCClrange.c b/src/SDCClrange.c
+index 9ba2696..b14e27b 100644
+--- a/src/SDCClrange.c
++++ b/src/SDCClrange.c
+@@ -460,7 +460,15 @@ findPrevUse (eBBlock *ebp, iCode *ic, operand *op,
+                   /* to the last common dominator before defs/uses.    */
+                   /* First, find the common dominators of all defs/uses */
+                   unvisitBlocks (ebbs, count);
+-                  used = newBitVect (count);
++                  /* The use being examined need not have been entered in
++                   * OP_USES yet (computeLiveRanges builds that information).
++                   * It must nevertheless be dominated by the initializer.
++                   * Seed both sets with this block instead of relying on a
++                   * possibly empty/stale defs/uses scan to provide a block.
++                   */
++                  dom = bitVectCopy (ebp->domVect);
++                  used = bitVectSetBit (newBitVect (count), ebp->bbnum);
++                  ebp->visited = 1;
+                   for (i=0; i<iCodeKey; i++)
+                     {
+                       if (bitVectBitValue (OP_USES (op), i) ||
+@@ -1285,4 +1293,3 @@ shortenLiveRanges (iCode *sic, ebbIndex *ebbi)
+ 
+   return (change);
+ }
+-
+diff --git a/src/SDCCmain.c b/src/SDCCmain.c
+index 0f560a2..f6c7c89 100644
+--- a/src/SDCCmain.c
++++ b/src/SDCCmain.c
+@@ -1981,7 +1981,7 @@ linkEdit (char **envp)
+ 
+           /* if stack size specified */
+           if (options.stack_size)
+-            fprintf (lnkfile, "-S 0x%02x\n", options.stack_size);
++            fprintf (lnkfile, "-S 0x%x\n", options.stack_size);
+ 
+           /* if xram size specified */
+           if (options.xram_size_set)
+@@ -2049,7 +2049,9 @@ linkEdit (char **envp)
+           WRITE_SEG_LOC (BIT_NAME, 0);
+ 
+           /* stack start */
+-          if ((options.stack_loc) && (options.stack_loc < 0x100) && TARGET_MCS51_LIKE && !TARGET_MOS6502_LIKE)
++          if ((options.stack_loc) && TARGET_MCS51_LIKE &&
++              (TARGET_IS_MCS251 ? options.stack_loc < 0x10000 : options.stack_loc < 0x100) &&
++              !TARGET_MOS6502_LIKE)
+             {
+               WRITE_SEG_LOC ("SSEG", options.stack_loc);
+               /* with the disappearance of --no-pack-iram I don't think this is ever valid anymore */
+diff --git a/src/SDCCpeeph.c b/src/SDCCpeeph.c
+index 7a20b92..74c3708 100644
+--- a/src/SDCCpeeph.c
++++ b/src/SDCCpeeph.c
+@@ -3119,9 +3119,10 @@ keyForVar (const char *d)
+ static void
+ bindVar (int key, char **s, hTab ** vtab)
+ {
+-  char vval[MAX_PATTERN_LEN];
++  struct dbuf_s vval;
+   char *vvx;
+-  char *vv = vval;
++
++  dbuf_init (&vval, MAX_PATTERN_LEN);
+ 
+   /* first get the value of the variable */
+   vvx = *s;
+@@ -3141,22 +3142,21 @@ bindVar (int key, char **s, hTab ** vtab)
+           ubb++;
+           while (ubb)
+             {
+-              *vv++ = *vvx++;
++              dbuf_append_char (&vval, *vvx++);
+               if (*vvx == '(')
+                 ubb++;
+               if (*vvx == ')')
+                 ubb--;
+             }
+           // include the trailing ')'
+-          *vv++ = *vvx++;
++          dbuf_append_char (&vval, *vvx++);
+         }
+       else
+-        *vv++ = *vvx++;
++        dbuf_append_char (&vval, *vvx++);
+     }
+   *s = vvx;
+-  *vv = '\0';
+   /* got value */
+-  vvx = traceAlloc (&_G.values, Safe_strdup(vval));
++  vvx = traceAlloc (&_G.values, dbuf_detach_c_str (&vval));
+ 
+   hTabAddItem (vtab, key, vvx);
+ }
+diff --git a/src/mcs251/Makefile.in b/src/mcs251/Makefile.in
+index 1fb1218..cfc7de1 100644
+--- a/src/mcs251/Makefile.in
++++ b/src/mcs251/Makefile.in
+@@ -11,251 +11,4 @@ PEEPRULES = peeph.rul
+ peeph.rul: $(top_srcdir)/src/mcs51/peeph.def $(srcdir)/peeph-mcs251.def
+ 	$(AWK) -f $(top_srcdir)/src/SDCCpeeph.awk $^ > $@
+ 
+-.PHONY: check
+-check: all
+-	$(PYTHON) $(srcdir)/tests/check-backend-isolation.py \
+-		--mcs251-source $(srcdir)/main.c \
+-		--mcs251-peep-source $(srcdir)/peep.c \
+-		--mcs251-rtrack-source $(srcdir)/rtrack.c \
+-		--mcs251-gen-source $(srcdir)/gen.c \
+-		--mcs251-gen-lower-source $(srcdir)/gen_lower.c.inc \
+-		--mcs251-ralloc-source $(srcdir)/ralloc.c \
+-		--mcs51-source $(top_srcdir)/src/mcs51/main.c \
+-		--mcs51-peep-source $(top_srcdir)/src/mcs51/peep.c \
+-		--mcs51-rtrack-source $(top_srcdir)/src/mcs51/rtrack.c \
+-		--mcs51-gen-source $(top_srcdir)/src/mcs51/gen.c \
+-		--mcs51-ralloc-source $(top_srcdir)/src/mcs51/ralloc.c
+-	$(PYTHON) $(srcdir)/tests/check-language-modes.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--source $(srcdir)/tests/language-mode.c
+-	$(PYTHON) $(srcdir)/tests/check-target-macros.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--device-include $(top_srcdir)/device/include
+-	$(PYTHON) $(srcdir)/tests/check-static-inline.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--source $(srcdir)/tests/static-inline-emission.c
+-	$(PYTHON) $(srcdir)/tests/check-compound-literal-codegen.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--source $(srcdir)/tests/compound-literal-argument.c
+-	$(PYTHON) $(srcdir)/tests/check-gnu-extensions.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--device-include $(top_srcdir)/device/include \
+-		--empty-aggregate-source \
+-			$(srcdir)/tests/gnu-empty-aggregate.c \
+-		--keyword-alias-source \
+-			$(srcdir)/tests/gnu-keyword-aliases.c \
+-		--attribute-source \
+-			$(srcdir)/tests/gnu-attributes.c \
+-		--invalid-attribute-source \
+-			$(srcdir)/tests/gnu-attribute-invalid.c \
+-		--types-compatible-source \
+-			$(srcdir)/tests/gnu-types-compatible.c \
+-		--invalid-types-compatible-source \
+-			$(srcdir)/tests/gnu-types-compatible-invalid.c \
+-		--builtin-expect-source \
+-			$(srcdir)/tests/gnu-builtin-expect.c \
+-		--invalid-builtin-expect-source \
+-			$(srcdir)/tests/gnu-builtin-expect-invalid.c \
+-		--builtin-constant-p-source \
+-			$(srcdir)/tests/gnu-builtin-constant-p.c \
+-		--invalid-builtin-constant-p-source \
+-			$(srcdir)/tests/gnu-builtin-constant-p-invalid.c \
+-		--has-builtin-source \
+-			$(srcdir)/tests/gnu-has-builtin.c \
+-		--bit-builtins-source \
+-			$(srcdir)/tests/gnu-bit-builtins.c \
+-		--invalid-bit-builtins-source \
+-			$(srcdir)/tests/gnu-bit-builtins-invalid.c \
+-		--byte-swap-builtins-source \
+-			$(srcdir)/tests/gnu-byte-swap-builtins.c \
+-		--invalid-byte-swap-builtins-source \
+-			$(srcdir)/tests/gnu-byte-swap-builtins-invalid.c \
+-		--overflow-builtins-source \
+-			$(srcdir)/tests/gnu-overflow-builtins.c \
+-		--invalid-overflow-builtins-source \
+-			$(srcdir)/tests/gnu-overflow-builtins-invalid.c \
+-		--typed-overflow-builtins-source \
+-			$(srcdir)/tests/gnu-typed-overflow-builtins.c \
+-		--invalid-typed-overflow-builtins-source \
+-			$(srcdir)/tests/gnu-typed-overflow-builtins-invalid.c \
+-		--auto-type-source \
+-			$(srcdir)/tests/gnu-auto-type.c \
+-		--invalid-auto-type-source \
+-			$(srcdir)/tests/gnu-auto-type-invalid.c \
+-		--multiple-auto-type-source \
+-			$(srcdir)/tests/gnu-auto-type-multiple.c \
+-		--declarator-auto-type-source \
+-			$(srcdir)/tests/gnu-auto-type-declarator.c \
+-		--empty-declaration-source \
+-			$(srcdir)/tests/gnu-empty-declaration.c \
+-		--compound-literal-source \
+-			$(srcdir)/tests/conditional-compound-literal.c \
+-		--statement-expression-source \
+-			$(srcdir)/tests/gnu-statement-expressions.c \
+-		--case-range-source \
+-			$(srcdir)/tests/gnu-case-ranges.c \
+-		--extension-source \
+-			$(srcdir)/tests/gnu-extension-keyword.c
+-	$(PYTHON) $(srcdir)/tests/check-diagnostics.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--incompatible-extern-source \
+-			$(srcdir)/tests/incompatible-extern.c \
+-		--compatible-extern-array-source \
+-			$(srcdir)/tests/compatible-extern-array.c \
+-		--compatible-block-extern-source \
+-			$(srcdir)/tests/compatible-block-extern-struct.c \
+-		--incompatible-shadowed-struct-source \
+-			$(srcdir)/tests/incompatible-shadowed-struct.c \
+-		--invalid-wide-bitfield-source \
+-			$(srcdir)/tests/invalid-wide-bitfields.c
+-	$(PYTHON) $(srcdir)/tests/check-c23-struct-redefinitions.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--compatible-c23-struct-source \
+-			$(srcdir)/tests/compatible-c23-struct.c \
+-		--incompatible-c23-struct-source \
+-			$(srcdir)/tests/incompatible-c23-struct.c
+-	$(SHELL) $(srcdir)/tests/check-driver.sh \
+-		$(top_builddir)/bin/sdcc \
+-		$(srcdir)/tests/compiler-smoke.c \
+-		$(top_srcdir)/device/include \
+-		$(top_srcdir)/device/lib/_atof.c \
+-		$(top_srcdir)/device/lib/_fsneq.c \
+-		$(top_srcdir)/device/lib/bsearch.c \
+-		$(top_srcdir)/device/lib/_setjmp.c \
+-		$(top_srcdir)/device/lib/_gptrget.c \
+-		$(top_srcdir)/device/lib/_gptrgetc.c \
+-		$(top_srcdir)/device/lib/_gptrput.c \
+-		$(top_srcdir)/device/lib/_decdptr.c \
+-		$(top_srcdir)/device/lib/sprintf.c \
+-		$(top_srcdir)/device/lib/vprintf.c
+-	$(SHELL) $(srcdir)/tests/check-codegen.sh \
+-		$(top_builddir)/bin/sdcc \
+-		$(srcdir)/tests/native-optimization.c \
+-		$(srcdir)/tests/call-24bit.c \
+-		$(srcdir)/tests/interrupt-vector.c \
+-		$(srcdir)/tests/aggregate-initializer.c \
+-		$(srcdir)/tests/memory-model.c \
+-		$(top_srcdir)/device/lib/bsearch.c \
+-		$(top_srcdir)/device/lib/_mullonglong.c \
+-		$(top_srcdir)/device/lib/_divuint.c \
+-		$(top_srcdir)/device/include
+-	$(PYTHON) $(srcdir)/tests/check-native-isa-selection.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--source $(srcdir)/tests/native-extension.c
+-	$(PYTHON) $(srcdir)/tests/check-register-allocation.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--source $(srcdir)/tests/register-pressure.c
+-	$(PYTHON) $(srcdir)/tests/check-wide-shift-jump-table.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--source $(srcdir)/tests/large-switch.c
+-	$(PYTHON) $(srcdir)/tests/check-endianness.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--source $(srcdir)/tests/endianness-layout.c \
+-		--aggregate-source $(srcdir)/tests/aggregate-return.c
+-	$(PYTHON) $(srcdir)/tests/check-elf-output.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--source $(srcdir)/tests/elf-output-probe.c
+-
+-QEMU_MCS251 ?= $(HOME)/oss/qemu/builds/build-mcs251/qemu-system-mcs251
+-QEMU_MCS51 ?= $(HOME)/oss/qemu/builds/build-mcs51/qemu-system-mcs51
+-QEMU_TRACE_DIR ?=
+-MCS251_LIBRARY_DIR ?= $(top_builddir)/device/lib/build/mcs251-small
+-MCS251_STACK_AUTO_LIBRARY_DIR ?= $(top_builddir)/device/lib/build/mcs251-small-stack-auto
+-MCS251_LARGE_LIBRARY_DIR ?= $(top_builddir)/device/lib/build/mcs251-large
+-MCS251_LARGE_STACK_AUTO_LIBRARY_DIR ?= $(top_builddir)/device/lib/build/mcs251-large-stack-auto
+-
+-.PHONY: check-qemu check-official-qemu check-uart-qemu check-gdbstub
+-check-qemu: all check-official-qemu check-gdbstub
+-	$(PYTHON) $(srcdir)/tests/check-qemu.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--sdas251 $(top_builddir)/bin/sdas251 \
+-		--qemu $(QEMU_MCS251) \
+-		--main-source $(srcdir)/tests/far-main.c \
+-		--far-source $(srcdir)/tests/far-callee.c \
+-		--crt0 $(srcdir)/tests/crt0.asm \
+-		--runtime-source $(srcdir)/tests/runtime-main.c \
+-		--statement-expression-source \
+-			$(srcdir)/tests/statement-expression-runtime.c \
+-		--bit-builtins-source \
+-			$(srcdir)/tests/gnu-bit-builtins-runtime.c \
+-		--byte-swap-builtins-source \
+-			$(srcdir)/tests/gnu-byte-swap-builtins-runtime.c \
+-		--size-type-source $(srcdir)/tests/size-type-runtime.c \
+-		--register-pressure-source \
+-			$(srcdir)/tests/register-pressure.c \
+-		--wide-shift-source $(srcdir)/tests/large-switch.c \
+-		--overflow-builtins-source \
+-			$(srcdir)/tests/gnu-overflow-builtins-runtime.c \
+-		--typed-overflow-builtins-source \
+-			$(srcdir)/tests/gnu-typed-overflow-builtins-runtime.c \
+-		--optimization-runtime-source \
+-			$(srcdir)/tests/optimization-runtime.c \
+-		--abi-regression-source $(srcdir)/tests/abi-regression-runtime.c \
+-		--longlong-source $(srcdir)/tests/longlong-runtime.c \
+-		--startup-memory-source $(srcdir)/tests/startup-memory.c \
+-		--setjmp-spx-source $(srcdir)/tests/setjmp-spx-runtime.c \
+-		--endianness-runtime-source \
+-			$(srcdir)/tests/endianness-runtime.c \
+-		--aggregate-source $(srcdir)/tests/aggregate-return.c \
+-		--memory-model-main-source $(srcdir)/tests/memory-model-runtime.c \
+-		--memory-model-source $(srcdir)/tests/memory-model.c \
+-		--device-include $(top_srcdir)/device/include \
+-		--library-dir $(MCS251_LIBRARY_DIR) \
+-		--stack-auto-library-dir $(MCS251_STACK_AUTO_LIBRARY_DIR) \
+-		--large-library-dir $(MCS251_LARGE_LIBRARY_DIR) \
+-		--large-stack-auto-library-dir $(MCS251_LARGE_STACK_AUTO_LIBRARY_DIR) \
+-		$(if $(QEMU_TRACE_DIR),--trace-dir $(QEMU_TRACE_DIR)/mcs251)
+-
+-check-official-qemu: all
+-	$(PYTHON) $(srcdir)/tests/official/check-official-examples.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--qemu $(QEMU_MCS251) \
+-		--source-dir $(srcdir)/tests/official \
+-		--device-include $(top_srcdir)/device/include \
+-		--library-dir $(MCS251_LIBRARY_DIR)
+-
+-check-uart-qemu: all
+-	$(PYTHON) $(srcdir)/tests/official/check-official-examples.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--qemu $(QEMU_MCS251) \
+-		--source-dir $(srcdir)/tests/official \
+-		--device-include $(top_srcdir)/device/include \
+-		--library-dir $(MCS251_LIBRARY_DIR) \
+-		--uart-only
+-
+-check-gdbstub: all
+-	$(PYTHON) $(srcdir)/tests/check-gdbstub.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--qemu $(QEMU_MCS251) \
+-		--source $(srcdir)/tests/debug-smoke.c \
+-		--device-include $(top_srcdir)/device/include \
+-		--library-dir $(MCS251_LIBRARY_DIR)
+-
+-.PHONY: check-mcs51-qemu
+-check-mcs51-qemu: all
+-	$(PYTHON) $(srcdir)/tests/check-mcs51-qemu.py \
+-		--sdcc $(top_builddir)/bin/sdcc \
+-		--qemu $(QEMU_MCS51) \
+-		--source $(srcdir)/tests/mcs51-regression.c \
+-		--statement-expression-source \
+-			$(srcdir)/tests/statement-expression-runtime.c \
+-		--bit-builtins-source \
+-			$(srcdir)/tests/gnu-bit-builtins-runtime.c \
+-		--byte-swap-builtins-source \
+-			$(srcdir)/tests/gnu-byte-swap-builtins-runtime.c \
+-		--size-type-source $(srcdir)/tests/size-type-runtime.c \
+-		--register-pressure-source \
+-			$(srcdir)/tests/register-pressure.c \
+-		--overflow-builtins-source \
+-			$(srcdir)/tests/gnu-overflow-builtins-runtime.c \
+-		--typed-overflow-builtins-source \
+-			$(srcdir)/tests/gnu-typed-overflow-builtins-runtime.c \
+-		--longlong-source $(srcdir)/tests/longlong-runtime.c \
+-		--device-include $(top_srcdir)/device/include \
+-		--library-dir $(top_builddir)/device/lib/build/small \
+-		--stack-auto-library-dir \
+-			$(top_builddir)/device/lib/build/small-stack-auto \
+-		--baseline-digest $(srcdir)/tests/mcs51-regression.sha256 \
+-		$(if $(QEMU_TRACE_DIR),--trace-dir $(QEMU_TRACE_DIR)/mcs51)
+-
+ include $(srcdir)/../port.mk
+diff --git a/src/mcs251/gen.c b/src/mcs251/gen.c
+index 7f19079..61aeb1c 100644
+--- a/src/mcs251/gen.c
++++ b/src/mcs251/gen.c
+@@ -53,6 +53,25 @@ extern int allocInfo;
+  */
+ #include "gen_lower.c.inc"
+ 
++/* MCS251 native PUSH/POP of a double register transfers four bytes.  The
++ * generic emitpush()/emitpop() helpers account for one byte, so keep the
++ * compiler's stack-offset model in sync when using the native wide form. */
++static void
++mcs251EmitPushWide (const char *arg, int size)
++{
++  wassertl (size > 0, "invalid wide push size");
++  emitpush (arg);
++  _G.stack.pushed += size - 1;
++}
++
++static void
++mcs251EmitPopWide (const char *arg, int size)
++{
++  wassertl (size > 0 && _G.stack.pushed >= size, "stack underflow");
++  _G.stack.pushed -= size - 1;
++  emitpop (arg);
++}
++
+ /*-----------------------------------------------------------------*/
+ /* genMove_o - Copy part of one asmop to another                   */
+ /*-----------------------------------------------------------------*/
+@@ -1801,7 +1820,8 @@ genFunction (iCode * ic)
+   wassertl (_G.stack.pushed == 0, "stack over/underflow");
+   wassertl (_G.stack.xpushed == 0, "xstack over/underflow");
+ 
+-  /* if this is an interrupt service routine then save acc, b, dpl, dph */
++  /* if this is an interrupt service routine then save the compiler's
++     fixed scratch state in addition to acc, b, dpl and dph */
+   if (IFFUNC_ISISR (ftype))
+     {
+       bitVect *rsavebits;
+@@ -1832,6 +1852,12 @@ genFunction (iCode * ic)
+         emitpush ("dpl");
+       if (!inExcludeList ("dph"))
+         emitpush ("dph");
++      if (!inExcludeList ("dpxl"))
++        emitpush ("dpxl");
++      if (!inExcludeList ("dr24"))
++        mcs251EmitPushWide ("dr24", 4);
++      if (!inExcludeList ("dr28"))
++        mcs251EmitPushWide ("dr28", 4);
+ 
+       /* R8-R15 are fixed registers, not members of a PSW-selected bank. */
+       saveFixedByteRegisters (sym, IFFUNC_HASFCALL (ftype));
+@@ -2416,6 +2442,12 @@ genEndFunction (iCode * ic)
+ 
+       restoreFixedByteRegisters (sym, IFFUNC_HASFCALL (ftype));
+ 
++      if (!inExcludeList ("dr28"))
++        mcs251EmitPopWide ("dr28", 4);
++      if (!inExcludeList ("dr24"))
++        mcs251EmitPopWide ("dr24", 4);
++      if (!inExcludeList ("dpxl"))
++        emitpop ("dpxl");
+       if (!inExcludeList ("dph"))
+         emitpop ("dph");
+       if (!inExcludeList ("dpl"))
+@@ -3292,6 +3324,39 @@ mcs251GenDwordArithmetic (operand *left, operand *right, operand *result,
+   return TRUE;
+ }
+ 
++/* Multi-byte arithmetic proceeds from the low byte towards the high byte so
++   that carry propagates naturally.  A destination register can nevertheless
++   alias a source register that a later iteration still has to read.  For
++   example, [r7,r6,r5] + 5 -> [r5,r4,r3] must not overwrite source r5 while
++   producing destination byte zero. */
++static bool
++mcs251ArithmeticHasDestructiveOverlap (operand *result, operand *left,
++                                        operand *right, int size)
++{
++  asmop *resultAop = AOP (result);
++  asmop *leftAop = AOP (left);
++  asmop *rightAop = AOP (right);
++  int destination, source;
++
++  if (resultAop->type != AOP_REG)
++    return FALSE;
++
++  for (destination = 0; destination < size; ++destination)
++    for (source = destination + 1; source < size; ++source)
++      {
++        if (leftAop->type == AOP_REG && source < leftAop->size &&
++            resultAop->aopu.aop_reg[destination] ==
++              leftAop->aopu.aop_reg[source])
++          return TRUE;
++        if (rightAop->type == AOP_REG && source < rightAop->size &&
++            resultAop->aopu.aop_reg[destination] ==
++              rightAop->aopu.aop_reg[source])
++          return TRUE;
++      }
++
++  return FALSE;
++}
++
+ /*-----------------------------------------------------------------*/
+ /* genPlus - generates code for addition                           */
+ /*-----------------------------------------------------------------*/
+@@ -3304,6 +3369,7 @@ genPlus (iCode * ic)
+   bool swappedLR = FALSE;
+   operand *leftOp, *rightOp;
+   operand *op;
++  bool deferResultWrites;
+ 
+   D (emitcode (";", "genPlus"));
+ 
+@@ -3401,6 +3467,9 @@ genPlus (iCode * ic)
+       goto release;
+     }
+ 
++  deferResultWrites = mcs251ArithmeticHasDestructiveOverlap (
++    IC_RESULT (ic), leftOp, rightOp, size);
++
+   /* if the lower bytes of a literal are zero skip the addition */
+   if (AOP_TYPE (IC_RIGHT (ic)) == AOP_LIT)
+     {
+@@ -3463,12 +3532,20 @@ genPlus (iCode * ic)
+             }
+           if (!size && maskedtopbyte)
+             emitcode ("anl", "a,#!constbyte", topbytemask);
+-          opPut (IC_RESULT (ic), "a", offset);
++          if (deferResultWrites)
++            emitpush ("acc");
++          else
++            opPut (IC_RESULT (ic), "a", offset);
+           add = "addc";         /* further adds must propagate carry */
+         }
+       else
+         {
+-          if (!sameRegs (AOP (IC_LEFT (ic)), AOP (IC_RESULT (ic))) || isOperandVolatile (IC_RESULT (ic), FALSE))
++          if (deferResultWrites)
++            {
++              MOVA (opGet (leftOp, offset, FALSE, FALSE));
++              emitpush ("acc");
++            }
++          else if (!sameRegs (AOP (IC_LEFT (ic)), AOP (IC_RESULT (ic))) || isOperandVolatile (IC_RESULT (ic), FALSE))
+             {
+               /* just move */
+               opPut (IC_RESULT (ic), opGet (leftOp, offset, FALSE, FALSE), offset);
+@@ -3477,6 +3554,13 @@ genPlus (iCode * ic)
+       offset++;
+     }
+ 
++  if (deferResultWrites)
++    while (offset-- > 0)
++      {
++        emitpop ("acc");
++        opPut (IC_RESULT (ic), "a", offset);
++      }
++
+   adjustArithmeticResult (ic);
+ 
+ release:
+@@ -8997,11 +9081,39 @@ finish:
+ /*-----------------------------------------------------------------*/
+ /* genDataPointerGet - generates code when ptr offset is known     */
+ /*-----------------------------------------------------------------*/
++static int
++mcs251PointerGetAccessOffset (iCode *ic)
++{
++  wassertl (IC_RIGHT (ic), "GET_VALUE_AT_ADDRESS without right operand");
++  wassertl (IS_OP_LITERAL (IC_RIGHT (ic)),
++            "GET_VALUE_AT_ADDRESS with non-literal right operand");
++  return (int) operandLitValue (IC_RIGHT (ic));
++}
++
++static void
++mcs251AdjustBytePointer (const char *rname, int displacement)
++{
++  for (int pending = displacement; pending > 0; --pending)
++    emitcode ("inc", "%s", rname);
++  for (int pending = displacement; pending < 0; ++pending)
++    emitcode ("dec", "%s", rname);
++}
++
++static void
++mcs251AdjustFarPointer (int displacement)
++{
++  for (int pending = displacement; pending > 0; --pending)
++    incrementFarPointer ();
++  for (int pending = displacement; pending < 0; ++pending)
++    decrementFarPointer ();
++}
++
+ static void
+ genDataPointerGet (operand * left, operand * result, iCode * ic)
+ {
+   const char *l;
+   int size, physicalOffset = 0;
++  int accessOffset = mcs251PointerGetAccessOffset (ic);
+   sym_link *type = operandType (result);
+ 
+   D (emitcode (";", "genDataPointerGet"));
+@@ -9018,9 +9130,10 @@ genDataPointerGet (operand * left, operand * result, iCode * ic)
+         type, physicalOffset, size);
+ 
+       dbuf_init (&dbuf, 128);
+-      if (AOP_SIZE (result) > 1)
++      if (AOP_SIZE (result) > 1 || accessOffset)
+         {
+-          dbuf_printf (&dbuf, "(%s + %d)", l, physicalOffset);
++          dbuf_printf (&dbuf, "(%s + %d)", l,
++                       accessOffset + physicalOffset);
+         }
+       else
+         {
+@@ -9047,6 +9160,7 @@ genNearPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCo
+   char *ifxCond = "a";
+   sym_link *rtype, *retype;
+   sym_link *ltype = operandType (left);
++  int accessOffset = mcs251PointerGetAccessOffset (ic);
+ 
+   D (emitcode (";", "genNearPointerGet"));
+ 
+@@ -9105,6 +9219,8 @@ genNearPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCo
+   else
+     rname = opGet (left, 0, FALSE, FALSE);
+ 
++  mcs251AdjustBytePointer (rname, accessOffset);
++
+   /* if bitfield then unpack the bits */
+   if (IS_BITFIELD (retype))
+     ifxCond = genUnpackBits (result, rname, POINTER, ifx);
+@@ -9140,6 +9256,10 @@ genNearPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCo
+         }
+     }
+ 
++  /* IC_RIGHT is an access-only displacement.  Leave only the separately
++     fused post-increment (if any) in the pointer value. */
++  mcs251AdjustBytePointer (rname, -accessOffset);
++
+   /* now some housekeeping stuff */
+   if (aop)                      /* we had to allocate for this iCode */
+     {
+@@ -9188,6 +9308,7 @@ genPagedPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iC
+   const char *rname;
+   char *ifxCond = "a";
+   sym_link *rtype, *retype;
++  int accessOffset = mcs251PointerGetAccessOffset (ic);
+ 
+   D (emitcode (";", "genPagedPointerGet"));
+ 
+@@ -9217,6 +9338,7 @@ genPagedPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iC
+     }
+ 
+   aopOp (result, ic, TRUE);
++  mcs251AdjustBytePointer (rname, accessOffset);
+ 
+   /* if bitfield then unpack the bits */
+   if (IS_BITFIELD (retype))
+@@ -9245,6 +9367,9 @@ genPagedPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iC
+         }
+     }
+ 
++  /* Remove the access-only displacement before pointer write-back. */
++  mcs251AdjustBytePointer (rname, -accessOffset);
++
+   /* now some housekeeping stuff */
+   if (aop)                      /* we had to allocate for this iCode */
+     {
+@@ -9310,6 +9435,7 @@ static void
+ genFarPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCode * ifx)
+ {
+   int size, offset;
++  int accessOffset = mcs251PointerGetAccessOffset (ic);
+   bool mcs251FarResult;
+   char *ifxCond = "a";
+   sym_link *retype = getSpec (operandType (result));
+@@ -9333,6 +9459,8 @@ genFarPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCod
+       emitcode ("mov", "dpx,dr28");
+     }
+ 
++  mcs251AdjustFarPointer (accessOffset);
++
+   /* if bit then unpack */
+   if (IS_BITFIELD (retype))
+     ifxCond = genUnpackBits (result, farPointerRegister (), FPOINTER, ifx);
+@@ -9366,6 +9494,7 @@ genFarPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCod
+ 
+   if (pi && AOP_TYPE (left) != AOP_IMMD && AOP_TYPE (left) != AOP_STR)
+     {
++      mcs251AdjustFarPointer (-accessOffset);
+       if (AOP_TYPE (left) == AOP_DPTR)
+         mcs251WriteBackPostincrementedPointer (left);
+       else
+@@ -9393,6 +9522,7 @@ static void
+ genCodePointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCode * ifx)
+ {
+   int size, offset;
++  int accessOffset = mcs251PointerGetAccessOffset (ic);
+   bool mcs251FarResult;
+   char *ifxCond = "a";
+   sym_link *retype = getSpec (operandType (result));
+@@ -9414,6 +9544,8 @@ genCodePointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCo
+       emitcode ("mov", "dpx,dr28");
+     }
+ 
++  mcs251AdjustFarPointer (accessOffset);
++
+   /* if bit then unpack */
+   if (IS_BITFIELD (retype))
+     ifxCond = genUnpackBits (result, farPointerRegister (), CPOINTER, ifx);
+@@ -9447,6 +9579,7 @@ genCodePointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCo
+ 
+   if (pi && AOP_TYPE (left) != AOP_IMMD && AOP_TYPE (left) != AOP_STR)
+     {
++      mcs251AdjustFarPointer (-accessOffset);
+       if (AOP_TYPE (left) == AOP_DPTR)
+         mcs251WriteBackPostincrementedPointer (left);
+       else
+@@ -9474,6 +9607,7 @@ static void
+ genGenPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCode * ifx)
+ {
+   int size, offset;
++  int accessOffset;
+   bool mcs251FarResult;
+   char *ifxCond = "a";
+   sym_link *retype = getSpec (operandType (result));
+@@ -9495,6 +9629,12 @@ genGenPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCod
+       emitcode ("mov", "dpx,dr28");
+     }
+ 
++  /* GET_VALUE_AT_ADDRESS carries a literal byte displacement in IC_RIGHT.
++     Big-endian narrowing can turn a 32-bit load into a 24-bit load at +1;
++     ignoring this displacement reads the high 24 bits instead. */
++  accessOffset = mcs251PointerGetAccessOffset (ic);
++  mcs251AdjustFarPointer (accessOffset);
++
+   /* if bit then unpack */
+   if (IS_BITFIELD (retype))
+     {
+@@ -9530,6 +9670,10 @@ genGenPointerGet (operand * left, operand * result, iCode * ic, iCode * pi, iCod
+ 
+   if (pi && AOP_TYPE (left) != AOP_IMMD && AOP_TYPE (left) != AOP_STR)
+     {
++      /* The fused post-increment belongs to the base pointer.  The access
++         displacement above is not part of that pointer update. */
++      mcs251AdjustFarPointer (-accessOffset);
++
+       if (AOP_TYPE (left) == AOP_DPTR)
+         mcs251WriteBackPostincrementedPointer (left);
+       else
+diff --git a/src/mcs251/gen_lower.c.inc b/src/mcs251/gen_lower.c.inc
+index 6ba73fb..026c645 100644
+--- a/src/mcs251/gen_lower.c.inc
++++ b/src/mcs251/gen_lower.c.inc
+@@ -2034,7 +2034,8 @@ aopPutUsesAcc (const asmop* aop, const char *s, int offset)
+       return false;
+     case AOP_REG:
+       wassert (!EQ (aop->aopu.aop_reg[offset]->name, "a"));
+-      return FALSE;
++      return *s == '@' && EQ (aop->aopu.aop_reg[offset]->dname,
++                              aop->aopu.aop_reg[offset]->name);
+     case AOP_DPTR:
+       return TRUE;
+     case AOP_MCS251_STK:
+@@ -2133,7 +2134,15 @@ aopPut (asmop *aop, const char *s, int offset)
+     case AOP_REG:
+       if (!EQ (aop->aopu.aop_reg[offset]->name, s) && !EQ (aop->aopu.aop_reg[offset]->dname, s))
+         {
+-          if (*s == '@' ||
++          if (*s == '@' && aop->type == AOP_REG &&
++              EQ (aop->aopu.aop_reg[offset]->dname,
++                  aop->aopu.aop_reg[offset]->name))
++            {
++              MOVA (s);
++              emitcode ("mov", "%s,a", aop->aopu.aop_reg[offset]->name);
++              accuse = TRUE;
++            }
++          else if (*s == '@' ||
+               EQ (s, "r0") || EQ (s, "r1") || EQ (s, "r2") || EQ (s, "r3") ||
+               EQ (s, "r4") || EQ (s, "r5") || EQ (s, "r6") || EQ (s, "r7"))
+             {
+@@ -2323,15 +2332,22 @@ loadDptrFromOperand (operand *op, bool loadBToo)
+                  opGet returns a pointer to a static buffer, so we must
+                  copy the strings before the next opGet call. */
+               const char *dptr_name = opGet (op, 0, TRUE, FALSE);
+-              char dptr_buf[64] = {0};
+-              if (dptr_name && dptr_name[0])
+-                strncpy (dptr_buf, dptr_name, sizeof(dptr_buf) - 1);
++              char *dptr_buf = Safe_strdup (dptr_name ? dptr_name : "");
+               const char *dpxl_name = opGet (op, 2, FALSE, FALSE);
+-              char dpxl_buf[64] = {0};
+-              if (dpxl_name && dpxl_name[0])
+-                strncpy (dpxl_buf, dpxl_name, sizeof(dpxl_buf) - 1);
++              char *dpxl_buf = Safe_strdup (dpxl_name ? dpxl_name : "");
++              bool cacheable =
++                strlen (dptr_buf) < sizeof(_G.dptrCache.symbol) &&
++                strlen (dpxl_buf) < sizeof(_G.dptrCache.dpxlSymbol);
+ 
+-              if (_G.dptrCache.valid &&
++              if (!cacheable)
++                {
++                  /* Preserve complete assembler operands.  Long generated
++                     names cannot be represented by the fixed-size cache. */
++                  emitcode ("mov", "dptr,%s", dptr_buf);
++                  emitcode ("mov", "dpxl,%s", dpxl_buf);
++                  _G.dptrCache.valid = false;
++                }
++              else if (_G.dptrCache.valid &&
+                   dptr_buf[0] && dpxl_buf[0] &&
+                   !strcmp (dptr_buf, _G.dptrCache.symbol) &&
+                   !strcmp (dpxl_buf, _G.dptrCache.dpxlSymbol))
+@@ -2350,10 +2366,15 @@ loadDptrFromOperand (operand *op, bool loadBToo)
+                            sizeof(_G.dptrCache.dpxlSymbol) - 1);
+                 }
+               else if (_G.dptrCache.valid &&
+-                  dptr_buf[0])
++                  dptr_buf[0] &&
++                  strlen (_G.dptrCache.symbol) < 48 &&
++                  strlen (dptr_buf) < 48)
+                 {                  /* Try inc dpx for sequential addresses of the same base.
+                      Parse the symbol and offset from both the cached and
+-                     new dptr strings.  Format: "NAME" or "(NAME + 0xOFF)". */
++                     new dptr strings.  Format: "NAME" or "(NAME + 0xOFF)".
++                     Longer expressions bypass this micro-optimization and
++                     use the full reload below; the parser's base buffers are
++                     intentionally bounded to 48 bytes. */
+                   char cached_base[48] = {0};
+                   unsigned long cached_off = 0;
+                   char new_base[48] = {0};
+@@ -2459,6 +2480,8 @@ loadDptrFromOperand (operand *op, bool loadBToo)
+                            sizeof(_G.dptrCache.dpxlSymbol) - 1);
+                   _G.dptrCache.valid = true;
+                 }
++              Safe_free (dptr_buf);
++              Safe_free (dpxl_buf);
+             }
+           return;
+ 
+@@ -2737,10 +2760,13 @@ toBoolean (operand * oper)
+       AccUsed |= aopGetUsesAcc (oper->aop, offset++);
+     }
+ 
+-  if (opIsGptr (oper))
++  if (opIsGptr (oper) && GPTRSIZE > FARPTRSIZE)
+     {
+-      /* assumes that banks never map to address 0x0000
+-         so it suffices to check dptr part only and ignore b */
++      /* Tagged generic pointers carry an address-space discriminator after
++         the far-address bytes.  That discriminator need not participate in
++         a null test.  MCS251 generic pointers are instead flat 24-bit
++         addresses (GPTRSIZE == FARPTRSIZE), so their high byte is part of
++         the address and must be tested. */
+       size = AOP_SIZE (oper) - 2;
+     }
+   else
+@@ -3079,4 +3105,3 @@ skip_byte:
+ 
+   wassertl_bt (size >= 0, "genCopy() copied more than there is to be copied.");
+ }
+-
+diff --git a/src/mcs251/main.c b/src/mcs251/main.c
+index 2cd5ac3..dbd223f 100644
+--- a/src/mcs251/main.c
++++ b/src/mcs251/main.c
+@@ -152,6 +152,14 @@ _mcs251_parseOptions (int *pargc, char **argv, int *i)
+ static void
+ _mcs251_finaliseOptions (void)
+ {
++  /* Let runtime libraries distinguish backend-owned interrupt context
++     preservation from source-level compatibility fallbacks. */
++  addSet (&preArgvSet,
++          Safe_strdup ("-D__SDCC_MCS251_EXTENDED_ISR_CONTEXT__=1"));
++
++  addSet (&preArgvSet,
++          Safe_strdup ("-D__SDCC_MCS251_EXTENDED_STACK_LINKER__=1"));
++
+   if (options.noXinitOpt)
+     port->genXINIT=0;
+ 
+@@ -1018,7 +1026,7 @@ get_model (void)
+ */
+ static const char *_linkCmd[] =
+ {
+-  "sdld", "-r", "-nf", "$1", "$L", NULL
++  "sdldmcs251", "-r", "-nf", "$1", "$L", NULL
+ };
+ 
+ /* $3 is replaced by assembler.debug_opts resp. port->assembler.plain_opts */

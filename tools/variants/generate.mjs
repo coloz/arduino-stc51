@@ -11,9 +11,6 @@ const databasePath = join(scriptDir, "devices.json");
 const check = process.argv.includes("--check");
 
 const CORE_FAMILY_RULES = [
-  [/^STC89/, "89"],
-  [/^STC12/, "12"],
-  [/^STC15/, "15"],
   [/^STC8(?!9)/, "8"],
   [/^AI8[A-Z]/, "8"],
   [/^STC32/, "32"],
@@ -21,13 +18,47 @@ const CORE_FAMILY_RULES = [
 ];
 
 const ADC_LAYOUTS = {
-  stc12c2052ad_c5_8bit: { id: 1, resolutions: [8], p1Only: true },
-  legacy_bc_10bit_auxr1: { id: 2, resolutions: [10], p1Only: true },
-  legacy_bc_10bit_clkdiv: { id: 3, resolutions: [10], p1Only: true },
   modern_bc_adccfg: { id: 4, resolutions: [10, 12], p1Only: false },
 };
 
 const PIN_SELECTORS = new Set(["pswx1_bit0_clear_for_p5_4"]);
+const PORT_LABELS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B"];
+const LEGACY_PORT_COUNT = 8;
+const MCS251_CPP_STACK_BASE = 0x0100;
+const MCS251_CPP_MIN_HEAP_BYTES = 4096;
+const MCS251_CPP_MAX_HEAP_BYTES = 0x8000;
+const MCS251_CPP_MIN_STATIC_XDATA_RESERVE = 1024;
+const MCS251_CPP_CONSTRAINED_HEAP_BYTES = 3584;
+const MCS251_CPP_CONSTRAINED_XDATA_BYTES = 4096;
+const MCS251_CPP_CONSTRAINED_STATIC_XDATA_RESERVE = 512;
+const MCS51_CPP_MIN_HEAP_BYTES = 512;
+const MCS51_CPP_MIN_STATIC_XDATA_RESERVE = 512;
+const CPP_COMPACT_MAXIMUM_CODE_BYTES = 16384;
+const CPP_COMPACT_PROGRAM_CAP_BYTES = 14336;
+const CPP_MINIMUM_FLASH_HEADROOM_BYTES = 1024;
+const MCS251_LINKER_LAYOUTS = new Set([
+  "post_home_contiguous",
+  "pre_home_contiguous",
+]);
+const MCS251_ADDRESS_SPACE_END = 0x1000000;
+
+function portLabel(port) {
+  return PORT_LABELS[port];
+}
+
+function portMasks(device) {
+  return [
+    ...device.port_masks,
+    ...Array(PORT_LABELS.length - device.port_masks.length).fill(0),
+  ];
+}
+
+function parsePin(pin) {
+  const match = /^P([0-9AB])\.([0-7])$/.exec(pin);
+  if (match === null) return null;
+  const port = PORT_LABELS.indexOf(match[1]);
+  return port < 0 ? null : { port, bit: Number(match[2]) };
+}
 
 function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -120,10 +151,11 @@ function renderMapMacro(name, argument, mappings, fallback) {
 function renderCoreFlags(device) {
   const ports = new Set(device.capabilities.ports);
   const flags = [`-DSTC_CORE_FAMILY_${coreFamilyName(device)}=1`];
-  for (let port = 0; port < 8; port += 1) {
-    flags.push(`-DSTC_CORE_HAS_PORT${port}=${ports.has(port) ? 1 : 0}`);
+  for (let port = 0; port < PORT_LABELS.length; port += 1) {
+    flags.push(`-DSTC_CORE_HAS_PORT${portLabel(port)}=${ports.has(port) ? 1 : 0}`);
   }
   flags.push(`-DSTC_CORE_HAS_PORT_MODE=${device.capabilities.port_mode ? 1 : 0}`);
+  flags.push(`-DSTC_CORE_HAS_SEPARATE_PULLUP=${device.capabilities.separate_pullup === true ? 1 : 0}`);
   flags.push(`-DSTC_CORE_TIMER1_IS_1T=${device.capabilities.timer1_1t ? 1 : 0}`);
   flags.push(`-DSTC_CORE_HAS_UART1=${device.capabilities.uart1 === false ? 0 : 1}`);
   flags.push(`-DSTC_CORE_SERIAL_BUFFERED_RX=${device.capabilities.uart1 !== false && device.maximum_code_bytes > 2048 ? 1 : 0}`);
@@ -132,6 +164,100 @@ function renderCoreFlags(device) {
   flags.push(`-DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=${device.pin_selector === "pswx1_bit0_clear_for_p5_4" ? 1 : 0}`);
   flags.push(`-DSTC_CORE_ADC_NATIVE_BITS=${device.adc === false ? 0 : device.adc.resolution_bits}`);
   return flags.join(" ");
+}
+
+function renderTimerFlags(device) {
+  const divider = device.capabilities.timer0_clock_divider;
+  return divider === undefined ? "" : `-DSTC_TIMER0_CLOCK_DIVIDER=${divider}UL`;
+}
+
+function hexAddress(value) {
+  return `0x${value.toString(16)}`;
+}
+
+function renderLinkFlags(linker) {
+  if (linker === undefined) return "";
+  const flags = [`--code-loc ${hexAddress(linker.code_loc)}`];
+  if (linker.layout === "pre_home_contiguous") {
+    flags.push(`"-Wl-b GSINIT0=${hexAddress(linker.gsinit0_loc)}"`);
+  }
+  return flags.join(" ");
+}
+
+function mcs251FlashOrigin(device, linker) {
+  // Reduced-capacity parts keep reset at FF:0000; their EEPROM follows
+  // program Flash. They are not necessarily aligned to the top of 16 MB.
+  return linker.flash_loc ?? (MCS251_ADDRESS_SPACE_END - device.flash_bytes);
+}
+
+function validMcs251LinkerPlacement(device, linker) {
+  if (!isObject(linker)) return false;
+  const flashFloor = mcs251FlashOrigin(device, linker);
+  const flashEnd = flashFloor + device.flash_bytes;
+  if (!isObject(linker) ||
+      !MCS251_LINKER_LAYOUTS.has(linker.layout) ||
+      !Number.isInteger(flashFloor) || flashFloor < 0 ||
+      flashEnd > MCS251_ADDRESS_SPACE_END ||
+      !Number.isInteger(linker.code_loc) ||
+      linker.code_loc !== 0xff0000 ||
+      linker.code_loc < flashFloor ||
+      linker.code_loc >= flashEnd) {
+    return false;
+  }
+  if (linker.layout === "post_home_contiguous") {
+    return linker.gsinit0_loc === undefined &&
+      linker.code_loc === flashFloor &&
+      linker.code_loc + device.maximum_code_bytes <= flashEnd;
+  }
+  return Number.isInteger(linker.gsinit0_loc) &&
+    linker.gsinit0_loc >= flashFloor &&
+    linker.gsinit0_loc < linker.code_loc &&
+    linker.gsinit0_loc + device.maximum_code_bytes <= linker.code_loc;
+}
+
+function cppStackLayout(device, target) {
+  const supportsTarget = device.target === target ||
+    (device.target === "dual" && device.experimental_targets?.includes(target));
+  if (device.cpp_core_profile !== "stc-cxx11-12mhz-experimental" ||
+      target !== "mcs251" || !supportsTarget) return null;
+  return {
+    iramSize: device.edata_bytes,
+    stackLoc: MCS251_CPP_STACK_BASE,
+    stackSize: device.edata_bytes - MCS251_CPP_STACK_BASE,
+  };
+}
+
+function supportsCppTarget(device, target) {
+  return device.target === target ||
+    (device.target === "dual" && target === "mcs51") ||
+    (device.target === "dual" && device.experimental_targets?.includes(target));
+}
+
+function expectedCompactProgramBytes(device) {
+  const minimumHeadroom = Math.max(
+    Math.ceil(device.maximum_code_bytes * 10 / 100),
+    CPP_MINIMUM_FLASH_HEADROOM_BYTES,
+  );
+  return Math.min(
+    CPP_COMPACT_PROGRAM_CAP_BYTES,
+    device.maximum_code_bytes - minimumHeadroom,
+  );
+}
+
+function renderCppHeapContractFlags(device) {
+  return device.cpp_static_xdata_reserve_bytes ===
+    MCS251_CPP_CONSTRAINED_STATIC_XDATA_RESERVE ?
+    " -DSTCXX_MCS251_CONSTRAINED_HEAP=1" : "";
+}
+
+function renderCppTargetLinkFlags(device, target) {
+  const stack = cppStackLayout(device, target);
+  if (stack === null) return "";
+  return [
+    `-DSTCXX_MCS251_IRAM_SIZE=${hexAddress(stack.iramSize)}`,
+    `-DSTCXX_MCS251_STACK_LOC=${hexAddress(stack.stackLoc)}`,
+    `-DSTCXX_MCS251_STACK_SIZE=${hexAddress(stack.stackSize)}`,
+  ].join(" ");
 }
 
 function popcount(value) {
@@ -189,11 +315,76 @@ function loadDatabase() {
     if (device.target === "mcs251" && !device.experimental) {
       throw new Error(`${device.model} uses mcs251 but is not marked experimental`);
     }
+    if (device.cpp_core_profile !== undefined &&
+        (device.cpp_core_profile !== "stc-cxx11-12mhz-experimental" ||
+         !device.clock_options_hz.includes(12000000))) {
+      throw new Error(`invalid C++ core profile for ${device.model}`);
+    }
     if (device.rank !== undefined) requireInteger(device, "rank", 1);
     for (const field of ["flash_bytes", "maximum_code_bytes", "idata_bytes", "xdata_bytes", "edata_bytes", "max_io", "default_clock_hz"]) {
       requireInteger(device, field, field === "flash_bytes" || field === "maximum_code_bytes" || field === "default_clock_hz" ? 1 : 0);
     }
-    for (const field of ["reserved_flash_bytes", "usb_ram_bytes", "physical_io"]) {
+    if (cppStackLayout(device, "mcs251") !== null &&
+        (device.edata_bytes <= MCS251_CPP_STACK_BASE ||
+         device.edata_bytes > 0x10000)) {
+      throw new Error(
+        `${device.model} C++ stack requires EDATA in ` +
+        `(0x${MCS251_CPP_STACK_BASE.toString(16)}, 0x10000]`,
+      );
+    }
+    if (device.cpp_core_profile !== undefined) {
+      const hasMcs251 = supportsCppTarget(device, "mcs251");
+      let minimumHeap = hasMcs251 ?
+        MCS251_CPP_MIN_HEAP_BYTES : MCS51_CPP_MIN_HEAP_BYTES;
+      let staticReserve = hasMcs251 ?
+        MCS251_CPP_MIN_STATIC_XDATA_RESERVE : MCS51_CPP_MIN_STATIC_XDATA_RESERVE;
+      if (device.cpp_static_xdata_reserve_bytes !== undefined) {
+        requireInteger(device, "cpp_static_xdata_reserve_bytes");
+        if (device.target !== "mcs251" || device.family !== "STC32F" ||
+            device.xdata_bytes !== MCS251_CPP_CONSTRAINED_XDATA_BYTES ||
+            device.cpp_heap_bytes !== MCS251_CPP_CONSTRAINED_HEAP_BYTES ||
+            device.cpp_static_xdata_reserve_bytes !==
+              MCS251_CPP_CONSTRAINED_STATIC_XDATA_RESERVE) {
+          throw new Error(
+            `${device.model} declares an unsupported constrained MCS251 C++ heap`,
+          );
+        }
+        minimumHeap = MCS251_CPP_CONSTRAINED_HEAP_BYTES;
+        staticReserve = MCS251_CPP_CONSTRAINED_STATIC_XDATA_RESERVE;
+      }
+      requireInteger(device, "cpp_heap_bytes", minimumHeap);
+      if (device.cpp_heap_bytes > MCS251_CPP_MAX_HEAP_BYTES ||
+          device.cpp_heap_bytes + staticReserve >
+            device.xdata_bytes) {
+        throw new Error(
+          `${device.model} C++ heap must be at most ` +
+          `${MCS251_CPP_MAX_HEAP_BYTES} bytes and leave at least ` +
+          `${staticReserve} bytes of XDATA for globals`,
+        );
+      }
+      const compactProgramBytes = device.maximum_code_bytes <=
+        CPP_COMPACT_MAXIMUM_CODE_BYTES ?
+        expectedCompactProgramBytes(device) : null;
+      if (compactProgramBytes === null) {
+        if (device.cpp_compact_maximum_program_bytes !== undefined) {
+          throw new Error(
+            `${device.model} declares a compact C++ program limit for a full profile`,
+          );
+        }
+      } else {
+        requireInteger(device, "cpp_compact_maximum_program_bytes", 1);
+        if (device.cpp_compact_maximum_program_bytes !== compactProgramBytes) {
+          throw new Error(
+            `${device.model} compact C++ program limit must be ${compactProgramBytes} bytes`,
+          );
+        }
+      }
+    } else if (device.cpp_heap_bytes !== undefined ||
+               device.cpp_static_xdata_reserve_bytes !== undefined ||
+               device.cpp_compact_maximum_program_bytes !== undefined) {
+      throw new Error(`${device.model} declares a C++ capacity without a C++ core profile`);
+    }
+    for (const field of ["usb_ram_bytes", "executable_ram_bytes", "physical_io"]) {
       if (device[field] !== undefined) requireInteger(device, field);
     }
     if (typeof device.package_dependent !== "boolean") {
@@ -218,12 +409,37 @@ function loadDatabase() {
          new Set(device.experimental_targets).size !== device.experimental_targets.length)) {
       throw new Error(`invalid experimental targets for ${device.model}`);
     }
+    if (device.linker !== undefined &&
+        (device.target !== "mcs251" ||
+         !validMcs251LinkerPlacement(device, device.linker))) {
+      throw new Error(`invalid MCS251 linker layout for ${device.model}`);
+    }
+    if (device.target === "mcs251" && device.linker === undefined) {
+      throw new Error(`${device.model} requires an explicit MCS251 high-address linker layout`);
+    }
+    if (device.mcs251_linker !== undefined &&
+        (device.target !== "dual" ||
+         !device.experimental_targets?.includes("mcs251") ||
+         !validMcs251LinkerPlacement(device, device.mcs251_linker))) {
+      throw new Error(`invalid experimental MCS251 linker layout for ${device.model}`);
+    }
+    if (device.target === "dual" &&
+        device.experimental_targets?.includes("mcs251") &&
+        device.mcs251_linker === undefined) {
+      throw new Error(
+        `${device.model} requires an explicit experimental MCS251 high-address linker layout`,
+      );
+    }
     if (!isObject(device.capabilities) ||
         !Array.isArray(device.capabilities.ports) ||
         device.capabilities.ports.length === 0 ||
-        device.capabilities.ports.some((port) => !Number.isInteger(port) || port < 0 || port > 7) ||
+        device.capabilities.ports.some((port) => !Number.isInteger(port) || port < 0 || port >= PORT_LABELS.length) ||
         new Set(device.capabilities.ports).size !== device.capabilities.ports.length ||
         typeof device.capabilities.port_mode !== "boolean" ||
+        (device.capabilities.separate_pullup !== undefined &&
+         typeof device.capabilities.separate_pullup !== "boolean") ||
+        (device.capabilities.timer0_clock_divider !== undefined &&
+         ![1, 6, 12].includes(device.capabilities.timer0_clock_divider)) ||
         typeof device.capabilities.timer1_1t !== "boolean" ||
         (device.capabilities.uart1 !== undefined &&
          typeof device.capabilities.uart1 !== "boolean")) {
@@ -241,11 +457,13 @@ function loadDatabase() {
     models.add(device.model);
     macros.add(device.macro);
     variants.add(variant);
-    if (!Array.isArray(device.port_masks) || device.port_masks.length !== 8 ||
+    if (!Array.isArray(device.port_masks) ||
+        ![LEGACY_PORT_COUNT, PORT_LABELS.length].includes(device.port_masks.length) ||
         device.port_masks.some((mask) => !Number.isInteger(mask) || mask < 0 || mask > 255)) {
       throw new Error(`invalid port masks for ${device.model}`);
     }
-    const bonded = device.port_masks.reduce((total, mask) => total + popcount(mask), 0);
+    const masks = portMasks(device);
+    const bonded = masks.reduce((total, mask) => total + popcount(mask), 0);
     if (bonded !== device.max_io) {
       throw new Error(`${device.model} masks contain ${bonded} pins, expected ${device.max_io}`);
     }
@@ -262,9 +480,9 @@ function loadDatabase() {
         throw new Error(`duplicate pin inside a physical alias group for ${device.model}`);
       }
       for (const pin of group) {
-        const match = /^P([0-7])\.([0-7])$/.exec(pin);
-        if (match === null ||
-            (device.port_masks[Number(match[1])] & (1 << Number(match[2]))) === 0) {
+        const parsed = parsePin(pin);
+        if (parsed === null ||
+            (masks[parsed.port] & (1 << parsed.bit)) === 0) {
           throw new Error(`invalid or unbonded physical pin alias ${pin} for ${device.model}`);
         }
         if (aliasedPins.has(pin)) {
@@ -281,13 +499,13 @@ function loadDatabase() {
       throw new Error(`invalid startup pin selector for ${device.model}`);
     }
     if (device.pin_selector === "pswx1_bit0_clear_for_p5_4" &&
-        (device.family !== "AI8H" || (device.port_masks[5] & 0x10) === 0 ||
-         (device.port_masks[1] & 0x04) !== 0)) {
+        (device.family !== "AI8H" || (masks[5] & 0x10) === 0 ||
+         (masks[1] & 0x04) !== 0)) {
       throw new Error(`${device.model} P_SWX1 selector must canonicalize P1.2 as bonded P5.4 on AI8H`);
     }
-    for (let port = 0; port < 8; port += 1) {
-      if (device.port_masks[port] !== 0 && !device.capabilities.ports.includes(port)) {
-        throw new Error(`${device.model} has bonded P${port} pins but no P${port} capability`);
+    for (let port = 0; port < PORT_LABELS.length; port += 1) {
+      if (masks[port] !== 0 && !device.capabilities.ports.includes(port)) {
+        throw new Error(`${device.model} has bonded P${portLabel(port)} pins but no P${portLabel(port)} capability`);
       }
     }
     if (device.adc !== false && !isObject(device.adc)) {
@@ -303,13 +521,12 @@ function loadDatabase() {
       }
       const channels = new Set();
       for (const [pin, channel] of adcEntries(device)) {
-        const match = /^P([0-7])\.([0-7])$/.exec(pin);
-        if (match === null || !Number.isInteger(channel) || channel < 0 || channel > 14) {
+        const parsed = parsePin(pin);
+        if (parsed === null || !Number.isInteger(channel) || channel < 0 || channel > 14) {
           throw new Error(`invalid ADC route ${pin} -> ${channel} for ${device.model}`);
         }
-        const port = Number(match[1]);
-        const bit = Number(match[2]);
-        if ((device.port_masks[port] & (1 << bit)) === 0) {
+        const { port, bit } = parsed;
+        if ((masks[port] & (1 << bit)) === 0) {
           throw new Error(`${device.model} ADC route ${pin} is not present in its port mask`);
         }
         if (channels.has(channel)) {
@@ -352,9 +569,9 @@ function renderBoards(devices) {
     "# Bare-MCU variants use maximum logical port masks. Verify the selected package pinout.",
     "",
     "menu.clock=CPU clock (must match ISP configuration)",
-    "menu.machine=STC89 machine cycle (must match ISP configuration)",
     "menu.memory=SDCC memory model",
     "menu.execution=Execution mode",
+    "menu.cppcore=Arduino core language",
     "",
   ];
   for (const device of devices) {
@@ -376,7 +593,11 @@ function renderBoards(devices) {
       `${board}.build.target=-m${defaultTarget}`,
       `${board}.build.mode_flags=-DSTC_EXECUTION_MODE_${defaultTarget.toUpperCase()}`,
       `${board}.build.core_flags=${renderCoreFlags(device)}`,
-      `${board}.build.timer_flags=${device.family.startsWith("STC89") ? "-DSTC_TIMER0_CLOCK_DIVIDER=12UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=12UL" : ""}`,
+      `${board}.build.timer_flags=${renderTimerFlags(device)}`,
+      `${board}.build.link_flags=${renderLinkFlags(
+        device.target === "mcs251" ? device.linker : undefined,
+      )}`,
+      `${board}.build.cpp_target_link_flags=${renderCppTargetLinkFlags(device, defaultTarget)}`,
       `${board}.upload.maximum_size=${device.maximum_code_bytes}`,
       `${board}.upload.maximum_idata_size=${device.idata_bytes}`,
       `${board}.upload.maximum_xdata_size=${device.xdata_bytes}`,
@@ -384,24 +605,32 @@ function renderBoards(devices) {
       "",
     );
 
+    if (device.cpp_core_profile === "stc-cxx11-12mhz-experimental") {
+      const heapContractFlags = renderCppHeapContractFlags(device);
+      lines.push(
+        `${board}.menu.cppcore.plain=Plain C (default)`,
+        `${board}.menu.cppcore.plain.build.cpp_core_flags=`,
+        `${board}.menu.cppcore.plain.build.cpp_link_flags=`,
+        `${board}.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)`,
+        `${board}.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=${device.cpp_heap_bytes}UL${heapContractFlags}`,
+        `${board}.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1${heapContractFlags}`,
+        `${board}.menu.cppcore.enabled.compiler.cache_core=false`,
+        "",
+      );
+    }
+
     if (device.target === "dual") {
       lines.push(
         `${board}.menu.execution.mcs51=8051 compatible / SDCC MCS51 (default)`,
         `${board}.menu.execution.mcs51.build.target=-mmcs51`,
         `${board}.menu.execution.mcs51.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51`,
+        `${board}.menu.execution.mcs51.build.link_flags=`,
+        `${board}.menu.execution.mcs51.build.cpp_target_link_flags=`,
         `${board}.menu.execution.mcs251=32-bit / experimental SDCC MCS251`,
         `${board}.menu.execution.mcs251.build.target=-mmcs251`,
         `${board}.menu.execution.mcs251.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251`,
-        "",
-      );
-    }
-
-    if (device.family.startsWith("STC89")) {
-      lines.push(
-        `${board}.menu.machine.12t=12T (default)`,
-        `${board}.menu.machine.12t.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=12UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=12UL`,
-        `${board}.menu.machine.6t=6T`,
-        `${board}.menu.machine.6t.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=6UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=6UL`,
+        `${board}.menu.execution.mcs251.build.link_flags=${renderLinkFlags(device.mcs251_linker)}`,
+        `${board}.menu.execution.mcs251.build.cpp_target_link_flags=${renderCppTargetLinkFlags(device, "mcs251")}`,
         "",
       );
     }
@@ -430,9 +659,9 @@ function renderBoards(devices) {
 
 function renderCommonHeader() {
   const pins = [];
-  for (let port = 0; port < 8; port += 1) {
+  for (let port = 0; port < PORT_LABELS.length; port += 1) {
     for (let bit = 0; bit < 8; bit += 1) {
-      pins.push(`#define P${port}_${bit} STC_PORT_PIN(${port}, ${bit})`);
+      pins.push(`#define P${portLabel(port)}_${bit} STC_PORT_PIN(${port}, ${bit})`);
     }
   }
   return `// Generated support header. Pin encoding is kept compatible with the original core.
@@ -451,12 +680,12 @@ function renderCommonHeader() {
 #ifndef NOT_AN_ADC_CHANNEL
 #define NOT_AN_ADC_CHANNEL 0xFF
 #endif
-#define STC_PORT_PIN(port, bit) ((((port) & 0x07) << 4) | ((bit) & 0x07))
+#define STC_PORT_PIN(port, bit) ((((port) & 0x0F) << 4) | ((bit) & 0x07))
 #define STC_PIN_PORT(pin) (((pin) == NOT_A_PIN) ? NOT_A_PORT : (((pin) >> 4) & 0x0F))
 #define STC_PIN_BIT(pin) ((pin) & 0x07)
 #define STC_PIN_BIT_MASK(pin) \
   (((pin) == NOT_A_PIN || (((pin) & 0x0F) > 7)) ? 0U : (1U << STC_PIN_BIT(pin)))
-#define STC_PIN_ENCODING_LIMIT 0x78
+#define STC_PIN_ENCODING_LIMIT 0xB8
 #define STC_NUM_PIN_CODES STC_PIN_ENCODING_LIMIT
 
 ${pins.join("\n")}
@@ -532,8 +761,8 @@ ${pins.join("\n")}
 
 function renderVariantHeader(device) {
   const guard = `ARDUINO_VARIANT_${device.macro}_H`;
-  const masks = device.port_masks
-    .map((mask, port) => `#define PIN_VALID_MASK_P${port} 0x${mask.toString(16).padStart(2, "0").toUpperCase()}U`)
+  const masks = portMasks(device)
+    .map((mask, port) => `#define PIN_VALID_MASK_P${portLabel(port)} 0x${mask.toString(16).padStart(2, "0").toUpperCase()}U`)
     .join("\n");
   const entries = adcEntries(device);
   const analogAliases = entries
@@ -571,6 +800,7 @@ function renderVariantHeader(device) {
 #define STC_NUM_BONDED_DIGITAL_PINS ${physicalIoCount(device)}U
 #define STC_VARIANT_PIN_ALIAS_GROUP_COUNT ${pinAliasGroups(device).length}U
 #define STC_PINOUT_IS_PACKAGE_DEPENDENT ${device.package_dependent ? 1 : 0}
+#define STC_VARIANT_HAS_SEPARATE_PULLUP ${device.capabilities.separate_pullup === true ? 1 : 0}
 #define STC_VARIANT_HAS_UART1 ${device.capabilities.uart1 === false ? 0 : 1}
 #define STC_VARIANT_SERIAL_BUFFERED_RX ${device.capabilities.uart1 !== false && device.maximum_code_bytes > 2048 ? 1 : 0}
 #define STC_VARIANT_PINMUX_PSWX1_BIT0_CLEAR ${device.pin_selector === "pswx1_bit0_clear_for_p5_4" ? 1 : 0}
@@ -604,8 +834,33 @@ function renderMetadata(database, device) {
     xdata_bytes: device.xdata_bytes,
     edata_bytes: device.edata_bytes,
   };
-  if (device.reserved_flash_bytes !== undefined) memory.reserved_flash_bytes = device.reserved_flash_bytes;
   if (device.usb_ram_bytes !== undefined) memory.usb_ram_bytes = device.usb_ram_bytes;
+  if (device.executable_ram_bytes !== undefined) memory.executable_ram_bytes = device.executable_ram_bytes;
+  if (device.linker !== undefined) {
+    memory.flash_origin = hexAddress(mcs251FlashOrigin(device, device.linker));
+    memory.linker_layout = device.linker.layout;
+    memory.code_origin = hexAddress(device.linker.code_loc);
+    if (device.linker.gsinit0_loc !== undefined) {
+      memory.gsinit0_origin = hexAddress(device.linker.gsinit0_loc);
+    }
+  }
+  if (device.mcs251_linker !== undefined) {
+    memory.execution_linkers = {
+      mcs51: {
+        flash_origin: "0x0",
+        code_origin: "0x0",
+      },
+      mcs251: {
+        flash_origin: hexAddress(mcs251FlashOrigin(device, device.mcs251_linker)),
+        linker_layout: device.mcs251_linker.layout,
+        code_origin: hexAddress(device.mcs251_linker.code_loc),
+      },
+    };
+    if (device.mcs251_linker.gsinit0_loc !== undefined) {
+      memory.execution_linkers.mcs251.gsinit0_origin =
+        hexAddress(device.mcs251_linker.gsinit0_loc);
+    }
+  }
   const adc = device.adc === false ? {
     supported: false,
     layout: "none",
@@ -640,15 +895,17 @@ function renderMetadata(database, device) {
       maximum_logical_io: device.max_io,
       maximum_physical_io: physicalIoCount(device),
       physical_alias_groups: pinAliasGroups(device),
-      port_masks: device.port_masks.map((mask) => `0x${mask.toString(16).padStart(2, "0").toUpperCase()}`),
+      port_masks: portMasks(device).map((mask) => `0x${mask.toString(16).padStart(2, "0").toUpperCase()}`),
       package_dependent: device.package_dependent,
       startup_selector: device.pin_selector ?? null,
       analog_aliases_enabled: device.adc !== false,
+      separate_pullup: device.capabilities.separate_pullup === true,
     },
     peripherals: {
       uart1: device.capabilities.uart1 !== false,
       uart1_buffered_rx:
         device.capabilities.uart1 !== false && device.maximum_code_bytes > 2048,
+      timer0_clock_divider: device.capabilities.timer0_clock_divider ?? null,
       adc,
     },
     official_product_page: device.official_url,

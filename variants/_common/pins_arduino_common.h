@@ -14,11 +14,11 @@
 #ifndef NOT_AN_ADC_CHANNEL
 #define NOT_AN_ADC_CHANNEL 0xFF
 #endif
-#define STC_PORT_PIN(port, bit) ((((port) & 0x07) << 4) | ((bit) & 0x07))
+#define STC_PORT_PIN(port, bit) ((((port) & 0x0F) << 4) | ((bit) & 0x07))
 #define STC_PIN_PORT(pin) (((pin) == NOT_A_PIN) ? NOT_A_PORT : (((pin) >> 4) & 0x0F))
 #define STC_PIN_BIT(pin) ((pin) & 0x07)
 #define STC_PIN_BIT_MASK(pin)   (((pin) == NOT_A_PIN || (((pin) & 0x0F) > 7)) ? 0U : (1U << STC_PIN_BIT(pin)))
-#define STC_PIN_ENCODING_LIMIT 0x78
+#define STC_PIN_ENCODING_LIMIT 0xB8
 #define STC_NUM_PIN_CODES STC_PIN_ENCODING_LIMIT
 
 #define P0_0 STC_PORT_PIN(0, 0)
@@ -85,6 +85,38 @@
 #define P7_5 STC_PORT_PIN(7, 5)
 #define P7_6 STC_PORT_PIN(7, 6)
 #define P7_7 STC_PORT_PIN(7, 7)
+#define P8_0 STC_PORT_PIN(8, 0)
+#define P8_1 STC_PORT_PIN(8, 1)
+#define P8_2 STC_PORT_PIN(8, 2)
+#define P8_3 STC_PORT_PIN(8, 3)
+#define P8_4 STC_PORT_PIN(8, 4)
+#define P8_5 STC_PORT_PIN(8, 5)
+#define P8_6 STC_PORT_PIN(8, 6)
+#define P8_7 STC_PORT_PIN(8, 7)
+#define P9_0 STC_PORT_PIN(9, 0)
+#define P9_1 STC_PORT_PIN(9, 1)
+#define P9_2 STC_PORT_PIN(9, 2)
+#define P9_3 STC_PORT_PIN(9, 3)
+#define P9_4 STC_PORT_PIN(9, 4)
+#define P9_5 STC_PORT_PIN(9, 5)
+#define P9_6 STC_PORT_PIN(9, 6)
+#define P9_7 STC_PORT_PIN(9, 7)
+#define PA_0 STC_PORT_PIN(10, 0)
+#define PA_1 STC_PORT_PIN(10, 1)
+#define PA_2 STC_PORT_PIN(10, 2)
+#define PA_3 STC_PORT_PIN(10, 3)
+#define PA_4 STC_PORT_PIN(10, 4)
+#define PA_5 STC_PORT_PIN(10, 5)
+#define PA_6 STC_PORT_PIN(10, 6)
+#define PA_7 STC_PORT_PIN(10, 7)
+#define PB_0 STC_PORT_PIN(11, 0)
+#define PB_1 STC_PORT_PIN(11, 1)
+#define PB_2 STC_PORT_PIN(11, 2)
+#define PB_3 STC_PORT_PIN(11, 3)
+#define PB_4 STC_PORT_PIN(11, 4)
+#define PB_5 STC_PORT_PIN(11, 5)
+#define PB_6 STC_PORT_PIN(11, 6)
+#define PB_7 STC_PORT_PIN(11, 7)
 
 #define LED_BUILTIN NOT_A_PIN
 #define NUM_DIGITAL_PINS STC_NUM_PIN_CODES

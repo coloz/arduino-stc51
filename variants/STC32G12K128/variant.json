@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-08-31",
+  "as_of": "2026-09-05",
   "model": "STC32G12K128",
   "family": "STC32G",
   "selection": "popular",
@@ -12,10 +12,14 @@
   ],
   "memory": {
     "flash_bytes": 131072,
-    "maximum_code_bytes": 131072,
+    "maximum_code_bytes": 65536,
     "idata_bytes": 0,
     "xdata_bytes": 8192,
-    "edata_bytes": 4096
+    "edata_bytes": 4096,
+    "flash_origin": "0xfe0000",
+    "linker_layout": "pre_home_contiguous",
+    "code_origin": "0xff0000",
+    "gsinit0_origin": "0xfe0000"
   },
   "pinout": {
     "encoding": "(port << 4) | bit",
@@ -30,15 +34,21 @@
       "0xFF",
       "0x1F",
       "0xFF",
-      "0xFF"
+      "0xFF",
+      "0x00",
+      "0x00",
+      "0x00",
+      "0x00"
     ],
     "package_dependent": true,
     "startup_selector": null,
-    "analog_aliases_enabled": true
+    "analog_aliases_enabled": true,
+    "separate_pullup": false
   },
   "peripherals": {
     "uart1": true,
     "uart1_buffered_rx": true,
+    "timer0_clock_divider": null,
     "adc": {
       "supported": true,
       "layout": "modern_bc_adccfg",
@@ -127,5 +137,6 @@
     }
   },
   "official_product_page": "https://www.stcmicro.com/cn/stc/stc32g12k128.html",
-  "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks."
+  "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks.",
+  "data_quality_note": "The physical 128 KiB program Flash is 0xFE0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout places GSINIT0 and ordinary code at 0xFE0000 while retaining HOME at 0xFF0000. maximum_code_bytes is conservatively limited to the continuous 64 KiB pre-HOME interval; the upper HOME window is not advertised until segmented-link support is implemented and verified."
 }

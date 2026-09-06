@@ -1,5 +1,7 @@
 #include "Arduino.h"
 
+#if !defined(STCXX_CPP_CORE) || !STCXX_CPP_CORE
+
 __code const HardwareSerialClass Serial = {
     Serial_begin,
     Serial_end,
@@ -19,3 +21,5 @@ __code const HardwareSerialClass Serial = {
     Serial_printlnNumber
 #endif
 };
+
+#endif

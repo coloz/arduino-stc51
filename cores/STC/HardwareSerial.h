@@ -1,6 +1,12 @@
 #ifndef STC_CORE_HARDWARE_SERIAL_H
 #define STC_CORE_HARDWARE_SERIAL_H
 
+#if defined(__cplusplus) && defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
+
+# include "cpp/HardwareSerial.h"
+
+#else
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -78,5 +84,7 @@ extern __code const HardwareSerialClass Serial;
 #define HardwareSerial_println           Serial_println
 #define HardwareSerial_printNumber       Serial_printNumber
 #define HardwareSerial_printlnNumber     Serial_printlnNumber
+
+#endif /* C facade / C++ class routing */
 
 #endif

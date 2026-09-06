@@ -3,9 +3,9 @@
  *
  * Clean-room plain-C software UART for the unified arduino-stc51 core.
  *
- * The SoftwareSerial object is a const table of function pointers.  It keeps
- * familiar point syntax for the single active port, but it is not the C++
- * Arduino SoftwareSerial class and does not provide constructors or Stream.
+ * Plain-C builds expose a const function table named SoftwareSerial.  The
+ * C++ Arduino Core profile exposes the conventional SoftwareSerial : Stream
+ * class while retaining the same single-active-port C HAL underneath.
  */
 #ifndef STC_SOFTWARE_SERIAL_H
 #define STC_SOFTWARE_SERIAL_H
@@ -25,8 +25,16 @@ extern "C" {
 #endif
 
 #ifndef SOFTWARE_SERIAL_RX_BUFFER_SIZE
-# define SOFTWARE_SERIAL_RX_BUFFER_SIZE 16u
+# if defined(STC_XDATA_BYTES) && STC_XDATA_BYTES >= 2048
+#  define SOFTWARE_SERIAL_RX_BUFFER_SIZE 64u
+# else
+#  define SOFTWARE_SERIAL_RX_BUFFER_SIZE 16u
+# endif
 #endif
+
+/* Callers can distinguish a polled port from an interrupt-backed UART. */
+#define SOFTWARE_SERIAL_RX_BACKGROUND 0
+#define SOFTWARE_SERIAL_RX_POLL_ON_READ 1
 
 #if (SOFTWARE_SERIAL_RX_BUFFER_SIZE < 2) || \
     (SOFTWARE_SERIAL_RX_BUFFER_SIZE > 255)
@@ -51,6 +59,11 @@ bool SoftwareSerial_setPins(uint8_t receive_pin,
                             uint8_t transmit_pin) STC_SOFTWARE_SERIAL_REENTRANT;
 bool SoftwareSerial_setInverseLogic(bool inverse_logic);
 bool SoftwareSerial_begin(unsigned long baud);
+/* Validate the complete C++ object configuration before replacing the
+ * current single active backend.  A rejected request leaves it untouched. */
+bool SoftwareSerial_beginOnPins(uint8_t receive_pin, uint8_t transmit_pin,
+                                bool inverse_logic, unsigned long baud)
+                                STC_SOFTWARE_SERIAL_REENTRANT;
 void SoftwareSerial_end(void);
 bool SoftwareSerial_listen(void);
 bool SoftwareSerial_stopListening(void);
@@ -58,7 +71,8 @@ bool SoftwareSerial_isListening(void);
 
 /* Poll once for a start bit and, when found, synchronously sample one frame. */
 size_t SoftwareSerial_poll(void);
-/* The accessors below only inspect buffered bytes and never call poll(). */
+/* available/peek/read service one arriving frame before inspecting the buffer.
+ * Frequent calls are still necessary; this is not background reception. */
 int SoftwareSerial_available(void);
 int SoftwareSerial_availableForWrite(void);
 int SoftwareSerial_peek(void);
@@ -77,6 +91,14 @@ bool SoftwareSerial_timingError(void);
 
 size_t SoftwareSerial_print(const char *text);
 size_t SoftwareSerial_println(const char *text);
+
+#if defined(__cplusplus) && defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
+
+} /* extern "C" */
+
+# include "SoftwareSerialClass.h"
+
+#else
 
 typedef struct {
     bool (*setPins)(uint8_t receive_pin,
@@ -107,8 +129,10 @@ typedef struct {
 
 extern STC_SOFTWARE_SERIAL_CODE const STCSoftwareSerialClass SoftwareSerial;
 
-#ifdef __cplusplus
+# ifdef __cplusplus
 }
-#endif
+# endif
+
+#endif /* C++ class profile */
 
 #endif

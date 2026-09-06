@@ -1,5 +1,7 @@
 #include "Arduino.h"
 
+#if !defined(STCXX_CPP_CORE) || !STCXX_CPP_CORE
+
 size_t Serial_print(const char *text)
 {
     size_t count = 0u;
@@ -25,3 +27,5 @@ size_t Serial_println(const char *text)
     count += Serial_write((uint8_t)'\n');
     return count;
 }
+
+#endif

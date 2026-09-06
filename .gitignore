@@ -1,0 +1,19 @@
+tmp/
+.build/
+.tmp/
+.build-cpp-all-variants/
+**/.build-*/
+**/.cache/
+**/.gate-root/
+**/__pycache__/
+*.py[cod]
+*.d
+*.part
+/dist/arduino-stc51-*.tar.bz2
+
+# Downloaded vendor sources and tool archives are local caches.
+/sdk/downloads/*
+!/sdk/downloads/.gitignore
+
+# Separate local QEMU development checkout; not part of this Arduino platform.
+/arduino-stc51-qemu-source-all-variants-v1/

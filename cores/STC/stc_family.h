@@ -8,6 +8,27 @@
 #define STC_ADC_LAYOUT_MODERN_BC_ADCCFG         4
 
 /*
+ * C++ translation units are lowered by the Clang STC frontend and then
+ * rebuilt by SDCC at the bridge boundary.  Distinguish that frontend target
+ * from the native SDCC predefined macros while accepting either as evidence
+ * of the selected machine model.
+ */
+#if defined(__SDCC_mcs51) || defined(__STC_MCS51__)
+# define STC_CORE_COMPILER_TARGET_MCS51 1
+#else
+# define STC_CORE_COMPILER_TARGET_MCS51 0
+#endif
+#if defined(__SDCC_mcs251) || defined(__STC_MCS251__)
+# define STC_CORE_COMPILER_TARGET_MCS251 1
+#else
+# define STC_CORE_COMPILER_TARGET_MCS251 0
+#endif
+
+#if STC_CORE_COMPILER_TARGET_MCS51 && STC_CORE_COMPILER_TARGET_MCS251
+# error "Select only one compiler machine target"
+#endif
+
+/*
  * Generated board definitions select the core family and hardware
  * capabilities explicitly.  Model-name macros remain available to SDK
  * headers and sketches, but the core never needs a per-model allow-list.
@@ -26,9 +47,12 @@
     !defined(STC_CORE_HAS_PORT2) || !defined(STC_CORE_HAS_PORT3) || \
     !defined(STC_CORE_HAS_PORT4) || !defined(STC_CORE_HAS_PORT5) || \
     !defined(STC_CORE_HAS_PORT6) || !defined(STC_CORE_HAS_PORT7) || \
+    !defined(STC_CORE_HAS_PORT8) || !defined(STC_CORE_HAS_PORT9) || \
+    !defined(STC_CORE_HAS_PORTA) || !defined(STC_CORE_HAS_PORTB) || \
     !defined(STC_CORE_HAS_PORT_MODE) || !defined(STC_CORE_TIMER1_IS_1T) || \
     !defined(STC_CORE_HAS_UART1) || !defined(STC_CORE_SERIAL_BUFFERED_RX) || \
     !defined(STC_CORE_HAS_ADC) || !defined(STC_CORE_ADC_LAYOUT) || \
+    !defined(STC_CORE_HAS_SEPARATE_PULLUP) || \
     !defined(STC_CORE_PINMUX_PSWX1_BIT0_CLEAR) || \
     !defined(STC_CORE_ADC_NATIVE_BITS)
 # error "Selected board is missing generated STC core capability flags"
@@ -43,15 +67,30 @@
     ((STC_CORE_HAS_PORT5 != 0) && (STC_CORE_HAS_PORT5 != 1)) || \
     ((STC_CORE_HAS_PORT6 != 0) && (STC_CORE_HAS_PORT6 != 1)) || \
     ((STC_CORE_HAS_PORT7 != 0) && (STC_CORE_HAS_PORT7 != 1)) || \
+    ((STC_CORE_HAS_PORT8 != 0) && (STC_CORE_HAS_PORT8 != 1)) || \
+    ((STC_CORE_HAS_PORT9 != 0) && (STC_CORE_HAS_PORT9 != 1)) || \
+    ((STC_CORE_HAS_PORTA != 0) && (STC_CORE_HAS_PORTA != 1)) || \
+    ((STC_CORE_HAS_PORTB != 0) && (STC_CORE_HAS_PORTB != 1)) || \
     ((STC_CORE_HAS_PORT_MODE != 0) && (STC_CORE_HAS_PORT_MODE != 1)) || \
     ((STC_CORE_TIMER1_IS_1T != 0) && (STC_CORE_TIMER1_IS_1T != 1)) || \
     ((STC_CORE_HAS_UART1 != 0) && (STC_CORE_HAS_UART1 != 1)) || \
     ((STC_CORE_HAS_ADC != 0) && (STC_CORE_HAS_ADC != 1)) || \
+    ((STC_CORE_HAS_SEPARATE_PULLUP != 0) && \
+     (STC_CORE_HAS_SEPARATE_PULLUP != 1)) || \
     ((STC_CORE_PINMUX_PSWX1_BIT0_CLEAR != 0) && \
      (STC_CORE_PINMUX_PSWX1_BIT0_CLEAR != 1)) || \
     ((STC_CORE_SERIAL_BUFFERED_RX != 0) && \
      (STC_CORE_SERIAL_BUFFERED_RX != 1))
 # error "STC core capability flags must be 0 or 1"
+#endif
+
+#if STC_CORE_HAS_SEPARATE_PULLUP && !STC_CORE_HAS_PORT_MODE
+# error "Separate pull-up control requires configurable port modes"
+#endif
+
+#if (STC_CORE_HAS_PORT8 || STC_CORE_HAS_PORT9 || STC_CORE_HAS_PORTA || \
+     STC_CORE_HAS_PORTB) && !defined(STC_CORE_FAMILY_32)
+# error "Extended P8/P9/PA/PB ports are only supported on STC32 targets"
 #endif
 
 #if !STC_CORE_HAS_UART1 && STC_CORE_SERIAL_BUFFERED_RX
@@ -110,7 +149,7 @@
 #  define STC_CORE_USES_MCS251 1
 # elif defined(STC_EXECUTION_MODE_MCS51)
 #  define STC_CORE_USES_MCS251 0
-# elif defined(__SDCC_mcs251)
+# elif STC_CORE_COMPILER_TARGET_MCS251
 #  define STC_CORE_USES_MCS251 1
 # else
 #  define STC_CORE_USES_MCS251 0
@@ -137,16 +176,16 @@
 #define STC_CORE_HAS_INT0 1
 #define STC_CORE_HAS_INT1 1
 
-#if defined(STC_EXECUTION_MODE_MCS51) && !defined(__SDCC_mcs51)
-# error "STC_EXECUTION_MODE_MCS51 requires the SDCC mcs51 backend"
-#elif defined(STC_EXECUTION_MODE_MCS251) && !defined(__SDCC_mcs251)
-# error "STC_EXECUTION_MODE_MCS251 requires the SDCC mcs251 backend"
+#if defined(STC_EXECUTION_MODE_MCS51) && !STC_CORE_COMPILER_TARGET_MCS51
+# error "STC_EXECUTION_MODE_MCS51 requires an MCS51 compiler target"
+#elif defined(STC_EXECUTION_MODE_MCS251) && !STC_CORE_COMPILER_TARGET_MCS251
+# error "STC_EXECUTION_MODE_MCS251 requires an MCS251 compiler target"
 #elif STC_CORE_USES_MCS251
-# if !defined(__SDCC_mcs251)
-#  error "STC32/AI8051U targets require the experimental SDCC mcs251 backend"
+# if !STC_CORE_COMPILER_TARGET_MCS251
+#  error "STC32/AI8051U targets require an MCS251 compiler target"
 # endif
-#elif defined(__SDCC_mcs251)
-# error "STC89/STC12/STC15/STC8 targets require the SDCC mcs51 backend"
+#elif STC_CORE_COMPILER_TARGET_MCS251
+# error "STC8 targets require an MCS51 compiler target"
 #endif
 
 #endif

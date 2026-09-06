@@ -2,46 +2,9 @@
 # Bare-MCU variants use maximum logical port masks. Verify the selected package pinout.
 
 menu.clock=CPU clock (must match ISP configuration)
-menu.machine=STC89 machine cycle (must match ISP configuration)
 menu.memory=SDCC memory model
 menu.execution=Execution mode
-
-#################### STC89C52RC ####################
-stc89c52rc.name=STC89C52RC
-
-stc89c52rc.build.core=STC
-stc89c52rc.build.board=STC89C52RC
-stc89c52rc.build.mcu_macro=STC89C52RC
-stc89c52rc.build.variant=STC89C52RC
-stc89c52rc.build.sdk_family=STC89
-stc89c52rc.build.f_cpu=11059200L
-stc89c52rc.build.memory_model=small
-stc89c52rc.build.target=-mmcs51
-stc89c52rc.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc89c52rc.build.core_flags=-DSTC_CORE_FAMILY_89=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=0 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=0 -DSTC_CORE_TIMER1_IS_1T=0 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=0 -DSTC_CORE_ADC_LAYOUT=0 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=0
-stc89c52rc.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=12UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=12UL
-stc89c52rc.upload.maximum_size=8192
-stc89c52rc.upload.maximum_idata_size=256
-stc89c52rc.upload.maximum_xdata_size=256
-stc89c52rc.upload.maximum_edata_size=0
-
-stc89c52rc.menu.machine.12t=12T (default)
-stc89c52rc.menu.machine.12t.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=12UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=12UL
-stc89c52rc.menu.machine.6t=6T
-stc89c52rc.menu.machine.6t.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=6UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=6UL
-
-stc89c52rc.menu.memory.small=Small (default)
-stc89c52rc.menu.memory.small.build.memory_model=small
-stc89c52rc.menu.memory.large=Large
-stc89c52rc.menu.memory.large.build.memory_model=large
-
-stc89c52rc.menu.clock.11m0592=11.0592 MHz (default)
-stc89c52rc.menu.clock.11m0592.build.f_cpu=11059200L
-stc89c52rc.menu.clock.12m=12 MHz
-stc89c52rc.menu.clock.12m.build.f_cpu=12000000L
-stc89c52rc.menu.clock.24m=24 MHz
-stc89c52rc.menu.clock.24m.build.f_cpu=24000000L
-
+menu.cppcore=Arduino core language
 
 #################### STC8H8K64U ####################
 stc8h8k64u.name=STC8H8K64U
@@ -55,12 +18,22 @@ stc8h8k64u.build.f_cpu=24000000L
 stc8h8k64u.build.memory_model=large
 stc8h8k64u.build.target=-mmcs51
 stc8h8k64u.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc8h8k64u.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc8h8k64u.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
 stc8h8k64u.build.timer_flags=
+stc8h8k64u.build.link_flags=
+stc8h8k64u.build.cpp_target_link_flags=
 stc8h8k64u.upload.maximum_size=65536
 stc8h8k64u.upload.maximum_idata_size=256
 stc8h8k64u.upload.maximum_xdata_size=8192
 stc8h8k64u.upload.maximum_edata_size=0
+
+stc8h8k64u.menu.cppcore.plain=Plain C (default)
+stc8h8k64u.menu.cppcore.plain.build.cpp_core_flags=
+stc8h8k64u.menu.cppcore.plain.build.cpp_link_flags=
+stc8h8k64u.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc8h8k64u.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=4096UL
+stc8h8k64u.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc8h8k64u.menu.cppcore.enabled.compiler.cache_core=false
 
 stc8h8k64u.menu.memory.large=Large (default)
 stc8h8k64u.menu.memory.large.build.memory_model=large
@@ -75,40 +48,6 @@ stc8h8k64u.menu.clock.45m=45 MHz
 stc8h8k64u.menu.clock.45m.build.f_cpu=45000000L
 
 
-#################### STC15F2K60S2 ####################
-stc15f2k60s2.name=STC15F2K60S2
-
-stc15f2k60s2.build.core=STC
-stc15f2k60s2.build.board=STC15F2K60S2
-stc15f2k60s2.build.mcu_macro=STC15F2K60S2
-stc15f2k60s2.build.variant=STC15F2K60S2
-stc15f2k60s2.build.sdk_family=STC15
-stc15f2k60s2.build.f_cpu=24000000L
-stc15f2k60s2.build.memory_model=large
-stc15f2k60s2.build.target=-mmcs51
-stc15f2k60s2.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc15f2k60s2.build.core_flags=-DSTC_CORE_FAMILY_15=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=3 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
-stc15f2k60s2.build.timer_flags=
-stc15f2k60s2.upload.maximum_size=61433
-stc15f2k60s2.upload.maximum_idata_size=256
-stc15f2k60s2.upload.maximum_xdata_size=1792
-stc15f2k60s2.upload.maximum_edata_size=0
-
-stc15f2k60s2.menu.memory.large=Large (default)
-stc15f2k60s2.menu.memory.large.build.memory_model=large
-stc15f2k60s2.menu.memory.small=Small
-stc15f2k60s2.menu.memory.small.build.memory_model=small
-
-stc15f2k60s2.menu.clock.11m0592=11.0592 MHz
-stc15f2k60s2.menu.clock.11m0592.build.f_cpu=11059200L
-stc15f2k60s2.menu.clock.24m=24 MHz (default)
-stc15f2k60s2.menu.clock.24m.build.f_cpu=24000000L
-stc15f2k60s2.menu.clock.27m=27 MHz
-stc15f2k60s2.menu.clock.27m.build.f_cpu=27000000L
-stc15f2k60s2.menu.clock.33m=33 MHz
-stc15f2k60s2.menu.clock.33m.build.f_cpu=33000000L
-
-
 #################### STC32G12K128 ####################
 stc32g12k128.name=STC32G12K128 (experimental MCS251)
 
@@ -121,12 +60,22 @@ stc32g12k128.build.f_cpu=24000000L
 stc32g12k128.build.memory_model=large
 stc32g12k128.build.target=-mmcs251
 stc32g12k128.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
-stc32g12k128.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc32g12k128.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
 stc32g12k128.build.timer_flags=
-stc32g12k128.upload.maximum_size=131072
+stc32g12k128.build.link_flags=--code-loc 0xff0000 "-Wl-b GSINIT0=0xfe0000"
+stc32g12k128.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x1000 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0xf00
+stc32g12k128.upload.maximum_size=65536
 stc32g12k128.upload.maximum_idata_size=0
 stc32g12k128.upload.maximum_xdata_size=8192
 stc32g12k128.upload.maximum_edata_size=4096
+
+stc32g12k128.menu.cppcore.plain=Plain C (default)
+stc32g12k128.menu.cppcore.plain.build.cpp_core_flags=
+stc32g12k128.menu.cppcore.plain.build.cpp_link_flags=
+stc32g12k128.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc32g12k128.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=6144UL
+stc32g12k128.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc32g12k128.menu.cppcore.enabled.compiler.cache_core=false
 
 stc32g12k128.menu.memory.large=Large (default)
 stc32g12k128.menu.memory.large.build.memory_model=large
@@ -151,12 +100,22 @@ stc8h1k08.build.f_cpu=24000000L
 stc8h1k08.build.memory_model=large
 stc8h1k08.build.target=-mmcs51
 stc8h1k08.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc8h1k08.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
+stc8h1k08.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
 stc8h1k08.build.timer_flags=
+stc8h1k08.build.link_flags=
+stc8h1k08.build.cpp_target_link_flags=
 stc8h1k08.upload.maximum_size=8192
 stc8h1k08.upload.maximum_idata_size=256
 stc8h1k08.upload.maximum_xdata_size=1024
 stc8h1k08.upload.maximum_edata_size=0
+
+stc8h1k08.menu.cppcore.plain=Plain C (default)
+stc8h1k08.menu.cppcore.plain.build.cpp_core_flags=
+stc8h1k08.menu.cppcore.plain.build.cpp_link_flags=
+stc8h1k08.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc8h1k08.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=512UL
+stc8h1k08.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc8h1k08.menu.cppcore.enabled.compiler.cache_core=false
 
 stc8h1k08.menu.memory.large=Large (default)
 stc8h1k08.menu.memory.large.build.memory_model=large
@@ -183,12 +142,22 @@ stc8g1k08a.build.f_cpu=24000000L
 stc8g1k08a.build.memory_model=large
 stc8g1k08a.build.target=-mmcs51
 stc8g1k08a.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc8g1k08a.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
+stc8g1k08a.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
 stc8g1k08a.build.timer_flags=
+stc8g1k08a.build.link_flags=
+stc8g1k08a.build.cpp_target_link_flags=
 stc8g1k08a.upload.maximum_size=8192
 stc8g1k08a.upload.maximum_idata_size=256
 stc8g1k08a.upload.maximum_xdata_size=1024
 stc8g1k08a.upload.maximum_edata_size=0
+
+stc8g1k08a.menu.cppcore.plain=Plain C (default)
+stc8g1k08a.menu.cppcore.plain.build.cpp_core_flags=
+stc8g1k08a.menu.cppcore.plain.build.cpp_link_flags=
+stc8g1k08a.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc8g1k08a.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=512UL
+stc8g1k08a.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc8g1k08a.menu.cppcore.enabled.compiler.cache_core=false
 
 stc8g1k08a.menu.memory.large=Large (default)
 stc8g1k08a.menu.memory.large.build.memory_model=large
@@ -203,70 +172,6 @@ stc8g1k08a.menu.clock.38m=38 MHz
 stc8g1k08a.menu.clock.38m.build.f_cpu=38000000L
 
 
-#################### STC12C5A60S2 ####################
-stc12c5a60s2.name=STC12C5A60S2
-
-stc12c5a60s2.build.core=STC
-stc12c5a60s2.build.board=STC12C5A60S2
-stc12c5a60s2.build.mcu_macro=STC12C5A60S2
-stc12c5a60s2.build.variant=STC12C5A60S2
-stc12c5a60s2.build.sdk_family=STC12
-stc12c5a60s2.build.f_cpu=24000000L
-stc12c5a60s2.build.memory_model=large
-stc12c5a60s2.build.target=-mmcs51
-stc12c5a60s2.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc12c5a60s2.build.core_flags=-DSTC_CORE_FAMILY_12=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=2 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
-stc12c5a60s2.build.timer_flags=
-stc12c5a60s2.upload.maximum_size=61440
-stc12c5a60s2.upload.maximum_idata_size=256
-stc12c5a60s2.upload.maximum_xdata_size=1024
-stc12c5a60s2.upload.maximum_edata_size=0
-
-stc12c5a60s2.menu.memory.large=Large (default)
-stc12c5a60s2.menu.memory.large.build.memory_model=large
-stc12c5a60s2.menu.memory.small=Small
-stc12c5a60s2.menu.memory.small.build.memory_model=small
-
-stc12c5a60s2.menu.clock.11m0592=11.0592 MHz
-stc12c5a60s2.menu.clock.11m0592.build.f_cpu=11059200L
-stc12c5a60s2.menu.clock.24m=24 MHz (default)
-stc12c5a60s2.menu.clock.24m.build.f_cpu=24000000L
-stc12c5a60s2.menu.clock.33m=33 MHz
-stc12c5a60s2.menu.clock.33m.build.f_cpu=33000000L
-
-
-#################### STC15W408AS ####################
-stc15w408as.name=STC15W408AS
-
-stc15w408as.build.core=STC
-stc15w408as.build.board=STC15W408AS
-stc15w408as.build.mcu_macro=STC15W408AS
-stc15w408as.build.variant=STC15W408AS
-stc15w408as.build.sdk_family=STC15
-stc15w408as.build.f_cpu=24000000L
-stc15w408as.build.memory_model=small
-stc15w408as.build.target=-mmcs51
-stc15w408as.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc15w408as.build.core_flags=-DSTC_CORE_FAMILY_15=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=3 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
-stc15w408as.build.timer_flags=
-stc15w408as.upload.maximum_size=8192
-stc15w408as.upload.maximum_idata_size=256
-stc15w408as.upload.maximum_xdata_size=256
-stc15w408as.upload.maximum_edata_size=0
-
-stc15w408as.menu.memory.small=Small (default)
-stc15w408as.menu.memory.small.build.memory_model=small
-stc15w408as.menu.memory.large=Large
-stc15w408as.menu.memory.large.build.memory_model=large
-
-stc15w408as.menu.clock.11m0592=11.0592 MHz
-stc15w408as.menu.clock.11m0592.build.f_cpu=11059200L
-stc15w408as.menu.clock.24m=24 MHz (default)
-stc15w408as.menu.clock.24m.build.f_cpu=24000000L
-stc15w408as.menu.clock.33m=33 MHz
-stc15w408as.menu.clock.33m.build.f_cpu=33000000L
-
-
 #################### STC8G1K08 ####################
 stc8g1k08.name=STC8G1K08
 
@@ -279,12 +184,22 @@ stc8g1k08.build.f_cpu=24000000L
 stc8g1k08.build.memory_model=large
 stc8g1k08.build.target=-mmcs51
 stc8g1k08.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc8g1k08.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
+stc8g1k08.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
 stc8g1k08.build.timer_flags=
+stc8g1k08.build.link_flags=
+stc8g1k08.build.cpp_target_link_flags=
 stc8g1k08.upload.maximum_size=8192
 stc8g1k08.upload.maximum_idata_size=256
 stc8g1k08.upload.maximum_xdata_size=1024
 stc8g1k08.upload.maximum_edata_size=0
+
+stc8g1k08.menu.cppcore.plain=Plain C (default)
+stc8g1k08.menu.cppcore.plain.build.cpp_core_flags=
+stc8g1k08.menu.cppcore.plain.build.cpp_link_flags=
+stc8g1k08.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc8g1k08.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=512UL
+stc8g1k08.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc8g1k08.menu.cppcore.enabled.compiler.cache_core=false
 
 stc8g1k08.menu.memory.large=Large (default)
 stc8g1k08.menu.memory.large.build.memory_model=large
@@ -311,12 +226,22 @@ stc8g2k64s4.build.f_cpu=24000000L
 stc8g2k64s4.build.memory_model=large
 stc8g2k64s4.build.target=-mmcs51
 stc8g2k64s4.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc8g2k64s4.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
+stc8g2k64s4.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
 stc8g2k64s4.build.timer_flags=
+stc8g2k64s4.build.link_flags=
+stc8g2k64s4.build.cpp_target_link_flags=
 stc8g2k64s4.upload.maximum_size=65536
 stc8g2k64s4.upload.maximum_idata_size=256
 stc8g2k64s4.upload.maximum_xdata_size=2048
 stc8g2k64s4.upload.maximum_edata_size=0
+
+stc8g2k64s4.menu.cppcore.plain=Plain C (default)
+stc8g2k64s4.menu.cppcore.plain.build.cpp_core_flags=
+stc8g2k64s4.menu.cppcore.plain.build.cpp_link_flags=
+stc8g2k64s4.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc8g2k64s4.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=512UL
+stc8g2k64s4.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc8g2k64s4.menu.cppcore.enabled.compiler.cache_core=false
 
 stc8g2k64s4.menu.memory.large=Large (default)
 stc8g2k64s4.menu.memory.large.build.memory_model=large
@@ -331,6 +256,46 @@ stc8g2k64s4.menu.clock.35m=35 MHz
 stc8g2k64s4.menu.clock.35m.build.f_cpu=35000000L
 
 
+#################### STC32G144K246 ####################
+stc32g144k246.name=STC32G144K246 (experimental MCS251)
+
+stc32g144k246.build.core=STC
+stc32g144k246.build.board=STC32G144K246
+stc32g144k246.build.mcu_macro=STC32G144K246
+stc32g144k246.build.variant=STC32G144K246
+stc32g144k246.build.sdk_family=STC32G
+stc32g144k246.build.f_cpu=24000000L
+stc32g144k246.build.memory_model=large
+stc32g144k246.build.target=-mmcs251
+stc32g144k246.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
+stc32g144k246.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=1 -DSTC_CORE_HAS_PORT9=1 -DSTC_CORE_HAS_PORTA=1 -DSTC_CORE_HAS_PORTB=1 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc32g144k246.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=12UL
+stc32g144k246.build.link_flags=--code-loc 0xff0000 "-Wl-b GSINIT0=0xfc2800"
+stc32g144k246.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x4000 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0x3f00
+stc32g144k246.upload.maximum_size=186368
+stc32g144k246.upload.maximum_idata_size=0
+stc32g144k246.upload.maximum_xdata_size=131072
+stc32g144k246.upload.maximum_edata_size=16384
+
+stc32g144k246.menu.cppcore.plain=Plain C (default)
+stc32g144k246.menu.cppcore.plain.build.cpp_core_flags=
+stc32g144k246.menu.cppcore.plain.build.cpp_link_flags=
+stc32g144k246.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc32g144k246.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=32768UL
+stc32g144k246.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc32g144k246.menu.cppcore.enabled.compiler.cache_core=false
+
+stc32g144k246.menu.memory.large=Large (default)
+stc32g144k246.menu.memory.large.build.memory_model=large
+
+stc32g144k246.menu.clock.12m=12 MHz
+stc32g144k246.menu.clock.12m.build.f_cpu=12000000L
+stc32g144k246.menu.clock.24m=24 MHz (default)
+stc32g144k246.menu.clock.24m.build.f_cpu=24000000L
+stc32g144k246.menu.clock.48m=48 MHz
+stc32g144k246.menu.clock.48m.build.f_cpu=48000000L
+
+
 #################### STC32G8K64 ####################
 stc32g8k64.name=STC32G8K64 (experimental MCS251)
 
@@ -343,12 +308,22 @@ stc32g8k64.build.f_cpu=24000000L
 stc32g8k64.build.memory_model=large
 stc32g8k64.build.target=-mmcs251
 stc32g8k64.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
-stc32g8k64.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc32g8k64.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
 stc32g8k64.build.timer_flags=
+stc32g8k64.build.link_flags=--code-loc 0xff0000
+stc32g8k64.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x800 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0x700
 stc32g8k64.upload.maximum_size=65536
 stc32g8k64.upload.maximum_idata_size=0
 stc32g8k64.upload.maximum_xdata_size=6144
 stc32g8k64.upload.maximum_edata_size=2048
+
+stc32g8k64.menu.cppcore.plain=Plain C (default)
+stc32g8k64.menu.cppcore.plain.build.cpp_core_flags=
+stc32g8k64.menu.cppcore.plain.build.cpp_link_flags=
+stc32g8k64.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc32g8k64.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=4096UL
+stc32g8k64.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc32g8k64.menu.cppcore.enabled.compiler.cache_core=false
 
 stc32g8k64.menu.memory.large=Large (default)
 stc32g8k64.menu.memory.large.build.memory_model=large
@@ -373,12 +348,22 @@ stc32cl8k64.build.f_cpu=24000000L
 stc32cl8k64.build.memory_model=large
 stc32cl8k64.build.target=-mmcs251
 stc32cl8k64.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
-stc32cl8k64.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc32cl8k64.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
 stc32cl8k64.build.timer_flags=
+stc32cl8k64.build.link_flags=--code-loc 0xff0000
+stc32cl8k64.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x800 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0x700
 stc32cl8k64.upload.maximum_size=65536
 stc32cl8k64.upload.maximum_idata_size=0
 stc32cl8k64.upload.maximum_xdata_size=6144
 stc32cl8k64.upload.maximum_edata_size=2048
+
+stc32cl8k64.menu.cppcore.plain=Plain C (default)
+stc32cl8k64.menu.cppcore.plain.build.cpp_core_flags=
+stc32cl8k64.menu.cppcore.plain.build.cpp_link_flags=
+stc32cl8k64.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc32cl8k64.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=4096UL
+stc32cl8k64.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc32cl8k64.menu.cppcore.enabled.compiler.cache_core=false
 
 stc32cl8k64.menu.memory.large=Large (default)
 stc32cl8k64.menu.memory.large.build.memory_model=large
@@ -403,19 +388,33 @@ ai8051u_34k64.build.f_cpu=24000000L
 ai8051u_34k64.build.memory_model=large
 ai8051u_34k64.build.target=-mmcs51
 ai8051u_34k64.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-ai8051u_34k64.build.core_flags=-DSTC_CORE_FAMILY_AI8051U=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+ai8051u_34k64.build.core_flags=-DSTC_CORE_FAMILY_AI8051U=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
 ai8051u_34k64.build.timer_flags=
+ai8051u_34k64.build.link_flags=
+ai8051u_34k64.build.cpp_target_link_flags=
 ai8051u_34k64.upload.maximum_size=65536
 ai8051u_34k64.upload.maximum_idata_size=256
 ai8051u_34k64.upload.maximum_xdata_size=32768
 ai8051u_34k64.upload.maximum_edata_size=2048
 
+ai8051u_34k64.menu.cppcore.plain=Plain C (default)
+ai8051u_34k64.menu.cppcore.plain.build.cpp_core_flags=
+ai8051u_34k64.menu.cppcore.plain.build.cpp_link_flags=
+ai8051u_34k64.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+ai8051u_34k64.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=16384UL
+ai8051u_34k64.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+ai8051u_34k64.menu.cppcore.enabled.compiler.cache_core=false
+
 ai8051u_34k64.menu.execution.mcs51=8051 compatible / SDCC MCS51 (default)
 ai8051u_34k64.menu.execution.mcs51.build.target=-mmcs51
 ai8051u_34k64.menu.execution.mcs51.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
+ai8051u_34k64.menu.execution.mcs51.build.link_flags=
+ai8051u_34k64.menu.execution.mcs51.build.cpp_target_link_flags=
 ai8051u_34k64.menu.execution.mcs251=32-bit / experimental SDCC MCS251
 ai8051u_34k64.menu.execution.mcs251.build.target=-mmcs251
 ai8051u_34k64.menu.execution.mcs251.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
+ai8051u_34k64.menu.execution.mcs251.build.link_flags=--code-loc 0xff0000
+ai8051u_34k64.menu.execution.mcs251.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x800 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0x700
 
 ai8051u_34k64.menu.memory.large=Large (default)
 ai8051u_34k64.menu.memory.large.build.memory_model=large
@@ -426,178 +425,6 @@ ai8051u_34k64.menu.clock.24m=24 MHz (default)
 ai8051u_34k64.menu.clock.24m.build.f_cpu=24000000L
 ai8051u_34k64.menu.clock.48m=48 MHz
 ai8051u_34k64.menu.clock.48m.build.f_cpu=48000000L
-
-
-#################### STC89C51RC ####################
-stc89c51rc.name=STC89C51RC
-
-stc89c51rc.build.core=STC
-stc89c51rc.build.board=STC89C51RC
-stc89c51rc.build.mcu_macro=STC89C51RC
-stc89c51rc.build.variant=STC89C51RC
-stc89c51rc.build.sdk_family=STC89
-stc89c51rc.build.f_cpu=11059200L
-stc89c51rc.build.memory_model=small
-stc89c51rc.build.target=-mmcs51
-stc89c51rc.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc89c51rc.build.core_flags=-DSTC_CORE_FAMILY_89=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=0 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=0 -DSTC_CORE_TIMER1_IS_1T=0 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=0 -DSTC_CORE_ADC_LAYOUT=0 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=0
-stc89c51rc.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=12UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=12UL
-stc89c51rc.upload.maximum_size=4096
-stc89c51rc.upload.maximum_idata_size=256
-stc89c51rc.upload.maximum_xdata_size=256
-stc89c51rc.upload.maximum_edata_size=0
-
-stc89c51rc.menu.machine.12t=12T (default)
-stc89c51rc.menu.machine.12t.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=12UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=12UL
-stc89c51rc.menu.machine.6t=6T
-stc89c51rc.menu.machine.6t.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=6UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=6UL
-
-stc89c51rc.menu.memory.small=Small (default)
-stc89c51rc.menu.memory.small.build.memory_model=small
-stc89c51rc.menu.memory.large=Large
-stc89c51rc.menu.memory.large.build.memory_model=large
-
-stc89c51rc.menu.clock.11m0592=11.0592 MHz (default)
-stc89c51rc.menu.clock.11m0592.build.f_cpu=11059200L
-stc89c51rc.menu.clock.12m=12 MHz
-stc89c51rc.menu.clock.12m.build.f_cpu=12000000L
-stc89c51rc.menu.clock.24m=24 MHz
-stc89c51rc.menu.clock.24m.build.f_cpu=24000000L
-
-
-#################### STC89C58RD+ ####################
-stc89c58rd_plus.name=STC89C58RD+
-
-stc89c58rd_plus.build.core=STC
-stc89c58rd_plus.build.board=STC89C58RD_PLUS
-stc89c58rd_plus.build.mcu_macro=STC89C58RD_PLUS
-stc89c58rd_plus.build.variant=STC89C58RD+
-stc89c58rd_plus.build.sdk_family=STC89
-stc89c58rd_plus.build.f_cpu=11059200L
-stc89c58rd_plus.build.memory_model=large
-stc89c58rd_plus.build.target=-mmcs51
-stc89c58rd_plus.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc89c58rd_plus.build.core_flags=-DSTC_CORE_FAMILY_89=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=0 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=0 -DSTC_CORE_TIMER1_IS_1T=0 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=0 -DSTC_CORE_ADC_LAYOUT=0 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=0
-stc89c58rd_plus.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=12UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=12UL
-stc89c58rd_plus.upload.maximum_size=32768
-stc89c58rd_plus.upload.maximum_idata_size=256
-stc89c58rd_plus.upload.maximum_xdata_size=1024
-stc89c58rd_plus.upload.maximum_edata_size=0
-
-stc89c58rd_plus.menu.machine.12t=12T (default)
-stc89c58rd_plus.menu.machine.12t.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=12UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=12UL
-stc89c58rd_plus.menu.machine.6t=6T
-stc89c58rd_plus.menu.machine.6t.build.timer_flags=-DSTC_TIMER0_CLOCK_DIVIDER=6UL -DSTC_SERIAL_TIMER1_CLOCK_DIVIDER=6UL
-
-stc89c58rd_plus.menu.memory.large=Large (default)
-stc89c58rd_plus.menu.memory.large.build.memory_model=large
-stc89c58rd_plus.menu.memory.small=Small
-stc89c58rd_plus.menu.memory.small.build.memory_model=small
-
-stc89c58rd_plus.menu.clock.11m0592=11.0592 MHz (default)
-stc89c58rd_plus.menu.clock.11m0592.build.f_cpu=11059200L
-stc89c58rd_plus.menu.clock.12m=12 MHz
-stc89c58rd_plus.menu.clock.12m.build.f_cpu=12000000L
-stc89c58rd_plus.menu.clock.24m=24 MHz
-stc89c58rd_plus.menu.clock.24m.build.f_cpu=24000000L
-
-
-#################### STC12C2052AD ####################
-stc12c2052ad.name=STC12C2052AD
-
-stc12c2052ad.build.core=STC
-stc12c2052ad.build.board=STC12C2052AD
-stc12c2052ad.build.mcu_macro=STC12C2052AD
-stc12c2052ad.build.variant=STC12C2052AD
-stc12c2052ad.build.sdk_family=STC12
-stc12c2052ad.build.f_cpu=11059200L
-stc12c2052ad.build.memory_model=small
-stc12c2052ad.build.target=-mmcs51
-stc12c2052ad.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc12c2052ad.build.core_flags=-DSTC_CORE_FAMILY_12=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=0 -DSTC_CORE_HAS_PORT5=0 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=0 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=1 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=8
-stc12c2052ad.build.timer_flags=
-stc12c2052ad.upload.maximum_size=2048
-stc12c2052ad.upload.maximum_idata_size=256
-stc12c2052ad.upload.maximum_xdata_size=0
-stc12c2052ad.upload.maximum_edata_size=0
-
-stc12c2052ad.menu.memory.small=Small (default)
-stc12c2052ad.menu.memory.small.build.memory_model=small
-
-stc12c2052ad.menu.clock.6m=6 MHz
-stc12c2052ad.menu.clock.6m.build.f_cpu=6000000L
-stc12c2052ad.menu.clock.11m0592=11.0592 MHz (default)
-stc12c2052ad.menu.clock.11m0592.build.f_cpu=11059200L
-stc12c2052ad.menu.clock.12m=12 MHz
-stc12c2052ad.menu.clock.12m.build.f_cpu=12000000L
-stc12c2052ad.menu.clock.24m=24 MHz
-stc12c2052ad.menu.clock.24m.build.f_cpu=24000000L
-
-
-#################### STC15F104W ####################
-stc15f104w.name=STC15F104W
-
-stc15f104w.build.core=STC
-stc15f104w.build.board=STC15F104W
-stc15f104w.build.mcu_macro=STC15F104W
-stc15f104w.build.variant=STC15F104W
-stc15f104w.build.sdk_family=STC15
-stc15f104w.build.f_cpu=11059200L
-stc15f104w.build.memory_model=small
-stc15f104w.build.target=-mmcs51
-stc15f104w.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc15f104w.build.core_flags=-DSTC_CORE_FAMILY_15=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=0 -DSTC_CORE_HAS_PORT5=0 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=0 -DSTC_CORE_SERIAL_BUFFERED_RX=0 -DSTC_CORE_HAS_ADC=0 -DSTC_CORE_ADC_LAYOUT=0 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=0
-stc15f104w.build.timer_flags=
-stc15f104w.upload.maximum_size=4096
-stc15f104w.upload.maximum_idata_size=128
-stc15f104w.upload.maximum_xdata_size=0
-stc15f104w.upload.maximum_edata_size=0
-
-stc15f104w.menu.memory.small=Small (default)
-stc15f104w.menu.memory.small.build.memory_model=small
-
-stc15f104w.menu.clock.5529600=5.5296 MHz
-stc15f104w.menu.clock.5529600.build.f_cpu=5529600L
-stc15f104w.menu.clock.11m0592=11.0592 MHz (default)
-stc15f104w.menu.clock.11m0592.build.f_cpu=11059200L
-stc15f104w.menu.clock.22118400=22.1184 MHz
-stc15f104w.menu.clock.22118400.build.f_cpu=22118400L
-stc15f104w.menu.clock.33177600=33.1776 MHz
-stc15f104w.menu.clock.33177600.build.f_cpu=33177600L
-
-
-#################### STC15W4K32S4 ####################
-stc15w4k32s4.name=STC15W4K32S4
-
-stc15w4k32s4.build.core=STC
-stc15w4k32s4.build.board=STC15W4K32S4
-stc15w4k32s4.build.mcu_macro=STC15W4K32S4
-stc15w4k32s4.build.variant=STC15W4K32S4
-stc15w4k32s4.build.sdk_family=STC15
-stc15w4k32s4.build.f_cpu=24000000L
-stc15w4k32s4.build.memory_model=large
-stc15w4k32s4.build.target=-mmcs51
-stc15w4k32s4.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc15w4k32s4.build.core_flags=-DSTC_CORE_FAMILY_15=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=3 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
-stc15w4k32s4.build.timer_flags=
-stc15w4k32s4.upload.maximum_size=32768
-stc15w4k32s4.upload.maximum_idata_size=256
-stc15w4k32s4.upload.maximum_xdata_size=3840
-stc15w4k32s4.upload.maximum_edata_size=0
-
-stc15w4k32s4.menu.memory.large=Large (default)
-stc15w4k32s4.menu.memory.large.build.memory_model=large
-stc15w4k32s4.menu.memory.small=Small
-stc15w4k32s4.menu.memory.small.build.memory_model=small
-
-stc15w4k32s4.menu.clock.11m0592=11.0592 MHz
-stc15w4k32s4.menu.clock.11m0592.build.f_cpu=11059200L
-stc15w4k32s4.menu.clock.12m=12 MHz
-stc15w4k32s4.menu.clock.12m.build.f_cpu=12000000L
-stc15w4k32s4.menu.clock.24m=24 MHz (default)
-stc15w4k32s4.menu.clock.24m.build.f_cpu=24000000L
-stc15w4k32s4.menu.clock.30m=30 MHz
-stc15w4k32s4.menu.clock.30m.build.f_cpu=30000000L
 
 
 #################### STC8A8K64S4A12 ####################
@@ -612,12 +439,22 @@ stc8a8k64s4a12.build.f_cpu=24000000L
 stc8a8k64s4a12.build.memory_model=large
 stc8a8k64s4a12.build.target=-mmcs51
 stc8a8k64s4a12.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc8a8k64s4a12.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc8a8k64s4a12.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
 stc8a8k64s4a12.build.timer_flags=
+stc8a8k64s4a12.build.link_flags=
+stc8a8k64s4a12.build.cpp_target_link_flags=
 stc8a8k64s4a12.upload.maximum_size=65536
 stc8a8k64s4a12.upload.maximum_idata_size=256
 stc8a8k64s4a12.upload.maximum_xdata_size=8192
 stc8a8k64s4a12.upload.maximum_edata_size=0
+
+stc8a8k64s4a12.menu.cppcore.plain=Plain C (default)
+stc8a8k64s4a12.menu.cppcore.plain.build.cpp_core_flags=
+stc8a8k64s4a12.menu.cppcore.plain.build.cpp_link_flags=
+stc8a8k64s4a12.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc8a8k64s4a12.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=4096UL
+stc8a8k64s4a12.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc8a8k64s4a12.menu.cppcore.enabled.compiler.cache_core=false
 
 stc8a8k64s4a12.menu.memory.large=Large (default)
 stc8a8k64s4a12.menu.memory.large.build.memory_model=large
@@ -644,12 +481,22 @@ stc8c2k64s4.build.f_cpu=24000000L
 stc8c2k64s4.build.memory_model=large
 stc8c2k64s4.build.target=-mmcs51
 stc8c2k64s4.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc8c2k64s4.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=0 -DSTC_CORE_ADC_LAYOUT=0 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=0
+stc8c2k64s4.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=0 -DSTC_CORE_ADC_LAYOUT=0 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=0
 stc8c2k64s4.build.timer_flags=
+stc8c2k64s4.build.link_flags=
+stc8c2k64s4.build.cpp_target_link_flags=
 stc8c2k64s4.upload.maximum_size=65536
 stc8c2k64s4.upload.maximum_idata_size=256
 stc8c2k64s4.upload.maximum_xdata_size=2048
 stc8c2k64s4.upload.maximum_edata_size=0
+
+stc8c2k64s4.menu.cppcore.plain=Plain C (default)
+stc8c2k64s4.menu.cppcore.plain.build.cpp_core_flags=
+stc8c2k64s4.menu.cppcore.plain.build.cpp_link_flags=
+stc8c2k64s4.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc8c2k64s4.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=512UL
+stc8c2k64s4.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc8c2k64s4.menu.cppcore.enabled.compiler.cache_core=false
 
 stc8c2k64s4.menu.memory.large=Large (default)
 stc8c2k64s4.menu.memory.large.build.memory_model=large
@@ -676,12 +523,22 @@ stc8h1k28.build.f_cpu=24000000L
 stc8h1k28.build.memory_model=large
 stc8h1k28.build.target=-mmcs51
 stc8h1k28.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc8h1k28.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
+stc8h1k28.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=10
 stc8h1k28.build.timer_flags=
+stc8h1k28.build.link_flags=
+stc8h1k28.build.cpp_target_link_flags=
 stc8h1k28.upload.maximum_size=28672
 stc8h1k28.upload.maximum_idata_size=256
 stc8h1k28.upload.maximum_xdata_size=1024
 stc8h1k28.upload.maximum_edata_size=0
+
+stc8h1k28.menu.cppcore.plain=Plain C (default)
+stc8h1k28.menu.cppcore.plain.build.cpp_core_flags=
+stc8h1k28.menu.cppcore.plain.build.cpp_link_flags=
+stc8h1k28.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc8h1k28.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=512UL
+stc8h1k28.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc8h1k28.menu.cppcore.enabled.compiler.cache_core=false
 
 stc8h1k28.menu.memory.large=Large (default)
 stc8h1k28.menu.memory.large.build.memory_model=large
@@ -708,12 +565,22 @@ stc8h3k64s4.build.f_cpu=24000000L
 stc8h3k64s4.build.memory_model=large
 stc8h3k64s4.build.target=-mmcs51
 stc8h3k64s4.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-stc8h3k64s4.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc8h3k64s4.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
 stc8h3k64s4.build.timer_flags=
+stc8h3k64s4.build.link_flags=
+stc8h3k64s4.build.cpp_target_link_flags=
 stc8h3k64s4.upload.maximum_size=65536
 stc8h3k64s4.upload.maximum_idata_size=256
 stc8h3k64s4.upload.maximum_xdata_size=3072
 stc8h3k64s4.upload.maximum_edata_size=0
+
+stc8h3k64s4.menu.cppcore.plain=Plain C (default)
+stc8h3k64s4.menu.cppcore.plain.build.cpp_core_flags=
+stc8h3k64s4.menu.cppcore.plain.build.cpp_link_flags=
+stc8h3k64s4.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc8h3k64s4.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=1024UL
+stc8h3k64s4.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc8h3k64s4.menu.cppcore.enabled.compiler.cache_core=false
 
 stc8h3k64s4.menu.memory.large=Large (default)
 stc8h3k64s4.menu.memory.large.build.memory_model=large
@@ -740,12 +607,22 @@ stc32g12k64.build.f_cpu=24000000L
 stc32g12k64.build.memory_model=large
 stc32g12k64.build.target=-mmcs251
 stc32g12k64.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
-stc32g12k64.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc32g12k64.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
 stc32g12k64.build.timer_flags=
+stc32g12k64.build.link_flags=--code-loc 0xff0000
+stc32g12k64.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x1000 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0xf00
 stc32g12k64.upload.maximum_size=65536
 stc32g12k64.upload.maximum_idata_size=0
 stc32g12k64.upload.maximum_xdata_size=8192
 stc32g12k64.upload.maximum_edata_size=4096
+
+stc32g12k64.menu.cppcore.plain=Plain C (default)
+stc32g12k64.menu.cppcore.plain.build.cpp_core_flags=
+stc32g12k64.menu.cppcore.plain.build.cpp_link_flags=
+stc32g12k64.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc32g12k64.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=6144UL
+stc32g12k64.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc32g12k64.menu.cppcore.enabled.compiler.cache_core=false
 
 stc32g12k64.menu.memory.large=Large (default)
 stc32g12k64.menu.memory.large.build.memory_model=large
@@ -770,12 +647,22 @@ ai8h2k12u.build.f_cpu=24000000L
 ai8h2k12u.build.memory_model=large
 ai8h2k12u.build.target=-mmcs51
 ai8h2k12u.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-ai8h2k12u.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=1 -DSTC_CORE_ADC_NATIVE_BITS=12
+ai8h2k12u.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=1 -DSTC_CORE_ADC_NATIVE_BITS=12
 ai8h2k12u.build.timer_flags=
+ai8h2k12u.build.link_flags=
+ai8h2k12u.build.cpp_target_link_flags=
 ai8h2k12u.upload.maximum_size=12288
 ai8h2k12u.upload.maximum_idata_size=256
 ai8h2k12u.upload.maximum_xdata_size=1024
 ai8h2k12u.upload.maximum_edata_size=0
+
+ai8h2k12u.menu.cppcore.plain=Plain C (default)
+ai8h2k12u.menu.cppcore.plain.build.cpp_core_flags=
+ai8h2k12u.menu.cppcore.plain.build.cpp_link_flags=
+ai8h2k12u.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+ai8h2k12u.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=512UL
+ai8h2k12u.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+ai8h2k12u.menu.cppcore.enabled.compiler.cache_core=false
 
 ai8h2k12u.menu.memory.large=Large (default)
 ai8h2k12u.menu.memory.large.build.memory_model=large
@@ -806,12 +693,22 @@ ai8h2k32u.build.f_cpu=24000000L
 ai8h2k32u.build.memory_model=large
 ai8h2k32u.build.target=-mmcs51
 ai8h2k32u.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
-ai8h2k32u.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=1 -DSTC_CORE_ADC_NATIVE_BITS=12
+ai8h2k32u.build.core_flags=-DSTC_CORE_FAMILY_8=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=1 -DSTC_CORE_ADC_NATIVE_BITS=12
 ai8h2k32u.build.timer_flags=
+ai8h2k32u.build.link_flags=
+ai8h2k32u.build.cpp_target_link_flags=
 ai8h2k32u.upload.maximum_size=32768
 ai8h2k32u.upload.maximum_idata_size=256
 ai8h2k32u.upload.maximum_xdata_size=1024
 ai8h2k32u.upload.maximum_edata_size=0
+
+ai8h2k32u.menu.cppcore.plain=Plain C (default)
+ai8h2k32u.menu.cppcore.plain.build.cpp_core_flags=
+ai8h2k32u.menu.cppcore.plain.build.cpp_link_flags=
+ai8h2k32u.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+ai8h2k32u.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=512UL
+ai8h2k32u.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+ai8h2k32u.menu.cppcore.enabled.compiler.cache_core=false
 
 ai8h2k32u.menu.memory.large=Large (default)
 ai8h2k32u.menu.memory.large.build.memory_model=large
@@ -828,3 +725,215 @@ ai8h2k32u.menu.clock.40m=40 MHz
 ai8h2k32u.menu.clock.40m.build.f_cpu=40000000L
 ai8h2k32u.menu.clock.45m=45 MHz
 ai8h2k32u.menu.clock.45m.build.f_cpu=45000000L
+
+
+#################### STC32G8K48 ####################
+stc32g8k48.name=STC32G8K48 (experimental MCS251)
+
+stc32g8k48.build.core=STC
+stc32g8k48.build.board=STC32G8K48
+stc32g8k48.build.mcu_macro=STC32G8K48
+stc32g8k48.build.variant=STC32G8K48
+stc32g8k48.build.sdk_family=STC32G
+stc32g8k48.build.f_cpu=24000000L
+stc32g8k48.build.memory_model=large
+stc32g8k48.build.target=-mmcs251
+stc32g8k48.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
+stc32g8k48.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc32g8k48.build.timer_flags=
+stc32g8k48.build.link_flags=--code-loc 0xff0000
+stc32g8k48.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x800 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0x700
+stc32g8k48.upload.maximum_size=49152
+stc32g8k48.upload.maximum_idata_size=0
+stc32g8k48.upload.maximum_xdata_size=6144
+stc32g8k48.upload.maximum_edata_size=2048
+
+stc32g8k48.menu.cppcore.plain=Plain C (default)
+stc32g8k48.menu.cppcore.plain.build.cpp_core_flags=
+stc32g8k48.menu.cppcore.plain.build.cpp_link_flags=
+stc32g8k48.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc32g8k48.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=4096UL
+stc32g8k48.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc32g8k48.menu.cppcore.enabled.compiler.cache_core=false
+
+stc32g8k48.menu.memory.large=Large (default)
+stc32g8k48.menu.memory.large.build.memory_model=large
+
+stc32g8k48.menu.clock.12m=12 MHz
+stc32g8k48.menu.clock.12m.build.f_cpu=12000000L
+stc32g8k48.menu.clock.24m=24 MHz (default)
+stc32g8k48.menu.clock.24m.build.f_cpu=24000000L
+
+
+#################### STC32CL8K48 ####################
+stc32cl8k48.name=STC32CL8K48 (experimental MCS251)
+
+stc32cl8k48.build.core=STC
+stc32cl8k48.build.board=STC32CL8K48
+stc32cl8k48.build.mcu_macro=STC32CL8K48
+stc32cl8k48.build.variant=STC32CL8K48
+stc32cl8k48.build.sdk_family=STC32CL
+stc32cl8k48.build.f_cpu=24000000L
+stc32cl8k48.build.memory_model=large
+stc32cl8k48.build.target=-mmcs251
+stc32cl8k48.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
+stc32cl8k48.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc32cl8k48.build.timer_flags=
+stc32cl8k48.build.link_flags=--code-loc 0xff0000
+stc32cl8k48.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x800 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0x700
+stc32cl8k48.upload.maximum_size=49152
+stc32cl8k48.upload.maximum_idata_size=0
+stc32cl8k48.upload.maximum_xdata_size=6144
+stc32cl8k48.upload.maximum_edata_size=2048
+
+stc32cl8k48.menu.cppcore.plain=Plain C (default)
+stc32cl8k48.menu.cppcore.plain.build.cpp_core_flags=
+stc32cl8k48.menu.cppcore.plain.build.cpp_link_flags=
+stc32cl8k48.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc32cl8k48.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=4096UL
+stc32cl8k48.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+stc32cl8k48.menu.cppcore.enabled.compiler.cache_core=false
+
+stc32cl8k48.menu.memory.large=Large (default)
+stc32cl8k48.menu.memory.large.build.memory_model=large
+
+stc32cl8k48.menu.clock.12m=12 MHz
+stc32cl8k48.menu.clock.12m.build.f_cpu=12000000L
+stc32cl8k48.menu.clock.24m=24 MHz (default)
+stc32cl8k48.menu.clock.24m.build.f_cpu=24000000L
+
+
+#################### AI8051U-34K32 ####################
+ai8051u_34k32.name=AI8051U-34K32
+
+ai8051u_34k32.build.core=STC
+ai8051u_34k32.build.board=AI8051U_34K32
+ai8051u_34k32.build.mcu_macro=AI8051U_34K32
+ai8051u_34k32.build.variant=AI8051U_34K32
+ai8051u_34k32.build.sdk_family=AI8051U
+ai8051u_34k32.build.f_cpu=24000000L
+ai8051u_34k32.build.memory_model=large
+ai8051u_34k32.build.target=-mmcs51
+ai8051u_34k32.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
+ai8051u_34k32.build.core_flags=-DSTC_CORE_FAMILY_AI8051U=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+ai8051u_34k32.build.timer_flags=
+ai8051u_34k32.build.link_flags=
+ai8051u_34k32.build.cpp_target_link_flags=
+ai8051u_34k32.upload.maximum_size=32768
+ai8051u_34k32.upload.maximum_idata_size=256
+ai8051u_34k32.upload.maximum_xdata_size=32768
+ai8051u_34k32.upload.maximum_edata_size=2048
+
+ai8051u_34k32.menu.cppcore.plain=Plain C (default)
+ai8051u_34k32.menu.cppcore.plain.build.cpp_core_flags=
+ai8051u_34k32.menu.cppcore.plain.build.cpp_link_flags=
+ai8051u_34k32.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+ai8051u_34k32.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=16384UL
+ai8051u_34k32.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+ai8051u_34k32.menu.cppcore.enabled.compiler.cache_core=false
+
+ai8051u_34k32.menu.execution.mcs51=8051 compatible / SDCC MCS51 (default)
+ai8051u_34k32.menu.execution.mcs51.build.target=-mmcs51
+ai8051u_34k32.menu.execution.mcs51.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
+ai8051u_34k32.menu.execution.mcs51.build.link_flags=
+ai8051u_34k32.menu.execution.mcs51.build.cpp_target_link_flags=
+ai8051u_34k32.menu.execution.mcs251=32-bit / experimental SDCC MCS251
+ai8051u_34k32.menu.execution.mcs251.build.target=-mmcs251
+ai8051u_34k32.menu.execution.mcs251.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
+ai8051u_34k32.menu.execution.mcs251.build.link_flags=--code-loc 0xff0000
+ai8051u_34k32.menu.execution.mcs251.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x800 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0x700
+
+ai8051u_34k32.menu.memory.large=Large (default)
+ai8051u_34k32.menu.memory.large.build.memory_model=large
+
+ai8051u_34k32.menu.clock.12m=12 MHz
+ai8051u_34k32.menu.clock.12m.build.f_cpu=12000000L
+ai8051u_34k32.menu.clock.24m=24 MHz (default)
+ai8051u_34k32.menu.clock.24m.build.f_cpu=24000000L
+
+
+#################### AI8051U-34K16 ####################
+ai8051u_34k16.name=AI8051U-34K16
+
+ai8051u_34k16.build.core=STC
+ai8051u_34k16.build.board=AI8051U_34K16
+ai8051u_34k16.build.mcu_macro=AI8051U_34K16
+ai8051u_34k16.build.variant=AI8051U_34K16
+ai8051u_34k16.build.sdk_family=AI8051U
+ai8051u_34k16.build.f_cpu=24000000L
+ai8051u_34k16.build.memory_model=large
+ai8051u_34k16.build.target=-mmcs51
+ai8051u_34k16.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
+ai8051u_34k16.build.core_flags=-DSTC_CORE_FAMILY_AI8051U=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=1 -DSTC_CORE_HAS_PORT7=1 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+ai8051u_34k16.build.timer_flags=
+ai8051u_34k16.build.link_flags=
+ai8051u_34k16.build.cpp_target_link_flags=
+ai8051u_34k16.upload.maximum_size=16384
+ai8051u_34k16.upload.maximum_idata_size=256
+ai8051u_34k16.upload.maximum_xdata_size=32768
+ai8051u_34k16.upload.maximum_edata_size=2048
+
+ai8051u_34k16.menu.cppcore.plain=Plain C (default)
+ai8051u_34k16.menu.cppcore.plain.build.cpp_core_flags=
+ai8051u_34k16.menu.cppcore.plain.build.cpp_link_flags=
+ai8051u_34k16.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+ai8051u_34k16.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=16384UL
+ai8051u_34k16.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
+ai8051u_34k16.menu.cppcore.enabled.compiler.cache_core=false
+
+ai8051u_34k16.menu.execution.mcs51=8051 compatible / SDCC MCS51 (default)
+ai8051u_34k16.menu.execution.mcs51.build.target=-mmcs51
+ai8051u_34k16.menu.execution.mcs51.build.mode_flags=-DSTC_EXECUTION_MODE_MCS51
+ai8051u_34k16.menu.execution.mcs51.build.link_flags=
+ai8051u_34k16.menu.execution.mcs51.build.cpp_target_link_flags=
+ai8051u_34k16.menu.execution.mcs251=32-bit / experimental SDCC MCS251
+ai8051u_34k16.menu.execution.mcs251.build.target=-mmcs251
+ai8051u_34k16.menu.execution.mcs251.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
+ai8051u_34k16.menu.execution.mcs251.build.link_flags=--code-loc 0xff0000
+ai8051u_34k16.menu.execution.mcs251.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x800 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0x700
+
+ai8051u_34k16.menu.memory.large=Large (default)
+ai8051u_34k16.menu.memory.large.build.memory_model=large
+
+ai8051u_34k16.menu.clock.12m=12 MHz
+ai8051u_34k16.menu.clock.12m.build.f_cpu=12000000L
+ai8051u_34k16.menu.clock.24m=24 MHz (default)
+ai8051u_34k16.menu.clock.24m.build.f_cpu=24000000L
+
+
+#################### STC32F12K54 ####################
+stc32f12k54.name=STC32F12K54 (experimental MCS251)
+
+stc32f12k54.build.core=STC
+stc32f12k54.build.board=STC32F12K54
+stc32f12k54.build.mcu_macro=STC32F12K54
+stc32f12k54.build.variant=STC32F12K54
+stc32f12k54.build.sdk_family=STC32F
+stc32f12k54.build.f_cpu=24000000L
+stc32f12k54.build.memory_model=large
+stc32f12k54.build.target=-mmcs251
+stc32f12k54.build.mode_flags=-DSTC_EXECUTION_MODE_MCS251
+stc32f12k54.build.core_flags=-DSTC_CORE_FAMILY_32=1 -DSTC_CORE_HAS_PORT0=1 -DSTC_CORE_HAS_PORT1=1 -DSTC_CORE_HAS_PORT2=1 -DSTC_CORE_HAS_PORT3=1 -DSTC_CORE_HAS_PORT4=1 -DSTC_CORE_HAS_PORT5=1 -DSTC_CORE_HAS_PORT6=0 -DSTC_CORE_HAS_PORT7=0 -DSTC_CORE_HAS_PORT8=0 -DSTC_CORE_HAS_PORT9=0 -DSTC_CORE_HAS_PORTA=0 -DSTC_CORE_HAS_PORTB=0 -DSTC_CORE_HAS_PORT_MODE=1 -DSTC_CORE_HAS_SEPARATE_PULLUP=0 -DSTC_CORE_TIMER1_IS_1T=1 -DSTC_CORE_HAS_UART1=1 -DSTC_CORE_SERIAL_BUFFERED_RX=1 -DSTC_CORE_HAS_ADC=1 -DSTC_CORE_ADC_LAYOUT=4 -DSTC_CORE_PINMUX_PSWX1_BIT0_CLEAR=0 -DSTC_CORE_ADC_NATIVE_BITS=12
+stc32f12k54.build.timer_flags=
+stc32f12k54.build.link_flags=--code-loc 0xff0000
+stc32f12k54.build.cpp_target_link_flags=-DSTCXX_MCS251_IRAM_SIZE=0x2000 -DSTCXX_MCS251_STACK_LOC=0x100 -DSTCXX_MCS251_STACK_SIZE=0x1f00
+stc32f12k54.upload.maximum_size=55296
+stc32f12k54.upload.maximum_idata_size=0
+stc32f12k54.upload.maximum_xdata_size=4096
+stc32f12k54.upload.maximum_edata_size=8192
+
+stc32f12k54.menu.cppcore.plain=Plain C (default)
+stc32f12k54.menu.cppcore.plain.build.cpp_core_flags=
+stc32f12k54.menu.cppcore.plain.build.cpp_link_flags=
+stc32f12k54.menu.cppcore.enabled=Experimental C++11 compile/link (12 MHz only)
+stc32f12k54.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=3584UL -DSTCXX_MCS251_CONSTRAINED_HEAP=1
+stc32f12k54.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_MCS251_CONSTRAINED_HEAP=1
+stc32f12k54.menu.cppcore.enabled.compiler.cache_core=false
+
+stc32f12k54.menu.memory.large=Large (default)
+stc32f12k54.menu.memory.large.build.memory_model=large
+
+stc32f12k54.menu.clock.12m=12 MHz
+stc32f12k54.menu.clock.12m.build.f_cpu=12000000L
+stc32f12k54.menu.clock.24m=24 MHz (default)
+stc32f12k54.menu.clock.24m.build.f_cpu=24000000L

@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-08-31",
+  "as_of": "2026-09-05",
   "model": "STC8H1K28",
   "family": "STC8H",
   "selection": "additional_common",
@@ -28,15 +28,21 @@
       "0x00",
       "0x10",
       "0x00",
+      "0x00",
+      "0x00",
+      "0x00",
+      "0x00",
       "0x00"
     ],
     "package_dependent": true,
     "startup_selector": null,
-    "analog_aliases_enabled": true
+    "analog_aliases_enabled": true,
+    "separate_pullup": false
   },
   "peripherals": {
     "uart1": true,
     "uart1_buffered_rx": true,
+    "timer0_clock_divider": null,
     "adc": {
       "supported": true,
       "layout": "modern_bc_adccfg",

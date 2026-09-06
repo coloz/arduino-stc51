@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-08-31",
+  "as_of": "2026-09-05",
   "model": "STC32G8K64",
   "family": "STC32G",
   "selection": "rising",
@@ -15,7 +15,10 @@
     "maximum_code_bytes": 65536,
     "idata_bytes": 0,
     "xdata_bytes": 6144,
-    "edata_bytes": 2048
+    "edata_bytes": 2048,
+    "flash_origin": "0xff0000",
+    "linker_layout": "post_home_contiguous",
+    "code_origin": "0xff0000"
   },
   "pinout": {
     "encoding": "(port << 4) | bit",
@@ -30,15 +33,21 @@
       "0xFF",
       "0x1F",
       "0x00",
+      "0x00",
+      "0x00",
+      "0x00",
+      "0x00",
       "0x00"
     ],
     "package_dependent": true,
     "startup_selector": null,
-    "analog_aliases_enabled": true
+    "analog_aliases_enabled": true,
+    "separate_pullup": false
   },
   "peripherals": {
     "uart1": true,
     "uart1_buffered_rx": true,
+    "timer0_clock_divider": null,
     "adc": {
       "supported": true,
       "layout": "modern_bc_adccfg",
@@ -60,7 +69,7 @@
         },
         {
           "alias": "A2",
-          "pin": "P1.2",
+          "pin": "P5.4",
           "channel": 2
         },
         {
@@ -127,5 +136,6 @@
     }
   },
   "official_product_page": "https://www.stcmicro.com/cn/stc/stc32g8k64.html",
-  "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks."
+  "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks.",
+  "data_quality_note": "The STC32G manual section 22.1.1 maps G8K48/G8K64 ADC channel 2 to P5.4; P1.2 remains a digital GPIO. The physical 64 KiB program Flash is 0xFF0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout keeps HOME, GSINIT and ordinary code in that same high-address window."
 }

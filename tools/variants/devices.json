@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-08-31",
+  "as_of": "2026-09-05",
   "pin_encoding": "(port << 4) | bit",
   "notes": [
     "Port masks describe the maximum logical pin set implemented by the device model.",
@@ -8,36 +8,6 @@
     "Popularity groups are the 2026-08 research snapshot used to select this support set, not STC sales data."
   ],
   "devices": [
-    {
-      "id": "stc89c52rc",
-      "model": "STC89C52RC",
-      "macro": "STC89C52RC",
-      "family": "STC89",
-      "selection": "popular",
-      "rank": 1,
-      "target": "mcs51",
-      "experimental": false,
-      "capabilities": {
-        "ports": [0, 1, 2, 3, 4],
-        "port_mode": false,
-        "timer1_1t": false
-      },
-      "adc": false,
-      "flash_bytes": 8192,
-      "maximum_code_bytes": 8192,
-      "idata_bytes": 256,
-      "xdata_bytes": 256,
-      "edata_bytes": 0,
-      "eeprom": "2048+ bytes EEPROM",
-      "memory_models": ["small", "large"],
-      "default_memory_model": "small",
-      "default_clock_hz": 11059200,
-      "clock_options_hz": [11059200, 12000000, 24000000],
-      "port_masks": [255, 255, 255, 255, 127, 0, 0, 0],
-      "max_io": 39,
-      "package_dependent": true,
-      "official_url": "https://www.stcmicro.com/cn/stc/stc89c52rc.html"
-    },
     {
       "id": "stc8h8k64u",
       "model": "STC8H8K64U",
@@ -47,6 +17,8 @@
       "rank": 2,
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 4096,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5, 6, 7],
         "port_mode": true,
@@ -74,41 +46,6 @@
       "official_url": "https://www.stcmicro.com/cn/stc/stc8h8k64u.html"
     },
     {
-      "id": "stc15f2k60s2",
-      "model": "STC15F2K60S2",
-      "macro": "STC15F2K60S2",
-      "family": "STC15",
-      "selection": "popular",
-      "rank": 3,
-      "target": "mcs51",
-      "experimental": false,
-      "capabilities": {
-        "ports": [0, 1, 2, 3, 4, 5],
-        "port_mode": true,
-        "timer1_1t": true
-      },
-      "adc": {
-        "layout": "legacy_bc_10bit_clkdiv",
-        "resolution_bits": 10,
-        "channels": {"P1.0": 0, "P1.1": 1, "P1.2": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7}
-      },
-      "flash_bytes": 61440,
-      "maximum_code_bytes": 61433,
-      "reserved_flash_bytes": 7,
-      "idata_bytes": 256,
-      "xdata_bytes": 1792,
-      "edata_bytes": 0,
-      "eeprom": "1024 bytes dedicated EEPROM",
-      "memory_models": ["large", "small"],
-      "default_memory_model": "large",
-      "default_clock_hz": 24000000,
-      "clock_options_hz": [11059200, 24000000, 27000000, 33000000],
-      "port_masks": [255, 255, 255, 255, 255, 48, 0, 0],
-      "max_io": 42,
-      "package_dependent": true,
-      "official_url": "https://www.stcmicro.com/cn/stc/stc15f2k60s2.html"
-    },
-    {
       "id": "stc32g12k128",
       "model": "STC32G12K128",
       "macro": "STC32G12K128",
@@ -117,6 +54,8 @@
       "rank": 4,
       "target": "mcs251",
       "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 6144,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5, 6, 7],
         "port_mode": true,
@@ -128,7 +67,7 @@
         "channels": {"P1.0": 0, "P1.1": 1, "P5.4": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7, "P0.0": 8, "P0.1": 9, "P0.2": 10, "P0.3": 11, "P0.4": 12, "P0.5": 13, "P0.6": 14}
       },
       "flash_bytes": 131072,
-      "maximum_code_bytes": 131072,
+      "maximum_code_bytes": 65536,
       "idata_bytes": 0,
       "xdata_bytes": 8192,
       "edata_bytes": 4096,
@@ -137,9 +76,15 @@
       "default_memory_model": "large",
       "default_clock_hz": 24000000,
       "clock_options_hz": [12000000, 24000000, 48000000],
+      "linker": {
+        "layout": "pre_home_contiguous",
+        "code_loc": 16711680,
+        "gsinit0_loc": 16646144
+      },
       "port_masks": [255, 251, 255, 255, 255, 31, 255, 255],
       "max_io": 60,
       "package_dependent": true,
+      "data_quality_note": "The physical 128 KiB program Flash is 0xFE0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout places GSINIT0 and ordinary code at 0xFE0000 while retaining HOME at 0xFF0000. maximum_code_bytes is conservatively limited to the continuous 64 KiB pre-HOME interval; the upper HOME window is not advertised until segmented-link support is implemented and verified.",
       "official_url": "https://www.stcmicro.com/cn/stc/stc32g12k128.html"
     },
     {
@@ -151,6 +96,9 @@
       "rank": 5,
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 512,
+      "cpp_compact_maximum_program_bytes": 7168,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5],
         "port_mode": true,
@@ -185,6 +133,9 @@
       "rank": 6,
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 512,
+      "cpp_compact_maximum_program_bytes": 7168,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5],
         "port_mode": true,
@@ -211,74 +162,6 @@
       "official_url": "https://www.stcmicro.com/cn/stc/stc8g1k08a.html"
     },
     {
-      "id": "stc12c5a60s2",
-      "model": "STC12C5A60S2",
-      "macro": "STC12C5A60S2",
-      "family": "STC12",
-      "selection": "popular",
-      "rank": 7,
-      "target": "mcs51",
-      "experimental": false,
-      "capabilities": {
-        "ports": [0, 1, 2, 3, 4, 5],
-        "port_mode": true,
-        "timer1_1t": true
-      },
-      "adc": {
-        "layout": "legacy_bc_10bit_auxr1",
-        "resolution_bits": 10,
-        "channels": {"P1.0": 0, "P1.1": 1, "P1.2": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7}
-      },
-      "flash_bytes": 61440,
-      "maximum_code_bytes": 61440,
-      "idata_bytes": 256,
-      "xdata_bytes": 1024,
-      "edata_bytes": 0,
-      "eeprom": "1024 bytes dedicated EEPROM",
-      "memory_models": ["large", "small"],
-      "default_memory_model": "large",
-      "default_clock_hz": 24000000,
-      "clock_options_hz": [11059200, 24000000, 33000000],
-      "port_masks": [255, 255, 255, 255, 255, 15, 0, 0],
-      "max_io": 44,
-      "package_dependent": true,
-      "official_url": "https://www.stcmicro.com/cn/stc/stc12c5a60s2.html"
-    },
-    {
-      "id": "stc15w408as",
-      "model": "STC15W408AS",
-      "macro": "STC15W408AS",
-      "family": "STC15",
-      "selection": "popular",
-      "rank": 8,
-      "target": "mcs51",
-      "experimental": false,
-      "capabilities": {
-        "ports": [0, 1, 2, 3, 4, 5],
-        "port_mode": true,
-        "timer1_1t": true
-      },
-      "adc": {
-        "layout": "legacy_bc_10bit_clkdiv",
-        "resolution_bits": 10,
-        "channels": {"P1.0": 0, "P1.1": 1, "P1.2": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7}
-      },
-      "flash_bytes": 8192,
-      "maximum_code_bytes": 8192,
-      "idata_bytes": 256,
-      "xdata_bytes": 256,
-      "edata_bytes": 0,
-      "eeprom": "5120 bytes dedicated EEPROM",
-      "memory_models": ["small", "large"],
-      "default_memory_model": "small",
-      "default_clock_hz": 24000000,
-      "clock_options_hz": [11059200, 24000000, 33000000],
-      "port_masks": [0, 255, 255, 255, 0, 48, 0, 0],
-      "max_io": 26,
-      "package_dependent": true,
-      "official_url": "https://www.stcmicro.com/cn/stc/stc15w408as.html"
-    },
-    {
       "id": "stc8g1k08",
       "model": "STC8G1K08",
       "macro": "STC8G1K08",
@@ -287,6 +170,9 @@
       "rank": 9,
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 512,
+      "cpp_compact_maximum_program_bytes": 7168,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5],
         "port_mode": true,
@@ -321,6 +207,8 @@
       "rank": 10,
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 512,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5],
         "port_mode": true,
@@ -347,6 +235,53 @@
       "official_url": "https://www.stcmicro.com/cn/stc/stc8g2k64s4.html"
     },
     {
+      "id": "stc32g144k246",
+      "model": "STC32G144K246",
+      "macro": "STC32G144K246",
+      "family": "STC32G",
+      "selection": "rising",
+      "target": "mcs251",
+      "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 32768,
+      "capabilities": {
+        "ports": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        "port_mode": true,
+        "separate_pullup": true,
+        "timer0_clock_divider": 12,
+        "timer1_1t": true
+      },
+      "adc": {
+        "layout": "modern_bc_adccfg",
+        "resolution_bits": 12,
+        "channels": {"P1.0": 0, "P1.1": 1, "P5.4": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7, "P0.0": 8, "P0.1": 9, "P0.2": 10}
+      },
+      "flash_bytes": 251904,
+      "maximum_code_bytes": 186368,
+      "executable_ram_bytes": 4096,
+      "usb_ram_bytes": 5760,
+      "idata_bytes": 0,
+      "xdata_bytes": 131072,
+      "edata_bytes": 16384,
+      "eeprom": "IAP configurable in program flash",
+      "memory_models": ["large"],
+      "default_memory_model": "large",
+      "default_clock_hz": 24000000,
+      "clock_options_hz": [12000000, 24000000, 48000000],
+      "linker": {
+        "layout": "pre_home_contiguous",
+        "code_loc": 16711680,
+        "gsinit0_loc": 16525312
+      },
+      "port_masks": [255, 251, 255, 255, 255, 31, 255, 255, 255, 255, 255, 255],
+      "max_io": 92,
+      "physical_io": 91,
+      "pin_alias_groups": [["P1.3", "P1.7"]],
+      "package_dependent": true,
+      "data_quality_note": "The chip has 251,904 bytes of physical user Flash at 0xFC2800-0xFFFFFF. The current SDCC/ASlink layout fixes GSINIT0 at 0xFC2800 and the reset HOME area at 0xFF0000; because ordinary code cannot yet be scattered reliably around that HOME island, maximum_code_bytes is conservatively limited to the continuous pre-HOME interval: 0xFF0000 - 0xFC2800 = 0x2D800 = 186,368 bytes. The upper 64 KiB physical window remains unadvertised for general code until segmented-link support is implemented and verified. The maximum package exposes 92 logical port names on 91 physical GPIO pads because P1.3 and P1.7 share one pad. P1.2 is intentionally omitted in favor of the canonical P5.4 name for its shared pad and ADC1 channel 2. Arduino analog aliases currently expose ADC1 external channels 0 through 10 only; ADC2 and the internal reference channel are outside this variant mapping. The 256-byte DATA/IDATA compatibility window is part of EDATA and is not counted a second time. The separately mapped 4 KiB executable RAM and 5,760-byte USB endpoint FIFO are reported but are not added to the normal heap. CPU options above 48 MHz remain hidden until the PLL startup path is implemented and hardware-validated.",
+      "official_url": "https://www.stcmicro.com/stc/stc32g144k246.html"
+    },
+    {
       "id": "stc32g8k64",
       "model": "STC32G8K64",
       "macro": "STC32G8K64",
@@ -354,6 +289,8 @@
       "selection": "rising",
       "target": "mcs251",
       "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 4096,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5, 6, 7],
         "port_mode": true,
@@ -362,7 +299,7 @@
       "adc": {
         "layout": "modern_bc_adccfg",
         "resolution_bits": 12,
-        "channels": {"P1.0": 0, "P1.1": 1, "P1.2": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7, "P0.0": 8, "P0.1": 9, "P0.2": 10, "P0.3": 11, "P0.4": 12, "P0.5": 13, "P0.6": 14}
+        "channels": {"P1.0": 0, "P1.1": 1, "P5.4": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7, "P0.0": 8, "P0.1": 9, "P0.2": 10, "P0.3": 11, "P0.4": 12, "P0.5": 13, "P0.6": 14}
       },
       "flash_bytes": 65536,
       "maximum_code_bytes": 65536,
@@ -374,9 +311,14 @@
       "default_memory_model": "large",
       "default_clock_hz": 24000000,
       "clock_options_hz": [12000000, 24000000, 48000000],
+      "linker": {
+        "layout": "post_home_contiguous",
+        "code_loc": 16711680
+      },
       "port_masks": [255, 255, 255, 255, 255, 31, 0, 0],
       "max_io": 45,
       "package_dependent": true,
+      "data_quality_note": "The STC32G manual section 22.1.1 maps G8K48/G8K64 ADC channel 2 to P5.4; P1.2 remains a digital GPIO. The physical 64 KiB program Flash is 0xFF0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout keeps HOME, GSINIT and ordinary code in that same high-address window.",
       "official_url": "https://www.stcmicro.com/cn/stc/stc32g8k64.html"
     },
     {
@@ -387,6 +329,8 @@
       "selection": "rising",
       "target": "mcs251",
       "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 4096,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5, 6, 7],
         "port_mode": true,
@@ -407,12 +351,16 @@
       "default_memory_model": "large",
       "default_clock_hz": 24000000,
       "clock_options_hz": [12000000, 24000000, 42000000],
+      "linker": {
+        "layout": "post_home_contiguous",
+        "code_loc": 16711680
+      },
       "port_masks": [15, 252, 0, 255, 0, 16, 0, 0],
       "max_io": 19,
       "physical_io": 17,
       "pin_alias_groups": [["P1.4", "P0.2"], ["P1.5", "P0.3"]],
       "package_dependent": true,
-      "data_quality_note": "The official pinout exposes 19 logical port names on 17 physical GPIO pads: P1.4/P0.2 and P1.5/P0.3 are two package-pad aliases. The variant keeps every documented logical name and records both alias groups explicitly.",
+      "data_quality_note": "The physical 64 KiB program Flash is 0xFF0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout keeps HOME, GSINIT and ordinary code in that same high-address window. The official pinout exposes 19 logical port names on 17 physical GPIO pads: P1.4/P0.2 and P1.5/P0.3 are two package-pad aliases. The variant keeps every documented logical name and records both alias groups explicitly.",
       "official_url": "https://www.stcmicro.com/cn/stc/stc32cl8k64.html"
     },
     {
@@ -423,6 +371,8 @@
       "selection": "rising",
       "target": "dual",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 16384,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5, 6, 7],
         "port_mode": true,
@@ -444,168 +394,17 @@
       "default_memory_model": "large",
       "default_clock_hz": 24000000,
       "clock_options_hz": [12000000, 24000000, 48000000],
+      "mcs251_linker": {
+        "layout": "post_home_contiguous",
+        "code_loc": 16711680
+      },
       "port_masks": [255, 255, 255, 255, 255, 207, 0, 0],
       "max_io": 46,
       "physical_io": 45,
       "pin_alias_groups": [["P4.4", "P4.5"]],
       "package_dependent": true,
-      "data_quality_note": "The LQFP48/QFN48 pinout exposes 46 logical port names on 45 physical GPIO pads because P4.4 and P4.5 share one package pad. P5 contains P5.0-P5.3 and P5.6-P5.7; P5.4/P5.5 are not bonded in this maximum mask.",
+      "data_quality_note": "The official dual execution modes use different program address views: MCS51 mode uses the low 0x0000-0xFFFF window, while MCS251 Source mode uses the physical 64 KiB Flash window at 0xFF0000-0xFFFFFF with reset HOME at 0xFF0000. The LQFP48/QFN48 pinout exposes 46 logical port names on 45 physical GPIO pads because P4.4 and P4.5 share one package pad. P5 contains P5.0-P5.3 and P5.6-P5.7; P5.4/P5.5 are not bonded in this maximum mask.",
       "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf"
-    },
-    {
-      "id": "stc89c51rc",
-      "model": "STC89C51RC",
-      "macro": "STC89C51RC",
-      "family": "STC89",
-      "selection": "additional_common",
-      "target": "mcs51",
-      "experimental": false,
-      "capabilities": {
-        "ports": [0, 1, 2, 3, 4],
-        "port_mode": false,
-        "timer1_1t": false
-      },
-      "adc": false,
-      "flash_bytes": 4096,
-      "maximum_code_bytes": 4096,
-      "idata_bytes": 256,
-      "xdata_bytes": 256,
-      "edata_bytes": 0,
-      "eeprom": "2048+ bytes EEPROM",
-      "memory_models": ["small", "large"],
-      "default_memory_model": "small",
-      "default_clock_hz": 11059200,
-      "clock_options_hz": [11059200, 12000000, 24000000],
-      "port_masks": [255, 255, 255, 255, 127, 0, 0, 0],
-      "max_io": 39,
-      "package_dependent": true,
-      "official_url": "https://www.stcmicro.com/cn/stc/stc89c51rc.html"
-    },
-    {
-      "id": "stc89c58rd_plus",
-      "model": "STC89C58RD+",
-      "macro": "STC89C58RD_PLUS",
-      "family": "STC89",
-      "selection": "additional_common",
-      "target": "mcs51",
-      "experimental": false,
-      "capabilities": {
-        "ports": [0, 1, 2, 3, 4],
-        "port_mode": false,
-        "timer1_1t": false
-      },
-      "adc": false,
-      "flash_bytes": 32768,
-      "maximum_code_bytes": 32768,
-      "idata_bytes": 256,
-      "xdata_bytes": 1024,
-      "edata_bytes": 0,
-      "eeprom": "16384+ bytes EEPROM",
-      "memory_models": ["large", "small"],
-      "default_memory_model": "large",
-      "default_clock_hz": 11059200,
-      "clock_options_hz": [11059200, 12000000, 24000000],
-      "port_masks": [255, 255, 255, 255, 127, 0, 0, 0],
-      "max_io": 39,
-      "package_dependent": true,
-      "official_url": "https://www.stcmicro.com/cn/stc/stc89c51rc.html"
-    },
-    {
-      "id": "stc12c2052ad",
-      "model": "STC12C2052AD",
-      "macro": "STC12C2052AD",
-      "family": "STC12",
-      "selection": "additional_common",
-      "target": "mcs51",
-      "experimental": false,
-      "capabilities": {
-        "ports": [0, 1, 2, 3],
-        "port_mode": true,
-        "timer1_1t": true
-      },
-      "adc": {
-        "layout": "stc12c2052ad_c5_8bit",
-        "resolution_bits": 8,
-        "channels": {"P1.0": 0, "P1.1": 1, "P1.2": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7}
-      },
-      "flash_bytes": 2048,
-      "maximum_code_bytes": 2048,
-      "idata_bytes": 256,
-      "xdata_bytes": 0,
-      "edata_bytes": 0,
-      "eeprom": "Dedicated EEPROM function; capacity depends on official configuration",
-      "memory_models": ["small"],
-      "default_memory_model": "small",
-      "default_clock_hz": 11059200,
-      "clock_options_hz": [6000000, 11059200, 12000000, 24000000],
-      "port_masks": [0, 255, 0, 191, 0, 0, 0, 0],
-      "max_io": 15,
-      "package_dependent": false,
-      "official_url": "https://www.stcmicro.com/cn/stc/stc12c2052.html"
-    },
-    {
-      "id": "stc15f104w",
-      "model": "STC15F104W",
-      "macro": "STC15F104W",
-      "family": "STC15",
-      "selection": "additional_common",
-      "target": "mcs51",
-      "experimental": false,
-      "capabilities": {
-        "ports": [0, 1, 2, 3],
-        "port_mode": true,
-        "timer1_1t": true,
-        "uart1": false
-      },
-      "adc": false,
-      "flash_bytes": 4096,
-      "maximum_code_bytes": 4096,
-      "idata_bytes": 128,
-      "xdata_bytes": 0,
-      "edata_bytes": 0,
-      "eeprom": "Dedicated EEPROM function; capacity depends on official configuration",
-      "memory_models": ["small"],
-      "default_memory_model": "small",
-      "default_clock_hz": 11059200,
-      "clock_options_hz": [5529600, 11059200, 22118400, 33177600],
-      "port_masks": [0, 0, 0, 63, 0, 0, 0, 0],
-      "max_io": 6,
-      "package_dependent": false,
-      "data_quality_note": "The official product page calls the 128-byte SRAM XRAM; the family memory summary used by this core exposes the small-memory IDATA view.",
-      "official_url": "https://www.stcmicro.com/cn/stc/stc15f101w.html"
-    },
-    {
-      "id": "stc15w4k32s4",
-      "model": "STC15W4K32S4",
-      "macro": "STC15W4K32S4",
-      "family": "STC15",
-      "selection": "additional_common",
-      "target": "mcs51",
-      "experimental": false,
-      "capabilities": {
-        "ports": [0, 1, 2, 3, 4, 5, 6, 7],
-        "port_mode": true,
-        "timer1_1t": true
-      },
-      "adc": {
-        "layout": "legacy_bc_10bit_clkdiv",
-        "resolution_bits": 10,
-        "channels": {"P1.0": 0, "P1.1": 1, "P1.2": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7}
-      },
-      "flash_bytes": 32768,
-      "maximum_code_bytes": 32768,
-      "idata_bytes": 256,
-      "xdata_bytes": 3840,
-      "edata_bytes": 0,
-      "eeprom": "26624 bytes dedicated EEPROM",
-      "memory_models": ["large", "small"],
-      "default_memory_model": "large",
-      "default_clock_hz": 24000000,
-      "clock_options_hz": [11059200, 12000000, 24000000, 30000000],
-      "port_masks": [255, 255, 255, 255, 255, 63, 255, 255],
-      "max_io": 62,
-      "package_dependent": true,
-      "official_url": "https://www.stcmicro.com/cn/stc/stc15w4k32s4.html"
     },
     {
       "id": "stc8a8k64s4a12",
@@ -615,6 +414,8 @@
       "selection": "additional_common",
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 4096,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5, 6, 7],
         "port_mode": true,
@@ -648,6 +449,8 @@
       "selection": "additional_common",
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 512,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5],
         "port_mode": true,
@@ -677,6 +480,8 @@
       "selection": "additional_common",
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 512,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5],
         "port_mode": true,
@@ -710,6 +515,8 @@
       "selection": "additional_common",
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 1024,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5],
         "port_mode": true,
@@ -744,6 +551,8 @@
       "selection": "additional_common",
       "target": "mcs251",
       "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 6144,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5, 6, 7],
         "port_mode": true,
@@ -764,9 +573,14 @@
       "default_memory_model": "large",
       "default_clock_hz": 24000000,
       "clock_options_hz": [12000000, 24000000, 36000000],
+      "linker": {
+        "layout": "post_home_contiguous",
+        "code_loc": 16711680
+      },
       "port_masks": [255, 251, 255, 255, 255, 31, 255, 255],
       "max_io": 60,
       "package_dependent": true,
+      "data_quality_note": "The physical 64 KiB program Flash is 0xFF0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout keeps HOME, GSINIT and ordinary code in that same high-address window.",
       "official_url": "https://www.stcmicro.com/cn/stc/stc32g12k128.html"
     },
     {
@@ -777,6 +591,9 @@
       "selection": "additional_common",
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 512,
+      "cpp_compact_maximum_program_bytes": 11059,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5],
         "port_mode": true,
@@ -813,6 +630,8 @@
       "selection": "additional_common",
       "target": "mcs51",
       "experimental": false,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 512,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5],
         "port_mode": true,
@@ -840,6 +659,432 @@
       "package_dependent": true,
       "data_quality_note": "P1.2 and P5.4 share one package pin; this static variant keeps P5.4 and excludes the duplicate P1.2 alias. The official IRC blind range from 32 to 37 MHz is omitted from the clock menu.",
       "official_url": "https://www.stcmicro.com/cn/ai/ai8h2k12u.html"
+    },
+    {
+      "id": "stc32g8k48",
+      "model": "STC32G8K48",
+      "macro": "STC32G8K48",
+      "family": "STC32G",
+      "selection": "mcs251_catalog",
+      "target": "mcs251",
+      "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 4096,
+      "capabilities": {
+        "ports": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "port_mode": true,
+        "timer1_1t": true
+      },
+      "adc": {
+        "layout": "modern_bc_adccfg",
+        "resolution_bits": 12,
+        "channels": {
+          "P1.0": 0,
+          "P1.1": 1,
+          "P5.4": 2,
+          "P1.3": 3,
+          "P1.4": 4,
+          "P1.5": 5,
+          "P1.6": 6,
+          "P1.7": 7,
+          "P0.0": 8,
+          "P0.1": 9,
+          "P0.2": 10,
+          "P0.3": 11,
+          "P0.4": 12,
+          "P0.5": 13,
+          "P0.6": 14
+        }
+      },
+      "flash_bytes": 49152,
+      "maximum_code_bytes": 49152,
+      "idata_bytes": 0,
+      "xdata_bytes": 6144,
+      "edata_bytes": 2048,
+      "eeprom": "16 KiB EEPROM outside the 48 KiB program region",
+      "memory_models": [
+        "large"
+      ],
+      "default_memory_model": "large",
+      "default_clock_hz": 24000000,
+      "clock_options_hz": [
+        12000000,
+        24000000
+      ],
+      "linker": {
+        "layout": "post_home_contiguous",
+        "code_loc": 16711680,
+        "flash_loc": 16711680
+      },
+      "port_masks": [
+        255,
+        255,
+        255,
+        255,
+        255,
+        31,
+        0,
+        0
+      ],
+      "max_io": 45,
+      "package_dependent": true,
+      "data_quality_note": "The STC32G manual section 22.1.1 maps G8K48/G8K64 ADC channel 2 to P5.4; P1.2 remains a digital GPIO. Program Flash in MCS251 Source mode is 0xFF0000-0xFFBFFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. The experimental C++11 core profile is exposed at 12 MHz; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings.",
+      "official_url": "https://www.stcmicro.com/cn/stc/stc32g8k64.html"
+    },
+    {
+      "id": "stc32cl8k48",
+      "model": "STC32CL8K48",
+      "macro": "STC32CL8K48",
+      "family": "STC32CL",
+      "selection": "mcs251_catalog",
+      "target": "mcs251",
+      "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 4096,
+      "capabilities": {
+        "ports": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "port_mode": true,
+        "timer1_1t": true
+      },
+      "adc": {
+        "layout": "modern_bc_adccfg",
+        "resolution_bits": 12,
+        "channels": {
+          "P5.4": 2,
+          "P1.3": 3,
+          "P1.4": 4,
+          "P1.5": 5,
+          "P1.6": 6,
+          "P1.7": 7,
+          "P0.0": 8,
+          "P0.1": 9,
+          "P0.2": 10,
+          "P0.3": 11
+        }
+      },
+      "flash_bytes": 49152,
+      "maximum_code_bytes": 49152,
+      "idata_bytes": 0,
+      "xdata_bytes": 6144,
+      "edata_bytes": 2048,
+      "eeprom": "16 KiB EEPROM outside the 48 KiB program region",
+      "memory_models": [
+        "large"
+      ],
+      "default_memory_model": "large",
+      "default_clock_hz": 24000000,
+      "clock_options_hz": [
+        12000000,
+        24000000
+      ],
+      "linker": {
+        "layout": "post_home_contiguous",
+        "code_loc": 16711680,
+        "flash_loc": 16711680
+      },
+      "port_masks": [
+        15,
+        252,
+        0,
+        255,
+        0,
+        16,
+        0,
+        0
+      ],
+      "max_io": 19,
+      "physical_io": 17,
+      "pin_alias_groups": [
+        [
+          "P1.4",
+          "P0.2"
+        ],
+        [
+          "P1.5",
+          "P0.3"
+        ]
+      ],
+      "package_dependent": true,
+      "data_quality_note": "Program Flash in MCS251 Source mode is 0xFF0000-0xFFBFFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. The experimental C++11 core profile is exposed at 12 MHz; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings. The 19 logical port names represent 17 physical pads; P1.4/P0.2 and P1.5/P0.3 remain physical aliases.",
+      "official_url": "https://www.stcmicro.com/cn/stc/stc32cl8k64.html"
+    },
+    {
+      "id": "ai8051u_34k32",
+      "model": "AI8051U-34K32",
+      "macro": "AI8051U_34K32",
+      "family": "AI8051U",
+      "selection": "mcs251_catalog",
+      "target": "dual",
+      "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 16384,
+      "capabilities": {
+        "ports": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "port_mode": true,
+        "timer1_1t": true
+      },
+      "adc": {
+        "layout": "modern_bc_adccfg",
+        "resolution_bits": 12,
+        "channels": {
+          "P1.0": 0,
+          "P1.1": 1,
+          "P1.2": 2,
+          "P1.3": 3,
+          "P1.4": 4,
+          "P1.5": 5,
+          "P1.6": 6,
+          "P1.7": 7,
+          "P0.0": 8,
+          "P0.1": 9,
+          "P0.2": 10,
+          "P0.3": 11,
+          "P0.4": 12,
+          "P0.5": 13,
+          "P0.6": 14
+        }
+      },
+      "experimental_targets": [
+        "mcs251"
+      ],
+      "flash_bytes": 32768,
+      "maximum_code_bytes": 32768,
+      "idata_bytes": 256,
+      "xdata_bytes": 32768,
+      "edata_bytes": 2048,
+      "eeprom": "32 KiB EEPROM outside the 32 KiB program region",
+      "memory_models": [
+        "large"
+      ],
+      "default_memory_model": "large",
+      "default_clock_hz": 24000000,
+      "clock_options_hz": [
+        12000000,
+        24000000
+      ],
+      "mcs251_linker": {
+        "layout": "post_home_contiguous",
+        "code_loc": 16711680,
+        "flash_loc": 16711680
+      },
+      "port_masks": [
+        255,
+        255,
+        255,
+        255,
+        255,
+        207,
+        0,
+        0
+      ],
+      "max_io": 46,
+      "physical_io": 45,
+      "pin_alias_groups": [
+        [
+          "P4.4",
+          "P4.5"
+        ]
+      ],
+      "package_dependent": true,
+      "data_quality_note": "Program Flash in MCS251 Source mode is 0xFF0000-0xFF7FFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. MCS51 mode maps the same 32 KiB program at 0x0000. The experimental C++11 core profile is exposed for both execution modes at 12 MHz; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings. The 46 logical port names represent 45 physical pads; P4.4/P4.5 remain aliases. DATA/IDATA is a compatibility view of EDATA in MCS251 mode.",
+      "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf"
+    },
+    {
+      "id": "ai8051u_34k16",
+      "model": "AI8051U-34K16",
+      "macro": "AI8051U_34K16",
+      "family": "AI8051U",
+      "selection": "mcs251_catalog",
+      "target": "dual",
+      "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 16384,
+      "cpp_compact_maximum_program_bytes": 14336,
+      "capabilities": {
+        "ports": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "port_mode": true,
+        "timer1_1t": true
+      },
+      "adc": {
+        "layout": "modern_bc_adccfg",
+        "resolution_bits": 12,
+        "channels": {
+          "P1.0": 0,
+          "P1.1": 1,
+          "P1.2": 2,
+          "P1.3": 3,
+          "P1.4": 4,
+          "P1.5": 5,
+          "P1.6": 6,
+          "P1.7": 7,
+          "P0.0": 8,
+          "P0.1": 9,
+          "P0.2": 10,
+          "P0.3": 11,
+          "P0.4": 12,
+          "P0.5": 13,
+          "P0.6": 14
+        }
+      },
+      "experimental_targets": [
+        "mcs251"
+      ],
+      "flash_bytes": 16384,
+      "maximum_code_bytes": 16384,
+      "idata_bytes": 256,
+      "xdata_bytes": 32768,
+      "edata_bytes": 2048,
+      "eeprom": "48 KiB EEPROM outside the 16 KiB program region",
+      "memory_models": [
+        "large"
+      ],
+      "default_memory_model": "large",
+      "default_clock_hz": 24000000,
+      "clock_options_hz": [
+        12000000,
+        24000000
+      ],
+      "mcs251_linker": {
+        "layout": "post_home_contiguous",
+        "code_loc": 16711680,
+        "flash_loc": 16711680
+      },
+      "port_masks": [
+        255,
+        255,
+        255,
+        255,
+        255,
+        207,
+        0,
+        0
+      ],
+      "max_io": 46,
+      "physical_io": 45,
+      "pin_alias_groups": [
+        [
+          "P4.4",
+          "P4.5"
+        ]
+      ],
+      "package_dependent": true,
+      "data_quality_note": "Program Flash in MCS251 Source mode is 0xFF0000-0xFF3FFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. MCS51 mode maps the same 16 KiB program at 0x0000. The experimental C++11 core profile is exposed for both execution modes at 12 MHz using the compact workload contract; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings. The 46 logical port names represent 45 physical pads; P4.4/P4.5 remain aliases. DATA/IDATA is a compatibility view of EDATA in MCS251 mode.",
+      "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf"
+    },
+    {
+      "id": "stc32f12k54",
+      "model": "STC32F12K54",
+      "macro": "STC32F12K54",
+      "family": "STC32F",
+      "selection": "mcs251_catalog",
+      "target": "mcs251",
+      "experimental": true,
+      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_heap_bytes": 3584,
+      "cpp_static_xdata_reserve_bytes": 512,
+      "capabilities": {
+        "ports": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "port_mode": true,
+        "timer1_1t": true
+      },
+      "adc": {
+        "layout": "modern_bc_adccfg",
+        "resolution_bits": 12,
+        "channels": {
+          "P1.0": 0,
+          "P1.1": 1,
+          "P5.4": 2,
+          "P1.3": 3,
+          "P1.4": 4,
+          "P1.5": 5,
+          "P1.6": 6,
+          "P1.7": 7,
+          "P0.0": 8,
+          "P0.1": 9,
+          "P0.2": 10,
+          "P0.3": 11,
+          "P0.4": 12,
+          "P0.5": 13,
+          "P0.6": 14
+        }
+      },
+      "flash_bytes": 55296,
+      "maximum_code_bytes": 55296,
+      "idata_bytes": 0,
+      "xdata_bytes": 4096,
+      "edata_bytes": 8192,
+      "eeprom": "IAP configurable in the 54 KiB user program Flash",
+      "memory_models": [
+        "large"
+      ],
+      "default_memory_model": "large",
+      "default_clock_hz": 24000000,
+      "clock_options_hz": [
+        12000000,
+        24000000
+      ],
+      "linker": {
+        "layout": "post_home_contiguous",
+        "code_loc": 16711680,
+        "flash_loc": 16711680
+      },
+      "port_masks": [
+        255,
+        251,
+        255,
+        255,
+        255,
+        31,
+        0,
+        0
+      ],
+      "max_io": 44,
+      "package_dependent": true,
+      "data_quality_note": "The STC32F manual (2024-02-02), sections 1.4, 2.1 and 10.1, documents STC32F12K54 with 54 KiB program Flash at 0xFF0000-0xFFD7FF, 8 KiB EDATA and 4 KiB XDATA. The LQFP48 pin table exposes 44 GPIOs; P1.2 is absent and ADC channel 2 uses P5.4. The section 12 heading says 45 GPIOs but conflicts with the actual pin table; this variant follows the pin table. TFPU and its vendor ROM/library region are not exposed as Arduino APIs or user Flash. The 12 MHz experimental C++11 core uses a constrained 3584-byte heap and preserves 512 XDATA bytes for static state; exact-QEMU qualification is tracked separately. It is unrelated to ARM-based STC32F03x parts.",
+      "official_url": "https://www.stcmicro.com/datasheet/stc32f-cn.pdf"
     }
   ]
 }

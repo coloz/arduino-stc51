@@ -15,6 +15,8 @@ static uint8_t wire_scl_pin = WIRE_DEFAULT_SCL_PIN;
 static unsigned int wire_half_period_us;
 static unsigned long wire_stretch_timeout_us =
     WIRE_DEFAULT_STRETCH_TIMEOUT_US;
+static uint8_t wire_reset_with_timeout;
+static uint8_t wire_timeout_flag;
 static uint8_t wire_initialized;
 static uint8_t wire_bus_held;
 
@@ -53,14 +55,42 @@ static void wire_release_scl(void)
     digitalWrite(wire_scl_pin, HIGH);
 }
 
+static void wire_handle_timeout(void)
+{
+    wire_timeout_flag = 1u;
+    if (wire_reset_with_timeout == 0u) {
+        return;
+    }
+
+    /* There is no hardware TWI block in this portable backend.  Reset its
+     * software state machine and release both open-drain lines instead. */
+    wire_release_sda();
+    wire_release_scl();
+    wire_bus_held = 0u;
+    wire_tx_length = 0u;
+    wire_tx_overflow = 0u;
+    wire_transmitting = 0u;
+    wire_rx_index = 0u;
+    wire_rx_length = 0u;
+}
+
 static uint8_t wire_wait_for_scl_high(void)
 {
     unsigned long started;
 
     wire_release_scl();
+    if (wire_stretch_timeout_us == 0UL) {
+        while (digitalRead(wire_scl_pin) == LOW) {
+            /* A zero timeout deliberately preserves Arduino's wait-forever
+             * behavior. */
+        }
+        return 1u;
+    }
+
     started = micros();
     while (digitalRead(wire_scl_pin) == LOW) {
         if ((unsigned long)(micros() - started) >= wire_stretch_timeout_us) {
+            wire_handle_timeout();
             return 0u;
         }
     }
@@ -213,6 +243,27 @@ void Wire_begin(void) STC_WIRE_REENTRANT
     wire_initialized = 1u;
 }
 
+#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
+void Wire_end(void) STC_WIRE_REENTRANT
+{
+    if (wire_initialized == 0u) {
+        return;
+    }
+    if (wire_bus_held != 0u) {
+        (void)wire_stop_condition();
+    }
+    wire_release_bus();
+    pinMode(wire_sda_pin, INPUT);
+    pinMode(wire_scl_pin, INPUT);
+    wire_tx_length = 0u;
+    wire_tx_overflow = 0u;
+    wire_transmitting = 0u;
+    wire_rx_index = 0u;
+    wire_rx_length = 0u;
+    wire_initialized = 0u;
+}
+#endif
+
 void Wire_setPins(uint8_t sda_pin, uint8_t scl_pin) STC_WIRE_REENTRANT
 {
     uint8_t restart = wire_initialized;
@@ -249,11 +300,30 @@ void Wire_setClock(unsigned long clock_hz) STC_WIRE_REENTRANT
 
 void Wire_setClockStretchTimeout(unsigned long timeout_us) STC_WIRE_REENTRANT
 {
-    wire_stretch_timeout_us = (timeout_us == 0UL) ? 1UL : timeout_us;
+    Wire_setWireTimeout((uint32_t)timeout_us, 0u);
+}
+
+void Wire_setWireTimeout(uint32_t timeout_us,
+                         uint8_t reset_with_timeout) STC_WIRE_REENTRANT
+{
+    wire_stretch_timeout_us = (unsigned long)timeout_us;
+    wire_reset_with_timeout = (reset_with_timeout != 0u) ? 1u : 0u;
+    wire_timeout_flag = 0u;
+}
+
+uint8_t Wire_getWireTimeoutFlag(void) STC_WIRE_REENTRANT
+{
+    return wire_timeout_flag;
+}
+
+void Wire_clearWireTimeoutFlag(void) STC_WIRE_REENTRANT
+{
+    wire_timeout_flag = 0u;
 }
 
 void Wire_beginTransmission(uint8_t address) STC_WIRE_REENTRANT
 {
+    wire_ensure_initialized();
     wire_tx_address = (uint8_t)(address & 0x7fu);
     wire_tx_length = 0u;
     wire_tx_overflow = 0u;
@@ -383,6 +453,35 @@ uint8_t Wire_requestFrom(uint8_t address, uint8_t quantity) STC_WIRE_REENTRANT
     return Wire_requestFromStop(address, quantity, 1u);
 }
 
+uint8_t Wire_requestFromInternal(uint8_t address, uint8_t quantity,
+                                 uint32_t internal_address,
+                                 uint8_t internal_address_size,
+                                 uint8_t send_stop) STC_WIRE_REENTRANT
+{
+    uint8_t status;
+
+    if (internal_address_size > 3u) {
+        internal_address_size = 3u;
+    }
+    if (internal_address_size != 0u) {
+        Wire_beginTransmission(address);
+        if (internal_address_size >= 3u) {
+            (void)Wire_write((uint8_t)(internal_address >> 16));
+        }
+        if (internal_address_size >= 2u) {
+            (void)Wire_write((uint8_t)(internal_address >> 8));
+        }
+        (void)Wire_write((uint8_t)internal_address);
+
+        status = Wire_endTransmissionStop(0u);
+        if (status != WIRE_STATUS_SUCCESS) {
+            return 0u;
+        }
+    }
+
+    return Wire_requestFromStop(address, quantity, send_stop);
+}
+
 int Wire_available(void) STC_WIRE_REENTRANT
 {
     return (int)(wire_rx_length - wire_rx_index);
@@ -404,6 +503,7 @@ int Wire_read(void) STC_WIRE_REENTRANT
     return (int)wire_rx_buffer[wire_rx_index++];
 }
 
+#if !defined(STCXX_CPP_CORE) || !STCXX_CPP_CORE
 const STCWireClass Wire = {
     Wire_begin,
     Wire_setPins,
@@ -417,5 +517,10 @@ const STCWireClass Wire = {
     Wire_peek,
     Wire_read,
     Wire_endTransmissionStop,
-    Wire_requestFromStop
+    Wire_requestFromStop,
+    Wire_setWireTimeout,
+    Wire_getWireTimeoutFlag,
+    Wire_clearWireTimeoutFlag,
+    Wire_requestFromInternal
 };
+#endif

@@ -1,171 +1,131 @@
 # arduino-stc51
 
-[![CI](https://github.com/coloz/arduino-stc51/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/coloz/arduino-stc51/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-0.0.1-blue.svg)](package_arduino-stc51_index.json)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+面向 STC 8051 / 251 单片机的 Arduino core，提供芯片级开发板定义、GPIO / 定时 / 串口等 API、常用外设库，以及生成 Intel HEX 的 SDCC 构建流程。默认使用 plain C；需要 C++ 类和 Arduino 类库接口时，可显式启用实验 C++ 配置。
 
-面向 STC 8051/251 系列 MCU 的 Arduino core，提供精确到芯片型号的开发板定义、Wiring-C / Arduino-C API、常用外设库和基于 SDCC 的可复现工具链。
+当前源码版本为 **0.0.2 开发版**，包含 22 个具体型号、25 种执行配置。源码支持范围与发布包版本不同；目前仓库的 Boards Manager 索引仍为 0.0.1。当前功能尚未完成实板验证，编译成功和模拟器运行不能替代硬件验证。版本信息见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
 
-> 需要帮助或发现问题？请先查看[项目文档](#文档)，搜索已有
-> [Issues](https://github.com/coloz/arduino-stc51/issues)，确认没有重复后再提交问题。
+三个项目分别负责开发流程中的不同部分：
 
-## 目录
+| 项目 | 用途 |
+| --- | --- |
+| `arduino-stc51` | Arduino core、开发板定义、引脚和库接口，编译 sketch 并导出 HEX |
+| `stcxx` | 独立 STC C / C++ 工具链；为实验 C++ 路径提供编译器和运行时 |
+| `stc-cli` | 独立 UART ISP 命令行工具，检查和烧录导出的 HEX |
 
-- [开发状态](#开发状态)
-- [文档](#文档)
-- [支持的 MCU](#支持的-mcu)
-- [安装](#安装)
-- [快速开始](#快速开始)
-- [Arduino API 与兼容性](#arduino-api-与兼容性)
-- [已知限制](#已知限制)
-- [问题反馈](#问题反馈)
-- [参与开发](#参与开发)
-- [许可证](#许可证)
+三个仓库可以并排放置，例如 `D:\Git\stc51\arduino-stc51`、`D:\Git\stc51\stcxx`、`D:\Git\stc51\stc-cli`。Arduino 平台目前没有自动上传配方，烧录使用独立工具。
 
-## 开发状态
+## 芯片范围
 
-当前版本为 **0.0.1**，属于早期开发版本。
+型号来自 [devices.json](tools/variants/devices.json)，由生成器维护 `boards.txt` 和 `variants/`。不要仅凭相近型号替代选择；封装实际引脚还应核对对应芯片手册。
 
-| 项目 | 当前状态 |
-|---|---|
-| 精确型号变体 | 25 个默认配置已纳入编译/链接矩阵 |
-| MCS51 后端 | 已用于 STC89、STC12、STC15、STC8 和 Ai8H；AI8051U 默认使用该后端 |
-| MCS251 后端 | 用于 STC32，并可供 AI8051U 选择；**experimental** |
-| 主机工具链 | Windows x64、macOS Apple Silicon、macOS Intel；暂不支持 Linux |
-| 自动化验证 | 覆盖全部默认变体、补充编译配置和随包库示例 |
-| 实板验证 | 仍待逐型号完成；生成 HEX 不等于真机通过 |
+| 执行体系 | 型号 | 数量 |
+| --- | --- | ---: |
+| MCS51 / STC8 | STC8A8K64S4A12、STC8C2K64S4、STC8G1K08、STC8G1K08A、STC8G2K64S4、STC8H1K08、STC8H1K28、STC8H3K64S4、STC8H8K64U | 9 |
+| MCS51 / Ai8H | Ai8H2K12U、Ai8H2K32U | 2 |
+| MCS251 / STC32 | STC32CL8K48、STC32CL8K64、STC32F12K54、STC32G12K64、STC32G12K128、STC32G144K246、STC32G8K48、STC32G8K64 | 8 |
+| MCS51 / MCS251 双模式 | AI8051U-34K16、AI8051U-34K32、AI8051U-34K64 | 3 |
 
-自动化编译结论与实板验证证据分开记录。发布或接线前请查看
-[硬件验证状态](docs/hardware-validation.md)，不要把“编译通过”理解为
-对应封装、电压、时钟和外设已经在实板验证。
+AI8051U 默认 MCS51，可选择 `execution=mcs251`。三款双模式芯片带来 14 个 MCS51、11 个 MCS251 配置；切换编译配置不会改变芯片的硬件执行模式。MCS251 的地址布局与链接边界见 [variants-mcs251.md](docs/variants-mcs251.md)。
 
-## 文档
+## 安装和首次构建
 
-- [Core API、资源冲突与迁移边界](docs/core-api-compatibility.md)
-- [随包库和 Arduino 库兼容性](docs/library-compatibility.md)
-- [工具链、STC SDK 来源与许可边界](docs/toolchain-and-sdk.md)
-- [逐型号编译与实板验证状态](docs/hardware-validation.md)
-- [统一 core 的实现说明](cores/STC/README.md)
-
-## 支持的 MCU
-
-| 系列 | 精确型号 | 编译后端 | 编译状态 | 实板状态 |
-|---|---|---|---|---|
-| STC89 | STC89C51RC、STC89C52RC、STC89C58RD+ | MCS51 | 已覆盖 | 待验证 |
-| STC12 | STC12C2052AD、STC12C5A60S2 | MCS51 | 已覆盖 | 待验证 |
-| STC15 | STC15F104W、STC15F2K60S2、STC15W408AS、STC15W4K32S4 | MCS51 | 已覆盖 | 待验证 |
-| STC8A/C | STC8A8K64S4A12、STC8C2K64S4 | MCS51 | 已覆盖 | 待验证 |
-| STC8G | STC8G1K08、STC8G1K08A、STC8G2K64S4 | MCS51 | 已覆盖 | 待验证 |
-| STC8H | STC8H1K08、STC8H1K28、STC8H3K64S4、STC8H8K64U | MCS51 | 已覆盖 | 待验证 |
-| STC32 | STC32CL8K64、STC32G8K64、STC32G12K64、STC32G12K128 | MCS251（实验） | 已覆盖 | 待验证 |
-| AI8051U | AI8051U-34K64 | MCS51；可选 MCS251（实验） | 已覆盖 | 待验证 |
-| Ai8H | Ai8H2K12U、Ai8H2K32U | MCS51 | 已覆盖 | 待验证 |
-
-每款 MCU 都有独立的 `variants/<型号>/`、内存边界、有效引脚掩码和
-`variant.json`。型号数据集中维护在
-[`tools/variants/devices.json`](tools/variants/devices.json)，并由生成器同步
-生成 `boards.txt` 和变体文件。
-
-## 安装
-
-当前 Boards Manager 包支持 Windows x64、macOS Apple Silicon（arm64）和
-macOS Intel（x86_64），暂不提供 Linux 工具链。在 Arduino IDE 2.x 的
-“附加开发板管理器网址”中添加：
+使用已发布版本时，将以下地址添加到 Arduino IDE 的“附加开发板管理器网址”，再安装 `arduino-stc51`：
 
 ```text
 https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
 ```
 
-然后打开开发板管理器，搜索并安装 **arduino-stc51 0.0.1**。
-
-也可以通过 Arduino CLI 添加索引并安装：
+对应的 Arduino CLI 命令如下。安装结果是索引中的已发布版本，不包含当前源码的全部新增功能。
 
 ```powershell
 arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
 arduino-cli core update-index
-arduino-cli core install arduino-stc51:mcs51@0.0.1
+arduino-cli core install arduino-stc51:mcs51
 ```
 
-## 快速开始
-
-1. 在开发板菜单中选择准确的 MCU 型号。
-2. 选择与 STC ISP 配置一致的 CPU 时钟；STC89 还要同步选择 12T 或 6T
-   machine cycle。
-3. 编译草图或导出已编译的二进制文件。
-4. 在 Windows 上使用官方 AiCube-ISP 打开生成的 Intel HEX 并烧录。
-
-core 不会切换或校准芯片振荡器。项目也不捆绑 AiCube-ISP，已核验的版本、
-下载地址、大小和 SHA-256 记录在
-[`sdk/manifest.json`](sdk/manifest.json)。
-
-## Arduino API 与兼容性
-
-本项目提供经 SDCC 验证的 **Wiring-C / Arduino-C** 接口。`.ino` 草图按 C
-编译，不提供 Arduino C++ ABI。
-
-当前 core 包含：
-
-- GPIO、四种 STC 端口模式和有效引脚检查；
-- `millis`、`micros`、延时、外部中断、移位、脉宽和常用数学辅助；
-- UART1 的 `Serial` 对象式与函数式接口；
-- 逐型号 ADC 映射和 1--15 位返回结果宽度设置；
-- `Wire`、`SPI`、`SoftwareSerial`、`LiquidCrystal`、`Stepper` 和
-  `SD` 随包库。
-
-`Serial.begin()`、`Wire.begin()` 等点号语法由只读函数指针表提供，不代表
-存在 C++ 类、继承或重载。`String`、`Print`、`Stream` 以及依赖这些接口
-的常规 Arduino C++ 库不能直接使用。完整接口矩阵见
-[Core API 兼容性文档](docs/core-api-compatibility.md)。
-
-## 已知限制
-
-- STC32 和 AI8051U 的 MCS251 路径仍为实验状态。
-- 25 个型号尚未完成系统性的实板验证。
-- 当前不提供自动上传配方；编译后需使用 AiCube-ISP 烧录 HEX。
-- Timer0 固定用作系统时基；启用 UART1 时 Timer1 被串口占用。
-- PWM、EEPROM/IAP、USB、CAN、DAC、硬件 I2C/SPI、多串口、`tone` 和
-  `Servo` 尚未作为通用能力提供。
-- 受上游 SDCC 参数解析限制，草图目录和自定义 `--build-path` 应避免空格。
-- 裸 MCU 没有统一板载 LED，`LED_BUILTIN` 为 `NOT_A_PIN`；接线前必须核对
-  所用封装的官方引脚图。
-
-## 问题反馈
-
-提交 Issue 前请先搜索是否已有相同问题，并至少附上：
-
-- MCU 完整型号和 FQBN；
-- CPU 时钟，以及 STC89 的 12T/6T 配置；
-- Arduino IDE/CLI 版本和操作系统；
-- 可复现的最小草图与完整编译日志；
-- 若为运行问题，附供电、封装、烧录工具版本和接线信息。
-
-## 参与开发
-
-重新生成或检查全部变体：
+**构建当前源码**：Windows 上准备 Arduino CLI、PowerShell、`tar` 和 `curl.exe`，然后在本仓库根目录运行：
 
 ```powershell
-node ./tools/variants/generate.mjs
-node ./tools/variants/generate.mjs --check
+$build = .\scripts\build-example.ps1 -WorkDirectory D:\stc51-work
+$build.firmware
 ```
 
-运行仓库一致性检查和 Windows 全变体编译矩阵：
+脚本将当前源码打包并安装到独立工作目录，按 [工具清单](tools/toolchain-manifest.json) 下载或复用经过大小和 SHA-256 校验的 Windows 工具包，然后编译一个 STC8G1K08A、12 MHz 的 [Blink](examples/Blink/Blink.ino) 示例。首次使用需要下载依赖；工具缓存位于 `sdk/downloads/toolchain`。它保留生成的 HEX、构建目录和 Arduino CLI 配置，便于继续开发。
+
+Blink 使用 P3.2，需按自己的电路连接 LED 和限流电阻或修改引脚。平台不假定存在板载 LED，通用 `LED_BUILTIN` 为 `NOT_A_PIN`。时钟菜单必须与 ISP 中设置的实际时钟一致；core 不自动校准或切换系统时钟。
+
+编译自己的 sketch 目录，或指定其他型号：
 
 ```powershell
-./scripts/check-repository.ps1
-./scripts/test-all-variants.ps1
+$build = .\scripts\build-example.ps1 `
+    -Fqbn 'arduino-stc51:mcs51:stc32g144k246:clock=12m' `
+    -SketchPath D:\sketches\MySketch -WorkDirectory D:\stc51-work
+
+arduino-cli compile --config-file $build.config `
+    --fqbn 'arduino-stc51:mcs51:stc32g144k246:clock=12m' `
+    --build-path D:\stc51-work\my-build D:\sketches\MySketch
 ```
 
-创建可复现的 Boards Manager 平台归档：
+`SketchPath` 是包含同名 `.ino` 的目录。Arduino CLI 不在 PATH 时，可传 `-ArduinoCli 'C:\Program Files\Arduino CLI\arduino-cli.exe'`。当前 SDCC 要求 sketch 和构建路径不含空格。源码安装脚本目前面向 Windows；其他宿主的工具链资料见 [toolchain-and-sdk.md](docs/toolchain-and-sdk.md)。
+
+## Plain C 和实验 C++
+
+默认路径使用 SDCC 编译 plain C。支持 `setup()` / `loop()`，以及 `pinMode`、`digitalWrite`、`millis`、`micros`、`delay`、外部中断、按型号提供的 ADC 和 UART1。`Serial.begin()`、`Wire.begin()` 等点语法在 plain C 中由函数指针表实现，不提供 C++ 重载、继承或类模板。
+
+随平台提供 Wire、SPI、SoftwareSerial、LiquidCrystal、Stepper 和受限 SD 接口；兼容范围、软件实现和引脚限制见 [核心 API](docs/core-api-compatibility.md) 与 [库兼容说明](docs/library-compatibility.md)。一般 Arduino C++ 库不能直接按 plain C 编译。
+
+实验 C++ 配置使用定制 Clang → LLVM-CBE → SDCC 流程，提供 `String`、`Print`、`Stream`、`HardwareSerial`、`SPIClass`、`TwoWire` 等类接口及受限运行时。22 个型号均有显式配置，**当前只允许 12 MHz**。先按 `stcxx` 仓库说明准备工具链，再按 [工具链说明](docs/toolchain-and-sdk.md) 配置对应的 Clang / LLVM 工具。Windows 配方通过 WSL 调用这些 Linux 工具，Boards Manager 平台包不包含它们。
 
 ```powershell
-./scripts/package-platform.ps1
+$env:STCXX_WSL_DISTRO = 'Ubuntu'
+$build = .\scripts\build-example.ps1 `
+    -Fqbn 'arduino-stc51:mcs51:stc32g144k246:cppcore=enabled,clock=12m' `
+    -SketchPath D:\sketches\MyCppSketch -WorkDirectory D:\stc51-work
 ```
 
-欢迎提交 Issue 和 Pull Request。新增型号时，请同时更新型号数据库、生成文件、
-编译证据和对应文档。
+当前独立工具链默认路径为 `D:\Git\stc51\stcxx`，WSL 对应 `/mnt/d/Git/stc51/stcxx`，SDCC 入口为 `out/bin/sdcc`。路径可在 WSL 中通过 `STCXX_TOOLCHAIN_ROOT` / `STCXX_SDCC` 覆盖，其他二进制也有相应 `STCXX_*` 变量；实际文件必须匹配工具锁的校验值。仅准备普通 SDCC 或仅启用菜单不足以启用 C++。
 
-## 许可证
+AI8051U 的 C++ MCS251 配置示例为 `arduino-stc51:mcs51:ai8051u_34k32:execution=mcs251,cppcore=enabled,clock=12m`。不支持异常、RTTI、线程或完整 STL / libstdc++；详细边界见 [C++ 运行时约定](docs/cpp-runtime-contract.md)。
 
-本仓库代码采用 [MIT License](LICENSE)。上游工具、历史来源代码和 STC 厂商
-资料各自保留其许可证与署名；详情见 [LICENSES](LICENSES/) 和
-[工具链与 SDK 文档](docs/toolchain-and-sdk.md)。
+## 用 stc-cli 烧录
+
+在相邻 `stc-cli` 仓库构建 `cargo build --release --locked`，或使用其已构建的可执行文件。Arduino IDE 可用“导出已编译的二进制文件”得到 HEX；上面的源码脚本通过 `$build.firmware` 返回 HEX 路径。
+
+先编译 STC8G1K08A，再检查和烧录同一个 HEX；将 COM5 替换为实际串口，并按 ISP 要求重新上电：
+
+```powershell
+$build = .\scripts\build-example.ps1 -WorkDirectory D:\stc51-work
+$stc = '..\stc-cli\target\release\stc-cli.exe'
+& $stc validate --expect STC8G1K08A --file $build.firmware
+& $stc flash --port COM5 --expect STC8G1K08A --file $build.firmware --reset manual
+```
+
+`--expect` 必须与刚编译的 FQBN 型号一致。其他芯片按其支持等级添加参数，例如以下命令分别使用为对应目标生成的 `MySketch.hex`：
+
+```powershell
+& $stc flash --port COM5 --expect STC32G144K246 --file MySketch.hex --allow-experimental --force-unverified-target
+& $stc flash --port COM5 --expect AI8051U_34K32 --file MySketch.hex --execution-mode mcs251 --allow-experimental --force-unverified-target
+```
+
+当前 `stc-cli` 为这 22 款型号都实现了烧录路径，其中 7 款标记 stable、15 款 experimental；该等级不等于本 Arduino core 已获实板验证。9 款官方协议目标因尚无可核实的 UART 身份映射，要求同时传入 `--allow-experimental` 与 `--force-unverified-target`：STC32CL8K48/64、STC32G12K64、STC32G144K246、三款 AI8051U，以及 Ai8H2K12U/32U。
+
+AI8051U 烧录前需用官方 ISP 将芯片设置为与 HEX 一致的 MCS51 / MCS251 模式；`stc-cli --execution-mode` 只选择镜像处理模式，不修改芯片硬件选项。型号、容量、实验协议和完整参数应以 `stc-cli` 的 README 与 `docs/PROTOCOL_SUPPORT.md` 为准。
+
+## 使用边界与开发资料
+
+- STC32G144K246 物理 Flash 为 246 KiB，当前普通程序链接窗口为 182 KiB；STC32G12K128 物理 Flash 为 128 KiB，当前普通程序窗口为 64 KiB。不要按物理容量直接扩大链接范围。
+- Timer0 用于系统计时，UART1 占用 Timer1。ADC 能力和 GPIO 可用掩码按型号定义，具体封装可能引出更少的引脚。
+- PWM、EEPROM / IAP、USB、CAN、DAC、硬件 I²C / SPI、多路 UART、tone 和 Servo 尚未作为通用 API 提供。
+- 模拟器覆盖 CPU、内存和部分 UART / 定时器行为，不能验证模拟外设、电气条件或周期精度。硬件验证要求见 [hardware-validation.md](docs/hardware-validation.md)。
+
+开发板数据库和打包操作应在完整源码 checkout 根目录运行：
+
+```powershell
+node .\tools\variants\generate.mjs --check
+node .\tools\variants\generate.mjs
+.\scripts\package-platform.ps1
+```
+
+`scripts/` 中的源码构建脚本不代表安装包包含完整开发环境；发布平台不包含 `tests/`、本机构建输出或大型工具链源码。`package-platform.ps1` 输出平台归档到 `dist/`，不会发布新版本或更新远端索引。
+
+项目代码使用 [MIT 许可证](LICENSE)，第三方代码的许可证和来源保留在 [LICENSES](LICENSES)。

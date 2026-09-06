@@ -3,9 +3,9 @@
  *
  * Plain-C HD44780-compatible character LCD driver.
  *
- * LiquidCrystal is a const function table, allowing Arduino-style calls such
- * as LiquidCrystal.begin(16u, 2u) in a C sketch.  The driver owns one global
- * LCD configuration; it is not the C++ Arduino LiquidCrystal class.
+ * Plain-C builds expose a const function table named LiquidCrystal.  The C++
+ * Arduino Core profile exposes the conventional LiquidCrystal : Print class.
+ * The C facade has a default context; each C++ object owns its LCD context.
  */
 #ifndef STC_LIQUID_CRYSTAL_H
 #define STC_LIQUID_CRYSTAL_H
@@ -66,6 +66,15 @@ extern "C" {
 #define LIQUIDCRYSTAL_ERROR 0u
 #define LIQUIDCRYSTAL_OK    1u
 
+typedef struct {
+    uint8_t rs_pin, rw_pin, enable_pin;
+    uint8_t data_pins[8];
+    uint8_t columns, rows, display_function, display_control, display_mode, flags;
+    uint8_t row_offsets[4];
+} STCLiquidCrystalState;
+STCLiquidCrystalState *LiquidCrystal_selectContext(STCLiquidCrystalState *context)
+    STC_LIQUIDCRYSTAL_REENTRANT;
+
 /* Common write-only wiring, with the controller R/W pin tied to ground. */
 uint8_t LiquidCrystal_setPins(uint8_t rs_pin, uint8_t enable_pin,
                               uint8_t d4_pin, uint8_t d5_pin,
@@ -103,6 +112,8 @@ void LiquidCrystal_clear(void) STC_LIQUIDCRYSTAL_REENTRANT;
 void LiquidCrystal_home(void) STC_LIQUIDCRYSTAL_REENTRANT;
 void LiquidCrystal_setCursor(uint8_t column,
                              uint8_t row) STC_LIQUIDCRYSTAL_REENTRANT;
+void LiquidCrystal_setRowOffsets(int row0, int row1, int row2, int row3)
+                                  STC_LIQUIDCRYSTAL_REENTRANT;
 void LiquidCrystal_display(void) STC_LIQUIDCRYSTAL_REENTRANT;
 void LiquidCrystal_noDisplay(void) STC_LIQUIDCRYSTAL_REENTRANT;
 void LiquidCrystal_cursor(void) STC_LIQUIDCRYSTAL_REENTRANT;
@@ -124,6 +135,14 @@ size_t LiquidCrystal_write(uint8_t value) STC_LIQUIDCRYSTAL_REENTRANT;
 size_t LiquidCrystal_print(const char *text) STC_LIQUIDCRYSTAL_REENTRANT;
 /* Arduino Print semantics: println appends CR and LF data bytes. */
 size_t LiquidCrystal_println(const char *text) STC_LIQUIDCRYSTAL_REENTRANT;
+
+#if defined(__cplusplus) && defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
+
+} /* extern "C" */
+
+# include "LiquidCrystalClass.h"
+
+#else
 
 typedef struct {
     uint8_t (*setPins)(uint8_t rs_pin, uint8_t enable_pin,
@@ -172,13 +191,17 @@ typedef struct {
     size_t (*write)(uint8_t value) STC_LIQUIDCRYSTAL_REENTRANT;
     size_t (*print)(const char *text) STC_LIQUIDCRYSTAL_REENTRANT;
     size_t (*println)(const char *text) STC_LIQUIDCRYSTAL_REENTRANT;
+    void (*setRowOffsets)(int row0, int row1, int row2, int row3)
+                           STC_LIQUIDCRYSTAL_REENTRANT;
 } STCLiquidCrystalClass;
 
 /* The table is placed in program memory by SDCC and consumes no DATA RAM. */
 extern STC_LIQUID_CRYSTAL_CODE const STCLiquidCrystalClass LiquidCrystal;
 
-#ifdef __cplusplus
+# ifdef __cplusplus
 }
-#endif
+# endif
+
+#endif /* C++ class profile */
 
 #endif

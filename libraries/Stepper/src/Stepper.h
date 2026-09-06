@@ -3,15 +3,21 @@
  *
  * Plain-C Arduino-style stepper motor control.
  *
- * The Stepper object is a const table of function pointers so a C sketch can
- * use Stepper.setSpeed(), Stepper.step(), and similar syntax.  Unlike the C++
- * Arduino Stepper class, this API controls one globally configured motor and
- * uses setPins2(), setPins4(), or setPins5() instead of constructors.
+ * Plain-C builds expose a const function table named Stepper.  The C++ Arduino
+ * Core profile exposes the conventional constructor-based Stepper class.
+ * The C facade has a default motor; each C++ object owns its motor context.
  */
 #ifndef STC_STEPPER_H
 #define STC_STEPPER_H
 
 #include <Arduino.h>
+
+typedef struct {
+    uint8_t pins[5];
+    uint8_t pin_count, phase;
+    unsigned int steps_per_revolution;
+    unsigned long step_delay_us, last_step_time;
+} STCStepperState;
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +43,9 @@ extern "C" {
 #define STEPPER_PIN_COUNT_2    2u
 #define STEPPER_PIN_COUNT_4    4u
 #define STEPPER_PIN_COUNT_5    5u
+
+STCStepperState *Stepper_selectContext(STCStepperState *context)
+    STC_STEPPER_REENTRANT;
 
 /*
  * steps_per_revolution must be in the range 1..65535.  Every pin must exist
@@ -70,6 +79,14 @@ unsigned long Stepper_stepsPerRevolution(void) STC_STEPPER_REENTRANT;
 uint8_t Stepper_pinCount(void) STC_STEPPER_REENTRANT;
 uint8_t Stepper_isConfigured(void) STC_STEPPER_REENTRANT;
 
+#if defined(__cplusplus) && defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
+
+} /* extern "C" */
+
+# include "StepperClass.h"
+
+#else
+
 typedef struct {
     uint8_t (*setPins2)(unsigned long steps_per_revolution,
                         uint8_t pin1, uint8_t pin2)
@@ -92,8 +109,10 @@ typedef struct {
 /* Keep the read-only dispatch table out of scarce 8051 data memory. */
 extern STC_STEPPER_CODE const STCStepperClass Stepper;
 
-#ifdef __cplusplus
+# ifdef __cplusplus
 }
-#endif
+# endif
+
+#endif /* C++ class profile */
 
 #endif

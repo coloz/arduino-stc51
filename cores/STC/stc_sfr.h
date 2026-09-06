@@ -44,8 +44,78 @@ STC_SFR(P6, 0xe8);
 STC_SFR(P7, 0xf8);
 #endif
 
+/*
+ * STC32G144K246 maps P8/P9/PA/PB into the 24-bit XFR address space.
+ * The mcs251 backend emits DPX-assisted accesses for these lvalues.
+ */
+#define STC_XFR8(address) \
+    (*(volatile __xdata unsigned char *)(address))
+
+#if STC_CORE_HAS_PORT8
+# define P8OUT  STC_XFR8(0x7ef700UL)
+# define P8IN   STC_XFR8(0x7ef708UL)
+# define P8M0   STC_XFR8(0x7ef710UL)
+# define P8M1   STC_XFR8(0x7ef718UL)
+# define P8SETB STC_XFR8(0x7ef720UL)
+# define P8CLRB STC_XFR8(0x7ef728UL)
+#endif
+#if STC_CORE_HAS_PORT9
+# define P9OUT  STC_XFR8(0x7ef701UL)
+# define P9IN   STC_XFR8(0x7ef709UL)
+# define P9M0   STC_XFR8(0x7ef711UL)
+# define P9M1   STC_XFR8(0x7ef719UL)
+# define P9SETB STC_XFR8(0x7ef721UL)
+# define P9CLRB STC_XFR8(0x7ef729UL)
+#endif
+#if STC_CORE_HAS_PORTA
+# define PAOUT  STC_XFR8(0x7ef702UL)
+# define PAIN   STC_XFR8(0x7ef70aUL)
+# define PAM0   STC_XFR8(0x7ef712UL)
+# define PAM1   STC_XFR8(0x7ef71aUL)
+# define PASETB STC_XFR8(0x7ef722UL)
+# define PACLRB STC_XFR8(0x7ef72aUL)
+#endif
+#if STC_CORE_HAS_PORTB
+# define PBOUT  STC_XFR8(0x7ef703UL)
+# define PBIN   STC_XFR8(0x7ef70bUL)
+# define PBM0   STC_XFR8(0x7ef713UL)
+# define PBM1   STC_XFR8(0x7ef71bUL)
+# define PBSETB STC_XFR8(0x7ef723UL)
+# define PBCLRB STC_XFR8(0x7ef72bUL)
+#endif
+
 #if STC_CORE_HAS_MODERN_UART1_BRT
 STC_SFR(P_SW1, 0xa2);
+#endif
+
+#if (STC_CORE_HAS_ADC && \
+     (STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_MODERN_BC_ADCCFG)) || \
+    STC_CORE_HAS_PORT8 || STC_CORE_HAS_PORT9 || \
+    STC_CORE_HAS_PORTA || STC_CORE_HAS_PORTB
+STC_SFR(P_SW2, 0xba);
+#endif
+
+#if STC_CORE_HAS_PORT8 || STC_CORE_HAS_PORT9 || \
+    STC_CORE_HAS_PORTA || STC_CORE_HAS_PORTB
+STC_SFR(WTST,  0xe9);
+STC_SFR(CKCON, 0xea);
+# define TM0PS STC_XFR8(0x7efea0UL)
+#endif
+
+#if STC_CORE_HAS_SEPARATE_PULLUP
+/* P0-P7 and P8-PB use two XFR banks for their pull-up enables. */
+# define P0PU STC_XFR8(0x7efe10UL)
+# define P1PU STC_XFR8(0x7efe11UL)
+# define P2PU STC_XFR8(0x7efe12UL)
+# define P3PU STC_XFR8(0x7efe13UL)
+# define P4PU STC_XFR8(0x7efe14UL)
+# define P5PU STC_XFR8(0x7efe15UL)
+# define P6PU STC_XFR8(0x7efe16UL)
+# define P7PU STC_XFR8(0x7efe17UL)
+# define P8PU STC_XFR8(0x7ef9c0UL)
+# define P9PU STC_XFR8(0x7ef9c1UL)
+# define PAPU STC_XFR8(0x7ef9c2UL)
+# define PBPU STC_XFR8(0x7ef9c3UL)
 #endif
 
 #if STC_CORE_HAS_PORT_MODE
@@ -90,7 +160,6 @@ STC_SFR(STC_ADC_ADJUST, 0xa2);
 # elif STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_LEGACY_BC_10BIT_CLKDIV
 STC_SFR(STC_ADC_ADJUST, 0x97);
 # elif STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_MODERN_BC_ADCCFG
-STC_SFR(P_SW2,  0xba);
 STC_SFR(ADCCFG, 0xde);
 # endif
 #endif
@@ -120,6 +189,7 @@ STC_SFR(ADCCFG, 0xde);
 #define STC_AUXR_T0_1T    0x80u
 #define STC_AUXR_T1_1T    0x40u
 #define STC_AUXR_S1_BRT_T2 0x01u
+#define STC_P_SW2_EAXFR   0x80u
 
 #define STC_IE_EA         0x80u
 #define STC_IE_ES         0x10u

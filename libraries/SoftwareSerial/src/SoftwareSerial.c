@@ -63,6 +63,18 @@ static uint8_t software_serial_port_read(uint8_t port)
 #if STC_CORE_HAS_PORT7
     case 7u: return P7;
 #endif
+#if STC_CORE_HAS_PORT8
+    case 8u: return P8IN;
+#endif
+#if STC_CORE_HAS_PORT9
+    case 9u: return P9IN;
+#endif
+#if STC_CORE_HAS_PORTA
+    case 10u: return PAIN;
+#endif
+#if STC_CORE_HAS_PORTB
+    case 11u: return PBIN;
+#endif
     default: return 0xffu;
     }
 }
@@ -104,6 +116,26 @@ static void software_serial_port_write(uint8_t port, uint8_t mask,
 #if STC_CORE_HAS_PORT7
     case 7u:
         if (high != 0u) { P7 |= mask; } else { P7 &= (uint8_t)~mask; }
+        break;
+#endif
+#if STC_CORE_HAS_PORT8
+    case 8u:
+        if (high != 0u) { P8SETB = mask; } else { P8CLRB = mask; }
+        break;
+#endif
+#if STC_CORE_HAS_PORT9
+    case 9u:
+        if (high != 0u) { P9SETB = mask; } else { P9CLRB = mask; }
+        break;
+#endif
+#if STC_CORE_HAS_PORTA
+    case 10u:
+        if (high != 0u) { PASETB = mask; } else { PACLRB = mask; }
+        break;
+#endif
+#if STC_CORE_HAS_PORTB
+    case 11u:
+        if (high != 0u) { PBSETB = mask; } else { PBCLRB = mask; }
         break;
 #endif
     default:
@@ -178,6 +210,60 @@ static uint8_t software_serial_pins_are_valid(uint8_t receive_pin,
     return 1u;
 }
 
+static uint8_t software_serial_period_for_baud(unsigned long baud,
+                                                unsigned int *period)
+{
+    unsigned long rounded_period;
+    unsigned long remainder;
+
+    if ((baud == 0UL) || (period == NULL)) {
+        return 0u;
+    }
+
+    /* Round 1,000,000 / baud without overflowing for a large baud value. */
+    rounded_period = 1000000UL / baud;
+    remainder = 1000000UL % baud;
+    if (remainder >= baud - remainder) {
+        ++rounded_period;
+    }
+    if ((rounded_period < (unsigned long)SOFTWARE_SERIAL_MIN_BIT_PERIOD_US) ||
+        (rounded_period > (unsigned long)SOFTWARE_SERIAL_MAX_BIT_PERIOD_US) ||
+        (rounded_period > 65535UL)) {
+        return 0u;
+    }
+    *period = (unsigned int)rounded_period;
+    return 1u;
+}
+
+static void software_serial_start_validated(unsigned long baud,
+                                             unsigned int period)
+{
+    if (software_serial_started != 0u) {
+        SoftwareSerial_end();
+    }
+
+    software_serial_bit_period_us = period;
+    software_serial_half_period_us = (unsigned int)((period + 1u) / 2u);
+    software_serial_baud = baud;
+    software_serial_rx_port = digitalPinToPort(software_serial_rx_pin);
+    software_serial_tx_port = digitalPinToPort(software_serial_tx_pin);
+    software_serial_rx_mask = digitalPinToBitMask(software_serial_rx_pin);
+    software_serial_tx_mask = digitalPinToBitMask(software_serial_tx_pin);
+
+    /* Preload the latch before enabling push-pull output to avoid a false
+     * start-bit pulse when the old latch held the opposite level. */
+    software_serial_port_write(software_serial_tx_port,
+                               software_serial_tx_mask,
+                               (software_serial_inverse != 0u) ? LOW : HIGH);
+    pinMode(software_serial_tx_pin, OUTPUT);
+    pinMode(software_serial_rx_pin,
+            (software_serial_inverse != 0u) ? INPUT : INPUT_PULLUP);
+
+    software_serial_reset_receive();
+    software_serial_started = 1u;
+    software_serial_listening = 1u;
+}
+
 bool SoftwareSerial_setPins(uint8_t receive_pin,
                             uint8_t transmit_pin) STC_SOFTWARE_SERIAL_REENTRANT
 {
@@ -223,47 +309,39 @@ bool SoftwareSerial_setInverseLogic(bool inverse_logic)
 
 bool SoftwareSerial_begin(unsigned long baud)
 {
-    unsigned long rounded_period;
+    unsigned int rounded_period;
 
-    if ((baud == 0UL) ||
-        (software_serial_pins_are_valid(software_serial_rx_pin,
+    if ((software_serial_pins_are_valid(software_serial_rx_pin,
                                         software_serial_tx_pin) == 0u) ||
-        (software_serial_timer_ready() == 0u)) {
+        (software_serial_timer_ready() == 0u) ||
+        (software_serial_period_for_baud(baud, &rounded_period) == 0u)) {
         return false;
     }
 
-    rounded_period = (1000000UL + (baud / 2UL)) / baud;
-    if ((rounded_period < (unsigned long)SOFTWARE_SERIAL_MIN_BIT_PERIOD_US) ||
-        (rounded_period > (unsigned long)SOFTWARE_SERIAL_MAX_BIT_PERIOD_US) ||
-        (rounded_period > 65535UL)) {
+    software_serial_start_validated(baud, rounded_period);
+    return true;
+}
+
+bool SoftwareSerial_beginOnPins(uint8_t receive_pin, uint8_t transmit_pin,
+                                bool inverse_logic, unsigned long baud)
+                                STC_SOFTWARE_SERIAL_REENTRANT
+{
+    unsigned int period;
+
+    /* Do every fallible check before ending or reconfiguring the current
+     * owner.  Once these checks pass, the remaining transition cannot fail. */
+    if ((software_serial_pins_are_valid(receive_pin, transmit_pin) == 0u) ||
+        (software_serial_timer_ready() == 0u) ||
+        (software_serial_period_for_baud(baud, &period) == 0u)) {
         return false;
     }
-
     if (software_serial_started != 0u) {
         SoftwareSerial_end();
     }
-
-    software_serial_bit_period_us = (unsigned int)rounded_period;
-    software_serial_half_period_us =
-        (unsigned int)((rounded_period + 1UL) / 2UL);
-    software_serial_baud = baud;
-    software_serial_rx_port = digitalPinToPort(software_serial_rx_pin);
-    software_serial_tx_port = digitalPinToPort(software_serial_tx_pin);
-    software_serial_rx_mask = digitalPinToBitMask(software_serial_rx_pin);
-    software_serial_tx_mask = digitalPinToBitMask(software_serial_tx_pin);
-
-    /* Preload the latch before enabling push-pull output to avoid a false
-     * start-bit pulse when the old latch held the opposite level. */
-    software_serial_port_write(software_serial_tx_port,
-                               software_serial_tx_mask,
-                               (software_serial_inverse != 0u) ? LOW : HIGH);
-    pinMode(software_serial_tx_pin, OUTPUT);
-    pinMode(software_serial_rx_pin,
-            (software_serial_inverse != 0u) ? INPUT : INPUT_PULLUP);
-
-    software_serial_reset_receive();
-    software_serial_started = 1u;
-    software_serial_listening = 1u;
+    software_serial_rx_pin = receive_pin;
+    software_serial_tx_pin = transmit_pin;
+    software_serial_inverse = inverse_logic ? 1u : 0u;
+    software_serial_start_validated(baud, period);
     return true;
 }
 
@@ -375,6 +453,11 @@ size_t SoftwareSerial_poll(void)
 int SoftwareSerial_available(void)
 {
     uint8_t count;
+
+    /* Service reception from the conventional Stream API too. This remains
+     * polling (not background IRQ reception), but an ordinary available/read
+     * loop no longer requires a nonstandard explicit poll() call. */
+    (void)SoftwareSerial_poll();
 
     if (software_serial_rx_head >= software_serial_rx_tail) {
         count = (uint8_t)(software_serial_rx_head - software_serial_rx_tail);
