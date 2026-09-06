@@ -17,3 +17,12 @@ tmp/
 
 # Separate local QEMU development checkout; not part of this Arduino platform.
 /arduino-stc51-qemu-source-all-variants-v1/
+
+# Versioned release binaries are GitHub Release assets, not source files.
+/dist/*-r1.tar.bz2
+/dist/*.tar.gz
+/dist/stc-cli-*.zip
+/dist/sdcc-mcs251-windows-*.zip
+/dist/SHA256SUMS
+/dist/release-*.json
+/dist/package_arduino-stc51_index.json

@@ -1,5 +1,13 @@
 # STC SDK 与编译器基线
 
+> **0.0.2 发布更新（2026-09-06）**：四种宿主各 23 项 plain-C 配置已通过编译与离线镜像校验；Linux/macOS `r1` 工具链已按最终补丁重建。Windows 保留上游 plain-C 编译器。实验 C++ 的 Arduino 入口仅支持另行准备工具链的 Windows + WSL。当前证据见[发布记录](releases/0.0.2.md)，下方旧 C++ 矩阵记录不构成本次的新运行时资格。
+
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](variant-lifecycle.md).
+
 本文记录 arduino-stc51 core 在 **2026-08-31** 采用的上游资料基线，并把“厂商 SDK”“编译器”和“烧录工具”分开说明。所有可下载资产的精确机器可读元数据均在 [`../sdk/manifest.json`](../sdk/manifest.json)。
 
 ## 已核验的厂商资产
@@ -81,7 +89,7 @@ SHA-256 为 `2e7e343a0a5b7f8f0a66366ec92d5ff181a64f1380c9b0f252d28719768eed6f`�
 `sdcc-mcs251-isr-context.patch` 只是最终补丁的后端修复组件，不是当前完整
 Arduino C++ 编译器补丁。
 
-Arduino CLI 已为 22 个物理型号、25 个 MCS51/MCS251 执行配置提供明确的
+Arduino CLI 已为 20 个物理型号、23 个 MCS51/MCS251 执行配置提供明确的
 12 MHz opt-in 入口；例如 K246：
 
 ```text
@@ -118,16 +126,7 @@ SHA-256 分别为 `08b41280f0a326ab5fe4ca2f18ed6d41860a7b4bb488b2b0a58fc5f088ea8
 当前没有代表性 K246 实板资格认证；在完成烧录、复位、中断、栈边界、时序和外设实测前，
 QEMU PASS 不能升级为硬件发布或量产支持结论。
 
-计划中的跨宿主发布矩阵覆盖 Windows x64、Linux x86_64、macOS Apple Silicon
-（arm64，macOS 11+）和保留的 macOS Intel（x86_64，macOS 11+）；只有实际完成
-重建、执行验证并在 [`../tools/toolchain-manifest.json`](../tools/toolchain-manifest.json)
-中写入精确大小与 SHA-256 的资产，才属于已认证发布物。Linux 资产的资格要求是在
-Debian 11 x86_64 容器中原生构建，并检查全部 ELF 的架构、动态库、RPATH/RUNPATH，
-以及不高于 GLIBC 2.31 / GLIBCXX 3.4.28 的符号版本需求。两份 macOS 资产必须从上述
-固定提交重新构建，部署目标固定为 macOS 11.0：Apple Silicon 版原生 arm64，Intel 版
-由 Apple clang 交叉生成并在 Rosetta 下实际执行；所有 Mach-O 工具还必须通过架构、
-部署目标、LC_RPATH 和动态依赖检查，且只允许系统库。在这些步骤实际完成前，前述
-Linux 与 macOS 资产仍保持 **NOT QUALIFIED**。
+0.0.2 的跨宿主 plain-C 发布矩阵覆盖 Windows x64、Linux x86_64、macOS arm64 和 x86_64（11+）。Linux/macOS 归档均从锁定提交加完整补丁重建，并在各自宿主通过 23 项配置检查；Intel 工具通过 Rosetta 执行。全部归档的准确大小、SHA-256 和构建信息见 `tools/toolchain-manifest.json`。本次验证不扩展 C++、外设或实板支持范围。
 
 Linux x86_64 构建需要 GCC/G++、Make、Bison、Flex、Boost 与 zlib 头文件、
 `file`、`readelf` 和 bzip2。发布资产使用 digest 锁定的 Debian 11 镜像：
@@ -146,7 +145,7 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
 `sdcc-mcs251-linux-x86_64-<commit>-r<revision>.tar.bz2`；包修订号用于区分同一份锁定源码的宿主打包改进，避免覆盖已发布工具缓存。
 
 macOS 构建的最小依赖是 Xcode Command Line Tools、Homebrew Boost 头文件和 GNU tar。
-产物的最低部署目标为 macOS 11.0；Intel 版本继续作为待重建资格认证的兼容 flavour 保留。
+产物的最低部署目标为 macOS 11.0；Intel 版本已重建，并通过 Rosetta 执行 plain-C 发布矩阵。
 可复现脚本不会安装依赖；它校验固定补丁和源码 blob，并检查编译器可运行性、Mach-O
 架构、部署目标和动态依赖。脚本原子创建固定的架构专用临时目录，拒绝复用已存在目录，也只清理本次自己创建
 的目录：

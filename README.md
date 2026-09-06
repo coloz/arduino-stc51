@@ -2,7 +2,7 @@
 
 面向 STC 8051 / 251 单片机的 Arduino core，提供芯片级开发板定义、GPIO / 定时 / 串口等 API、常用外设库，以及生成 Intel HEX 的 SDCC 构建流程。默认使用 plain C；需要 C++ 类和 Arduino 类库接口时，可显式启用实验 C++ 配置。
 
-当前源码版本为 **0.0.2 开发版**，包含 22 个具体型号、25 种执行配置。源码支持范围与发布包版本不同；目前仓库的 Boards Manager 索引仍为 0.0.1。当前功能尚未完成实板验证，编译成功和模拟器运行不能替代硬件验证。版本信息见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
+当前发布版本为 **0.0.2**，包含 20 个具体型号、23 种执行配置。Boards Manager 支持 Windows x64、Linux x86_64、macOS arm64 / x86_64（macOS 11+）；发布资产与验证记录见 [v0.0.2](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.2)。当前功能尚未完成实板验证，编译成功和模拟器运行不能替代硬件验证。版本信息见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
 
 三个项目分别负责开发流程中的不同部分：
 
@@ -20,12 +20,14 @@
 
 | 执行体系 | 型号 | 数量 |
 | --- | --- | ---: |
-| MCS51 / STC8 | STC8A8K64S4A12、STC8C2K64S4、STC8G1K08、STC8G1K08A、STC8G2K64S4、STC8H1K08、STC8H1K28、STC8H3K64S4、STC8H8K64U | 9 |
+| MCS51 / STC8 | STC8C2K64S4、STC8G1K08、STC8G1K08A、STC8G2K64S4、STC8H1K08、STC8H1K28、STC8H3K64S4、STC8H8K64U | 8 |
 | MCS51 / Ai8H | Ai8H2K12U、Ai8H2K32U | 2 |
-| MCS251 / STC32 | STC32CL8K48、STC32CL8K64、STC32F12K54、STC32G12K64、STC32G12K128、STC32G144K246、STC32G8K48、STC32G8K64 | 8 |
+| MCS251 / STC32 | STC32CL8K48、STC32CL8K64、STC32G12K64、STC32G12K128、STC32G144K246、STC32G8K48、STC32G8K64 | 7 |
 | MCS51 / MCS251 双模式 | AI8051U-34K16、AI8051U-34K32、AI8051U-34K64 | 3 |
 
-AI8051U 默认 MCS51，可选择 `execution=mcs251`。三款双模式芯片带来 14 个 MCS51、11 个 MCS251 配置；切换编译配置不会改变芯片的硬件执行模式。MCS251 的地址布局与链接边界见 [variants-mcs251.md](docs/variants-mcs251.md)。
+AI8051U 默认 MCS51，可选择 `execution=mcs251`。三款双模式芯片带来 13 个 MCS51、10 个 MCS251 配置；切换编译配置不会改变芯片的硬件执行模式。MCS251 的地址布局与链接边界见 [variants-mcs251.md](docs/variants-mcs251.md)。
+
+2026-09-06 移除了已停产的 STC8A8K64S4A12，以及原厂明确不量产、已有下架记录的 STC32F12K54。逐型号核查依据和保留结论见[变体生命周期记录](docs/variant-lifecycle.md)。旧版发布索引仍描述其对应归档，不代表当前源码的型号范围。
 
 ## 安装和首次构建
 
@@ -35,7 +37,7 @@ AI8051U 默认 MCS51，可选择 `execution=mcs251`。三款双模式芯片带�
 https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
 ```
 
-对应的 Arduino CLI 命令如下。安装结果是索引中的已发布版本，不包含当前源码的全部新增功能。
+对应的 Arduino CLI 命令如下。索引当前提供 0.0.2，并保留历史 0.0.1 条目。
 
 ```powershell
 arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
@@ -74,7 +76,7 @@ arduino-cli compile --config-file $build.config `
 
 随平台提供 Wire、SPI、SoftwareSerial、LiquidCrystal、Stepper 和受限 SD 接口；兼容范围、软件实现和引脚限制见 [核心 API](docs/core-api-compatibility.md) 与 [库兼容说明](docs/library-compatibility.md)。一般 Arduino C++ 库不能直接按 plain C 编译。
 
-实验 C++ 配置使用定制 Clang → LLVM-CBE → SDCC 流程，提供 `String`、`Print`、`Stream`、`HardwareSerial`、`SPIClass`、`TwoWire` 等类接口及受限运行时。22 个型号均有显式配置，**当前只允许 12 MHz**。先按 `stcxx` 仓库说明准备工具链，再按 [工具链说明](docs/toolchain-and-sdk.md) 配置对应的 Clang / LLVM 工具。Windows 配方通过 WSL 调用这些 Linux 工具，Boards Manager 平台包不包含它们。
+实验 C++ 配置使用定制 Clang → LLVM-CBE → SDCC 流程，提供 `String`、`Print`、`Stream`、`HardwareSerial`、`SPIClass`、`TwoWire` 等类接口及受限运行时。20 个型号均有显式配置，**当前只允许 12 MHz**。先按 `stcxx` 仓库说明准备工具链，再按 [工具链说明](docs/toolchain-and-sdk.md) 配置对应的 Clang / LLVM 工具。Windows 配方通过 WSL 调用这些 Linux 工具，Boards Manager 平台包不包含它们。
 
 ```powershell
 $env:STCXX_WSL_DISTRO = 'Ubuntu'
@@ -89,7 +91,7 @@ AI8051U 的 C++ MCS251 配置示例为 `arduino-stc51:mcs51:ai8051u_34k32:execut
 
 ## 用 stc-cli 烧录
 
-在相邻 `stc-cli` 仓库构建 `cargo build --release --locked`，或使用其已构建的可执行文件。Arduino IDE 可用“导出已编译的二进制文件”得到 HEX；上面的源码脚本通过 `$build.firmware` 返回 HEX 路径。
+从 [v0.0.2 release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.2) 下载匹配宿主的 `stc-cli-0.1.0-*`，解压后使用 `bin/stc-cli`（Windows 为 `bin/stc-cli.exe`）；Linux 版要求 GLIBC 2.34+，macOS 版要求 11+。也可在相邻 `stc-cli` 仓库构建 `cargo build --release --locked`。Arduino IDE 可用“导出已编译的二进制文件”得到 HEX；上面的源码脚本通过 `$build.firmware` 返回 HEX 路径。
 
 先编译 STC8G1K08A，再检查和烧录同一个 HEX；将 COM5 替换为实际串口，并按 ISP 要求重新上电：
 
@@ -107,7 +109,7 @@ $stc = '..\stc-cli\target\release\stc-cli.exe'
 & $stc flash --port COM5 --expect AI8051U_34K32 --file MySketch.hex --execution-mode mcs251 --allow-experimental --force-unverified-target
 ```
 
-当前 `stc-cli` 为这 22 款型号都实现了烧录路径，其中 7 款标记 stable、15 款 experimental；该等级不等于本 Arduino core 已获实板验证。9 款官方协议目标因尚无可核实的 UART 身份映射，要求同时传入 `--allow-experimental` 与 `--force-unverified-target`：STC32CL8K48/64、STC32G12K64、STC32G144K246、三款 AI8051U，以及 Ai8H2K12U/32U。
+独立 `stc-cli` 为当前 20 款型号都实现了烧录路径，其中 6 款标记 stable、14 款 experimental；该等级不等于本 Arduino core 已获实板验证。9 款官方协议目标因尚无可核实的 UART 身份映射，要求同时传入 `--allow-experimental` 与 `--force-unverified-target`：STC32CL8K48/64、STC32G12K64、STC32G144K246、三款 AI8051U，以及 Ai8H2K12U/32U。
 
 AI8051U 烧录前需用官方 ISP 将芯片设置为与 HEX 一致的 MCS51 / MCS251 模式；`stc-cli --execution-mode` 只选择镜像处理模式，不修改芯片硬件选项。型号、容量、实验协议和完整参数应以 `stc-cli` 的 README 与 `docs/PROTOCOL_SUPPORT.md` 为准。
 

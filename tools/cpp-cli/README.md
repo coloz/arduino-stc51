@@ -1,6 +1,12 @@
 # Arduino C++ 构建桥接层
 
-本目录是 Arduino 构建配方使用的运行时工具，连接 Clang、LLVM-CBE 和 SDCC。当前实验性 C++ 配置覆盖 22 个物理型号、25 个执行配置（14 个 MCS51、11 个 MCS251），时钟限定为 12 MHz。编译和链接支持不代表全部配置已完成运行时或实板验证。
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](../../docs/variant-lifecycle.md).
+
+本目录是 Arduino 构建配方使用的运行时工具，连接 Clang、LLVM-CBE 和 SDCC。当前实验性 C++ 配置覆盖 20 个物理型号、23 个执行配置（13 个 MCS51、10 个 MCS251），时钟限定为 12 MHz。编译和链接支持不代表全部配置已完成运行时或实板验证。
 
 普通 C 配方仍是默认入口。启用 C++ 时使用相应板卡的 `cppcore=enabled,clock=12m`，例如：
 

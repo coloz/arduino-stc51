@@ -1,5 +1,11 @@
 # C++ Arduino Core 实施计划
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](variant-lifecycle.md).
+
 状态：MCS51/MCS251 双目标 C++ Arduino CLI frontend/bridge 已实现；资格合同固定为 22 个物理型号、25 个执行配置和 31 个 workload，最终 clean run 正在重新生成，当前 outcome 只在机器可读 JSON 中声明；生产发布与广泛库兼容尚未完成  
 范围：当前 22 个 STC8、STC32、AI8051U 和 Ai8H 精确型号  
 最终目标：广泛兼容只依赖 Arduino 公共 API 的可移植 C++ 库

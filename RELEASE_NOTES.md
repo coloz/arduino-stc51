@@ -1,25 +1,39 @@
-# arduino-stc51 0.0.2（开发中，尚未发布）
+# arduino-stc51 0.0.2
 
-本文件描述当前源码，不是发布公告。仓库中的 Boards Manager 索引仍为 0.0.1；当前源码打出的 0.0.2 平台包尚未成为经过完整发布验证的新版本。文档整理、构建入口调整和测试产物清理不改变功能的实验状态，也不产生新的硬件或发布资格。
+2026-09-06 发布。Boards Manager 支持 Windows x64、Linux x86_64、macOS Apple Silicon 和 Intel（macOS 11+）。
 
-## 当前功能
+## 本次更新
 
-- 22 个 STC8、STC32、AI8051U 和 Ai8H 具体型号。三款 AI8051U 可选择 MCS51 / MCS251，共有 25 种执行配置。
-- 默认 plain C，提供 Arduino 风格核心 API，以及 Wire、SPI、SoftwareSerial、LiquidCrystal、Stepper 和受限 SD 随包库。
-- 所有 22 款均有 `cppcore=enabled,clock=12m` 实验 C++ 配置；Windows 通过 WSL 使用独立 `stcxx` 工具链与锁定的 Clang / LLVM-CBE 工具。
-- 新增 `scripts/build-example.ps1` 和普通 Blink 示例，支持隔离安装当前源码、校验工具包并编译一个指定 sketch。该构建入口不依赖测试矩阵或历史结果文件。
-- 可将导出的 Intel HEX 交给独立 `stc-cli` 烧录。Arduino 平台仍不提供自动上传配方；型号、实验参数和执行模式要求见 [README](README.md)。
+- 提供 20 个 STC8、STC32、AI8051U 和 Ai8H 型号，三款 AI8051U 可选 MCS51 / MCS251，共 23 种执行配置。
+- 默认 plain C，包含 Arduino 风格核心 API，以及 Wire、SPI、SoftwareSerial、LiquidCrystal、Stepper 和受限 SD 接口。
+- 移除 STC8A8K64S4A12 与 STC32F12K54，依据见[型号生命周期记录](docs/variant-lifecycle.md)。
+- Linux x86_64、macOS arm64 / x86_64 工具链从固定 SDCC 提交和完整 Arduino 补丁重新构建；Windows plain-C 编译器继续使用校验锁定的上游包。
+- 补齐 Linux 的 Boards Manager 工具依赖；新增跨宿主发布校验脚本。
+- 附带 stc-cli 0.1.0 的 Windows x64、Linux x86_64、macOS arm64 / x86_64 归档，以及 stc-cli 源码和已应用补丁的 SDCC 对应源码。
 
-## 使用限制
+## 安装
 
-C++ 仍为实验功能，不承诺普通 Arduino C++ 库的完整兼容性，不提供异常、RTTI、线程或完整 STL / libstdc++。实际可用 API 和运行时约定分别见 [核心兼容说明](docs/core-api-compatibility.md)、[库兼容说明](docs/library-compatibility.md) 和 [C++ 运行时约定](docs/cpp-runtime-contract.md)。
+将以下地址加入 Arduino IDE 的“附加开发板管理器网址”，安装 `arduino-stc51`：
 
-STC32G144K246 物理 Flash 为 246 KiB，当前普通代码窗口为 182 KiB；STC32G12K128 物理 Flash 为 128 KiB，当前普通代码窗口为 64 KiB。其他 MCS251 地址要求见 [variants-mcs251.md](docs/variants-mcs251.md)。AI8051U 编译执行模式必须与芯片已有硬件配置一致。
+```text
+https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
+```
 
-当前未完成实板验证。模拟器也不覆盖完整外设、模拟和电气行为、断电启动或周期精确时序；见 [硬件验证状态](docs/hardware-validation.md)。历史测试产物不作为本文件的当前验证结论，也不作为普通源码构建的前置条件。
+平台和重建工具链均使用本 release 的固定下载地址，并锁定大小与 SHA-256。旧 0.0.1 索引条目及其原始归档保持不变。独立 stc-cli 解压后位于 `bin/`，Linux 版要求 GLIBC 2.34+，macOS 版要求 11+；Arduino 的 Linux SDCC 工具链要求 GLIBC 2.29+ / GLIBCXX 3.4.21+。
 
-## 发布状态
+## 发布验证
 
-发布平台包不包含 `tests/`、本机构建输出和大型工具链源码；`scripts/` 中的开发命令应在完整源码 checkout 运行。工具包按工具清单中的大小与 SHA-256 校验。发布新版本前仍需为对应宿主重新核对当前编译器、补丁、运行时、平台包及功能验证结果，再更新 Boards Manager 索引。
+- Windows x64、Linux x86_64、macOS arm64 / x86_64：每个宿主的 23 种执行配置均通过 Blink plain-C 编译、链接、HEX 校验/容量检查、stc-cli 离线验证、缓存重编译及错误输入拒绝检查，共 92 项配置编译。Intel macOS 工具在 Apple Silicon 上通过 Rosetta 执行。
+- Windows 的 10 种 MCS251 配置通过 HOME / GSINIT0 / Flash 地址布局检查；STC32G144K246 通过四类中断的扩展上下文检查。
+- Windows + 已准备的 WSL 工具链：STC8G1K08A 和 STC32G144K246 的 12 MHz 实验 C++ Blink 编译通过。这两项是冒烟验证，不代表完整 C++ 库或运行时矩阵通过。
+- stc-cli 源码提交 `94d0f2d3133fee2340c768ffdf5dd11d33391312` 的原生跨平台 CI、Rust 1.85 最低版本、格式及 lint 均通过。Windows/macOS 二进制在本次重新构建；Linux 二进制取自该提交的成功 CI，并在 Ubuntu 上运行完整离线验证。
 
-旧 release/index 资产和现有 macOS `r1` 工具包不代表当前源码已具备发布资格。此文档未宣称完成新的编译矩阵、模拟器或实板验证。
+验证明细见 [发布记录](docs/releases/0.0.2.md) 和 release 附件 `release-qualification.json`；全部附件的大小和 SHA-256 见 `release-manifest.json` 与 `SHA256SUMS`。
+
+## 使用边界
+
+MCS251 和 C++ 保持实验状态，尚未完成实板烧录、复位、时序及外设验证。平台仍不提供自动上传配方，导出的 HEX 由独立 stc-cli 烧录。
+
+C++ 菜单依赖 Windows + WSL 和另行准备的锁定 Clang / LLVM-CBE / stcxx 工具链；本次 Linux/macOS SDCC 归档用于 plain C，并未提供这些宿主的原生 Arduino C++ 构建入口。不提供异常、RTTI、线程或完整 STL / libstdc++。
+
+STC32G144K246 普通代码窗口为 182 KiB，STC32G12K128 为 64 KiB。AI8051U 的编译执行模式必须与芯片已有配置一致；实验烧录参数及身份校验限制见 README 和 stc-cli 包内文档。

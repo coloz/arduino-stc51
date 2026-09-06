@@ -1,8 +1,14 @@
 # Arduino Core API 兼容性说明
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](variant-lifecycle.md).
+
 本文说明 `arduino-stc51` 当前统一核心所承诺的兼容范围。默认兼容层是 Wiring
 风格的 **plain C API**，不是 Arduino AVR/SAMD/ESP 等 C++ Core 的二进制或完整
-源码兼容。仓库另有覆盖 MCS51/MCS251、22 个物理型号和 25 个执行配置的
+源码兼容。仓库另有覆盖 MCS51/MCS251、20 个物理型号和 23 个执行配置的
 12 MHz opt-in C++11 profile；它们是
 **EXPERIMENTAL / NOT_SUPPORTED**，本页不会把它的结果扩大为默认平台、其他
 芯片、实板或广泛第三方库承诺。

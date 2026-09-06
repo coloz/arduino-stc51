@@ -1,5 +1,11 @@
 # MCS51/MCS251 C++ toolchain patches
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](../../docs/variant-lifecycle.md).
+
 This directory and its sibling `tools/clang-stc-target`/
 `tools/llvm-cbe-stc` directories contain packaging mirrors of source-level
 fixes for the pinned dual-target toolchain.

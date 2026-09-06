@@ -1,6 +1,12 @@
 # Unified STC core
 
-这里是 22 个已纳入目标集合的 STC 8051/251 型号共用 clean-room Arduino-C 核心。STC8、
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](../../docs/variant-lifecycle.md).
+
+这里是 20 个已纳入目标集合的 STC 8051/251 型号共用 clean-room Arduino-C 核心。STC8、
 Ai8H 以及 AI8051U 兼容模式使用 SDCC `mcs51` 后端；STC32
 以及显式选择该模式的 AI8051U 使用实验性的 `mcs251` 后端。
 
@@ -14,7 +20,7 @@ C++ 的类继承、重载、模板以及依赖这些接口的库在该默认 pro
 `cpp/` 中另有 opt-in 的实验性 C++11 类层和运行时，包括 `String`、`Print`、
 `Stream`、`HardwareSerial`、`SPIClass`、`TwoWire`、`IPAddress`、`Client`、
 `Server`、`UDP`、构造器、静态 guard 和 `new/delete`；`libraries/SD` 另提供
-继承 `Stream` 的只读 `File` 与 `SDClass`。它为 22 个物理型号、25 个 MCS51/MCS251
+继承 `Stream` 的只读 `File` 与 `SDClass`。它为 20 个物理型号、23 个 MCS51/MCS251
 执行配置的 12 MHz profile 接入 Arduino CLI，必须显式选择 `cppcore=enabled`；
 默认仍为 plain-C。双目标 frontend/ABI/bridge 已接通，最终 clean compile/link/
 capacity 与逐配置精确 QEMU 使用 25-profile/31-workload 的机器可读资格合同：

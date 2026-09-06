@@ -1,5 +1,11 @@
 # STC Arduino C++ class layer
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](../../../docs/variant-lifecycle.md).
+
 This directory contains the class and runtime layer of the experimental C++
 core. It contains real C++ classes for `String`, `Printable`, `Print`,
 `Stream`, `HardwareSerial`, `SPISettings`, `SPIClass`, `TwoWire`, `IPAddress`,
@@ -7,8 +13,8 @@ and the `Client`/`Server`/`UDP` transport interfaces. The platform now selects
 this layer only through the explicit `cppcore=enabled` menu option; plain C
 remains the default.
 
-The Arduino CLI exposes this layer at 12 MHz for all 22 physical variants and
-25 MCS51/MCS251 execution profiles (14 MCS51 and 11 MCS251). Both target
+The Arduino CLI exposes this layer at 12 MHz for all 20 physical variants and
+23 MCS51/MCS251 execution profiles (13 MCS51 and 10 MCS251). Both target
 frontends and bridge ABIs are
 implemented independently: MCS51 uses 16-bit code pointers, 2-byte data-member
 pointers, and 4-byte member-function pointers; MCS251 uses 24-bit, 3-byte, and

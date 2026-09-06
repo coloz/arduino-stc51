@@ -1,5 +1,11 @@
 # ADR: STC Arduino C++ 目标 ABI 基线
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](../variant-lifecycle.md).
+
 状态：**PARTIALLY FROZEN / EXPERIMENTAL DUAL-TARGET IMPLEMENTATION / NOT_SUPPORTED**  
 ABI 标识：`stc-arduino-cxx-v1`  
 机器清单：[abi-manifest.json](../../tests/cpp/abi/abi-manifest.json)

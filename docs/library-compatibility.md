@@ -1,5 +1,11 @@
 # Arduino 库对照与兼容性
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](variant-lifecycle.md).
+
 本文以最接近 STC 8 位目标的官方
 [`ArduinoCore-avr` 1.8.8](https://github.com/arduino/ArduinoCore-avr/tree/1.8.8/libraries)
 平台随包库为严格基线，并把 Arduino 官方独立常用库另行列出。对照快照日期为
@@ -11,7 +17,7 @@
 显式函数 API，不表示任意 Arduino C++ 库源码兼容。所有新增实现均为针对本 core
 API 的 clean-room MIT 实现，没有复制 Arduino 官方库源码。
 
-全部 22 个物理型号、25 个 MCS51/MCS251 执行配置都有显式
+全部 20 个物理型号、23 个 MCS51/MCS251 执行配置都有显式
 `cppcore=enabled` 的实验 C++11 profile。它包含
 `String`、`Printable`、`Print`、`Stream`、`HardwareSerial`、`SPIClass`、
 `TwoWire`、`IPAddress`、`Client`、`Server`、`UDP`，以及随库提供的

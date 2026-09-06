@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
-  "asOf": "2026-08-31",
-  "hostSupport": "Windows x64, macOS Apple Silicon (arm64) and macOS Intel (x86_64)",
+  "asOf": "2026-09-06",
+  "hostSupport": "Windows x64, Linux x86_64, macOS arm64 and x86_64 (macOS 11+)",
   "tools": [
     {
       "id": "sdcc-mcs251",
       "packageName": "sdcc-mcs251",
-      "version": "4.6.0-mcs251-20260804",
+      "version": "4.6.0-mcs251-20260804-r1",
       "purpose": "Primary compiler, assembler, archiver and linker for both -mmcs51 and experimental -mmcs251",
       "upstream": "https://github.com/gevico/sdcc-c251",
       "sourceTag": "v4.6.0-mcs251-20260804",
@@ -20,25 +20,41 @@
           "archiveRoot": "sdcc-mcs251",
           "size": 27857837,
           "sha256": "84c3ebecf56994d978c698e5001894cbcb7fbe4aa99772f571cee9be4704f2cb",
-          "knownIssue": "The bundled sdar.exe misses libintl-8.dll, libzstd.dll and zlib1.dll; Windows recipes use the separately pinned archive helper."
+          "knownIssue": "The bundled sdar.exe misses libintl-8.dll, libzstd.dll and zlib1.dll; Windows recipes use the separately pinned archive helper.",
+          "buildHost": "Unchanged upstream Windows x64 release; plain-C 23-profile qualification on Windows. Experimental C++ uses the separately locked WSL toolchain."
+        },
+        {
+          "host": "x86_64-pc-linux-gnu",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-linux-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2",
+          "archiveFileName": "sdcc-mcs251-linux-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2",
+          "archiveRoot": "sdcc-mcs251",
+          "size": 5468410,
+          "sha256": "262c639cff31730670bd0ac759d49747a6cf0f93b57dbbf24dc56680e84319c2",
+          "buildHost": "Debian 11 x86_64 container on Ubuntu; GCC 10.2; GLIBC 2.29 / GLIBCXX 3.4.21",
+          "sourcePatchSha256": "cf69ac0418f940e1ccc950ecff72d81e29a017847172747dc2cf3e31d26fabb3",
+          "qualification": "23 plain-C profiles + cached rebuild + offline stc-cli validation; no hardware qualification"
         },
         {
           "host": "arm64-apple-darwin",
-          "url": "https://raw.githubusercontent.com/coloz/arduino-stc51/main/dist/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
-          "archiveFileName": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2",
+          "archiveFileName": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2",
           "archiveRoot": "sdcc-mcs251",
-          "size": 8671734,
-          "sha256": "3caab45f23f86561b1134613ac7634acd37f7f85b2911399b94e0b1134814363",
-          "buildHost": "macOS 15.7.1 arm64, Apple clang 17.0.0"
+          "size": 4178343,
+          "sha256": "a6fc82f9afbafd1bdd306a325856b93ed847ee2a0f9cfbd7575bc2354b0c0d11",
+          "buildHost": "macOS 15.7.1 arm64, Apple clang 17; deployment target 11.0",
+          "sourcePatchSha256": "cf69ac0418f940e1ccc950ecff72d81e29a017847172747dc2cf3e31d26fabb3",
+          "qualification": "23 plain-C profiles + cached rebuild + offline stc-cli validation; no hardware qualification"
         },
         {
           "host": "x86_64-apple-darwin",
-          "url": "https://raw.githubusercontent.com/coloz/arduino-stc51/main/dist/sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
-          "archiveFileName": "sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87.tar.bz2",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2",
+          "archiveFileName": "sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2",
           "archiveRoot": "sdcc-mcs251",
-          "size": 8657582,
-          "sha256": "ff69d7a2f91c4e117fce24a5f584d7f15894db097d9fa489f95cd3de1942f3fb",
-          "buildHost": "Cross-built and executed on macOS 15.7.1 arm64 with Apple clang 17.0.0"
+          "size": 4273088,
+          "sha256": "18c3df7435cc9c2e90b211d159e92caf5f1d3f3425b9bae6f587659a2b12c8d1",
+          "buildHost": "macOS 15.7.1 arm64, Apple clang 17 cross-build; executed with Rosetta; deployment target 11.0",
+          "sourcePatchSha256": "cf69ac0418f940e1ccc950ecff72d81e29a017847172747dc2cf3e31d26fabb3",
+          "qualification": "23 plain-C profiles + cached rebuild + offline stc-cli validation; no hardware qualification"
         }
       ]
     },
@@ -65,6 +81,14 @@
           "archiveRoot": "tools",
           "size": 54816,
           "sha256": "dd57aac57b551da76d78af8daa7af9243ea554237381c6638011ce98061a85a3"
+        },
+        {
+          "host": "x86_64-pc-linux-gnu",
+          "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.26/ch55xduino-tools_linux64-2026.07.10.tar.bz2",
+          "archiveFileName": "ch55xduino-tools_linux64-2026.07.10.tar.bz2",
+          "archiveRoot": "tools",
+          "size": 19787,
+          "sha256": "af976f6ad99f1aeaec87c17c058a329af02f2a642fdbf144a2380a119478cab4"
         }
       ]
     },
@@ -92,6 +116,14 @@
           "archiveRoot": "sdcc",
           "size": 2988423,
           "sha256": "95380334bf51cf8e29e2654b59c8840528f94dc7367d411bb66efe48d5260746"
+        },
+        {
+          "host": "x86_64-pc-linux-gnu",
+          "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.20/sdcc-mcs51-amd64-ubuntu20.04-linux2.5-20220422-13407_4.tar.bz2",
+          "archiveFileName": "sdcc-mcs51-amd64-ubuntu20.04-linux2.5-20220422-13407_4.tar.bz2",
+          "archiveRoot": "sdcc",
+          "size": 4438607,
+          "sha256": "d006621d0a55ec81e04bd3b8bbf6952f2cdd6e1f6400748eeea15ba11d613964"
         }
       ]
     }

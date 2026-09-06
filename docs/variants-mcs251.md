@@ -1,6 +1,6 @@
 # MCS251 型号目录
 
-核对日期：2026-09-05。本目录按 STC 当前官方选型表的基础型号登记，速度、温度等级、
+核对日期：2026-09-06。本目录按 STC 官方选型表及[生命周期核查](variant-lifecycle.md)登记，速度、温度等级、
 封装后缀不另建 variant。每个 variant 描述该型号最大的逻辑 GPIO 集合，具体封装仍应
 按原厂管脚表接线。ARM Cortex-M0 的 STC32F03x 不在 MCS251 范围内。
 
@@ -18,7 +18,6 @@ KiB = 1024 字节。表中的范围仅为 MCS251 Source 模式下可供用户存
 | STC32CL8K64 | 64 KiB | FF0000–FFFFFF | 2 / 6 KiB | `STC32CL8K64` |
 | STC32CL8K48 | 48 KiB | FF0000–FFBFFF | 2 / 6 KiB | `STC32CL8K48` |
 | STC32G144K246 | 246 KiB | FC2800–FFFFFF | 16 / 128 KiB | `STC32G144K246` |
-| STC32F12K54 | 54 KiB | FF0000–FFD7FF | 8 / 4 KiB | `STC32F12K54` |
 | AI8051U-34K64 | 64 KiB | FF0000–FFFFFF | 2 / 32 KiB | `AI8051U_34K64` |
 | AI8051U-34K32 | 32 KiB | FF0000–FF7FFF | 2 / 32 KiB | `AI8051U_34K32` |
 | AI8051U-34K16 | 16 KiB | FF0000–FF3FFF | 2 / 32 KiB | `AI8051U_34K16` |
@@ -33,14 +32,15 @@ STC32G12K128 与 STC32G144K246 沿用现有链接策略，连续可用代码上�
 当前链接器已可利用全部空间。AI8051U 默认使用 MCS51 模式，其程序起点为 `0x0000`；
 在 Arduino 的 Execution mode 菜单选择 MCS251 后才使用上表地址，烧录模式必须一致。
 
-STC32F12K54 的最大封装按 §2.1 管脚表提供 44 个 GPIO，P1.2 不引出，ADC2 使用 P5.4；
-§12 标题中的 45 个 GPIO 与实际管脚表冲突，因此配置采用 44。其 RAM 是
-8 KiB EDATA + 4 KiB XDATA，不能复制 STC32G12K128 的 4 + 8 KiB 分配。
+STC32F12K54 已于 2026-09-06 移除，原厂明确其不是量产产品，详见生命周期记录。
 
 STC32G8K64 与 STC32G8K48 的 ADC 通道 2 均映射到 P5.4，P1.2 保留为数字 GPIO，
 依据 STC32G 手册 §22.1.1；本次同步修正已有 STC32G8K64 的模拟引脚映射。
 
 ## 新增型号的资格范围
+
+以下 2026-09-05 的 22 型号 / 25 配置 / 31 workload 说明保留为历史资格记录。
+移除两款后当前支持 20 个型号、23 种执行配置，旧记录不代表当前配置已经验证。
 
 2026-09-05 新增 STC32G8K48、STC32CL8K48、STC32F12K54、AI8051U-34K32 和
 AI8051U-34K16。它们提供实验性 plain-C 配置及保守的 12/24 MHz 时钟选项，
@@ -66,7 +66,7 @@ compact，程序上限都是 14,336 字节；STC32F12K54 属于受约束的 full
 
 ```powershell
 & ./scripts/test-all-variants.ps1 -DeviceId @(
-    'stc32g8k48', 'stc32cl8k48', 'stc32f12k54',
+    'stc32g8k48', 'stc32cl8k48',
     'ai8051u_34k32', 'ai8051u_34k16'
 ) -SkipLibraryProbes -KeepWorkDirectory
 ```

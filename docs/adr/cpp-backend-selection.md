@@ -1,5 +1,11 @@
 # ADR: STC Arduino C++ 后端选择
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](../variant-lifecycle.md).
+
 状态：**EXPERIMENTAL CANDIDATE-A CANARY / PRODUCTION NOT_SELECTED / NOT_SUPPORTED**  
 关联 ABI：[cpp-target-abi.md](cpp-target-abi.md)  
 当前证据：[cfront lowering shape spike](../../tools/cpp-spike/README.md)、

@@ -1,5 +1,11 @@
 # 逐型号编译与实板验证指南
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](variant-lifecycle.md).
+
 本文用于跟踪 `arduino-stc51` 支持型号的验证状态。这里严格区分两类结论：
 
 - **编译/链接验证**只说明当前 core、变体定义和测试草图能由对应后端完成编译、链接，并生成 HEX；它不能证明程序能够启动，也不能证明引脚、电气特性、中断、时基、UART 或 ADC 在芯片上工作正确。
@@ -45,7 +51,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 每个型号执行干净编译，并确认生成了 HEX。它还会编译 Wire、SPI、SoftwareSerial、
 LiquidCrystal、Stepper 和 SD 的代表示例，并用 MCS251 再编译一次 SoftwareSerial
 和 SD。
-STC32G/STC32CL/STC32F12K54 使用实验性的 `mcs251` 后端；AI8051U 默认测试 `mcs51`，
+STC32G/STC32CL 使用实验性的 `mcs251` 后端；AI8051U 默认测试 `mcs51`，
 并额外测试实验性的 `mcs251` 配置。
 只有脚本以零退出码结束且打印最终 `PASS`，对应配置才能记为
 “编译/链接通过”。网络下载失败、
@@ -55,7 +61,7 @@ plain-C 本地矩阵包含 22 个默认板项、3 个 AI8051U 的附加 `mcs251`
 配置和 8 个库探针，共 33 个配置；当前 outcome 只读取对应机器可读结果，不复制到
 平台包文档。K246 默认构建还会解析 Intel HEX，检查 `0xFF0000` 复位跳板、
 INT0/Timer0/INT1/UART1 的 24 位跳转、未占用 Timer1 的 `RETI` 以及目标地址范围。
-全部 22 个物理型号、25 个 MCS51/MCS251 执行配置的 12 MHz 实验 C++ profile 已接入
+当前 20 个物理型号、23 个 MCS51/MCS251 执行配置的 12 MHz 实验 C++ profile 已接入
 Arduino CLI 的显式 `cppcore=enabled` 选项；默认仍为 plain-C。最终补丁工具链来源是独立项目
 `D:\Git\stc51\stcxx`，其 frontend ELF 和 `sdldmcs251` SHA-256 分别为
 `1ccd9c28fa7d7fb7428cd43f423a80f1a456f98d32fc0f7823e5163d48d78cb5` 与
@@ -94,7 +100,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 | C++ 配置组 | compile/link/capacity | 精确 QEMU runtime | 当前结论 |
 | --- | --- | --- | --- |
-| 当前 C++ 范围：22 个物理型号、25 个执行配置、31 个 workload | 读取权威 JSON | 读取权威 JSON | 任一 required workload 失败或缺失，该 profile 就不能归一为 PASS；QEMU 不等于实板 |
+| 历史 C++ 范围：22 个物理型号、25 个执行配置、31 个 workload | 读取权威 JSON | 读取权威 JSON | 不代表移除后的当前支持清单；QEMU 不等于实板 |
 
 | MCU | 执行模式 | ADC 支持 | 编译/链接状态 | 实板状态 | 建议实板检查点 |
 | --- | --- | --- | --- | --- | --- |
@@ -108,7 +114,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 | STC32G8K64 | `mcs251`（实验） | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | 先确认启动和中断栈；P1.0/ADC0；UART、GPIO、时基 |
 | STC32CL8K64 | `mcs251`（实验） | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | P5.4/ADC2；10 个逻辑 ADC 路由仅 8 个独立焊盘；启动与时基 |
 | AI8051U-34K64 | `mcs51`；`mcs251`（实验） | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | 两种模式分别启动；P1.0/ADC0；核对 P4.4/P4.5 共用焊盘和 P5 掩码 `0xCF` |
-| STC8A8K64S4A12 | `mcs51` | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | P1.0/ADC0 与 P0.0/ADC8；跨端口通道；UART、时基 |
 | STC8C2K64S4 | `mcs51` | 否 | 见机器可读矩阵 | 未验证 | GPIO、UART、Timer0 时基；`analogRead()` 无效引脚应安全失败 |
 | STC8H1K28 | `mcs51` | 是，原生 10 位 | 见机器可读矩阵 | 未验证 | P1.0/ADC0 与 P0.0/ADC8；实际封装引脚；UART、时基 |
 | STC8H3K64S4 | `mcs51` | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | P1.0/ADC0、P1.6/ADC6、P0.0/ADC8；稀疏通道；UART、时基 |
@@ -117,7 +122,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 | Ai8H2K32U | `mcs51` | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | P1.0/ADC0、P5.4/ADC2；核对 P1.2/P5.4 共用焊盘；UART、时基 |
 | STC32G8K48 | `mcs251`（实验） | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | 程序不得进入 FFC000 起的 EEPROM；P5.4/ADC2；核对 exact-QEMU oracle 与实板 |
 | STC32CL8K48 | `mcs251`（实验） | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | 48 KiB 程序上限；17 个物理 GPIO；核对 exact-QEMU oracle 与实板 |
-| STC32F12K54 | `mcs251`（实验） | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | 54 KiB 程序、8 KiB EDATA/4 KiB XDATA、3,584 B heap + 512 B 静态 reserve、44 GPIO |
 | AI8051U-34K32 | `mcs51`；`mcs251`（实验） | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | 两模式均限 32 KiB 程序；分别核对 exact-QEMU oracle 与实板 |
 | AI8051U-34K16 | `mcs51`；`mcs251`（实验） | 是，原生 12 位 | 见机器可读矩阵 | 未验证 | 两模式均限 16 KiB Flash，compact 程序上限 14,336 B；分别核对 exact-QEMU oracle 与实板 |
 

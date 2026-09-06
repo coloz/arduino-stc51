@@ -1,9 +1,15 @@
 # STC Arduino C++ runtime contract
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](variant-lifecycle.md).
+
 Status: **EXPERIMENTAL / NOT_SUPPORTED**. Independent MCS51 and MCS251 C++
 paths are integrated into explicit 12 MHz Arduino CLI profiles selected with
-`cppcore=enabled` for 22 physical variants and 25 execution configurations.
-Qualification uses 31 workload results: six compact profiles require separate
+`cppcore=enabled` for 20 physical variants and 23 execution configurations.
+The historical qualification set uses 31 workload results: six compact profiles require separate
 `runtime` and `io` images, and nineteen full profiles require one `full` image.
 The execution split is 14 MCS51 plus 11 MCS251 profiles; the three AI8051U
 capacities each contribute both modes.

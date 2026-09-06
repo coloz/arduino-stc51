@@ -197,139 +197,26 @@ jobs:
           $Dirty = @(git status --porcelain)
           if ($Dirty.Count -ne 0) { throw "Build polluted the repository:`n$($Dirty -join "`n")" }
 
-  release:
+  verify-release:
     needs: [validate-and-compile, compile-posix]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-22.04
     timeout-minutes: 15
-    permissions:
-      contents: write
-    env:
-      STC_RELEASE_VERSION: 0.0.2
-      STC_TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download verified platform package
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: arduino-stc51-platform-0.0.2
-          path: dist
-
-      - name: Verify tag and platform version
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ExpectedTag = "v$env:STC_RELEASE_VERSION"
-          if ($env:STC_TAG -ne $ExpectedTag) {
-            throw "Release tag $env:STC_TAG does not match configured version $env:STC_RELEASE_VERSION"
-          }
-
-          $PlatformText = Get-Content -Raw -Encoding UTF8 platform.txt
-          $VersionMatch = [regex]::Match($PlatformText, '(?m)^version=(\d+\.\d+\.\d+)\s*$')
-          if (-not $VersionMatch.Success) { throw 'platform.txt has no semantic version' }
-          $PlatformVersion = $VersionMatch.Groups[1].Value
-          if ($PlatformVersion -ne $env:STC_RELEASE_VERSION) {
-            throw "Tag version $env:STC_RELEASE_VERSION does not match platform.txt version $PlatformVersion"
-          }
-
-      - name: Validate release metadata
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          node tools/variants/generate.mjs --check
-          if ($LASTEXITCODE -ne 0) { throw 'Generated metadata is out of date' } -Release
-
-      - name: Stage verified release assets
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ReleaseDirectory = Join-Path $PWD 'release-assets'
-          New-Item -ItemType Directory -Force -Path $ReleaseDirectory | Out-Null
-
-          $PlatformArchive = Join-Path $PWD "dist/arduino-stc51-$env:STC_RELEASE_VERSION.tar.bz2"
-          if (-not (Test-Path -LiteralPath $PlatformArchive -PathType Leaf)) {
-            throw "Missing platform archive: $PlatformArchive"
-          }
-          Copy-Item -LiteralPath $PlatformArchive -Destination $ReleaseDirectory
-
-          $Manifest = Get-Content -Raw -Encoding UTF8 tools/toolchain-manifest.json | ConvertFrom-Json
-          $PrimaryTools = @($Manifest.tools | Where-Object id -eq 'sdcc-mcs251')
-          if ($PrimaryTools.Count -ne 1) { throw 'Expected exactly one sdcc-mcs251 manifest entry' }
-
-          $ReleaseHosts = @(
-            'x86_64-mingw32',
-            'x86_64-pc-linux-gnu',
-            'arm64-apple-darwin',
-            'x86_64-apple-darwin'
-          )
-          foreach ($HostName in $ReleaseHosts) {
-            $Systems = @($PrimaryTools[0].systems | Where-Object host -eq $HostName)
-            if ($Systems.Count -ne 1) {
-              throw "Expected exactly one sdcc-mcs251 archive for $HostName"
-            }
-            $System = $Systems[0]
-            $Archive = Join-Path $PWD "dist/$($System.archiveFileName)"
-            $Downloaded = $false
-            if (-not (Test-Path -LiteralPath $Archive -PathType Leaf)) {
-              if ($HostName -ne 'x86_64-mingw32') {
-                throw "Missing local release archive: $Archive"
-              }
-              $Archive = Join-Path $ReleaseDirectory "$($System.archiveFileName).part"
-              & curl --fail --location --retry 4 --retry-delay 2 --retry-all-errors `
-                --silent --show-error --output $Archive $System.url
-              if ($LASTEXITCODE -ne 0) { throw "Download failed for $($System.archiveFileName)" }
-              $Downloaded = $true
-            }
-            if ((Get-Item -LiteralPath $Archive).Length -ne [long]$System.size) {
-              throw "Size mismatch for $($System.archiveFileName)"
-            }
-            $Hash = (Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash.ToLowerInvariant()
-            if ($Hash -ne $System.sha256) {
-              throw "SHA-256 mismatch for $($System.archiveFileName)"
-            }
-            $ReleaseArchive = Join-Path $ReleaseDirectory $System.archiveFileName
-            if ($Downloaded) {
-              Move-Item -LiteralPath $Archive -Destination $ReleaseArchive
-            } else {
-              Copy-Item -LiteralPath $Archive -Destination $ReleaseArchive
-            }
-          }
-
-          $ChecksumLines = @(
-            Get-ChildItem -LiteralPath $ReleaseDirectory -File |
-              Sort-Object Name |
-              ForEach-Object {
-                $Hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-                "$Hash  $($_.Name)"
-              }
-          )
-          if ($ChecksumLines.Count -ne 5) {
-            throw "Expected five release archives, found $($ChecksumLines.Count)"
-          }
-          $ChecksumPath = Join-Path $ReleaseDirectory 'SHA256SUMS'
-          [IO.File]::WriteAllLines($ChecksumPath, $ChecksumLines, [Text.UTF8Encoding]::new($false))
-          Get-Content -LiteralPath $ChecksumPath
-
-      - name: Publish GitHub release
-        shell: pwsh
+          path: ci-platform
+      - name: Verify published release and reproduced platform
         env:
           GH_TOKEN: ${{ github.token }}
+          STC_TAG: ${{ github.ref_name }}
         run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $false
-          $Assets = @(
-            Get-ChildItem -LiteralPath release-assets -File |
-              Sort-Object Name |
-              ForEach-Object FullName
-          )
-          if ($Assets.Count -ne 6) { throw "Expected six release assets, found $($Assets.Count)" }
-
-          & gh release create $env:STC_TAG @Assets --verify-tag `
-            --title "arduino-stc51 $env:STC_RELEASE_VERSION" --notes-file RELEASE_NOTES.md
-          if ($LASTEXITCODE -ne 0) {
-            throw 'GitHub release publication failed (the release may already exist; assets were not overwritten)'
-          }
+          test "$STC_TAG" = "v$(python3 -c 'import json; print(json.load(open("release-manifest.json"))["version"])')"
+          gh release download "$STC_TAG" --dir published
+          python3 scripts/verify-release-assets.py release-manifest.json published \
+            --platform-archive ci-platform/arduino-stc51-0.0.2.tar.bz2
 
   compile-posix:
     needs: validate-and-compile
@@ -337,6 +224,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - os: ubuntu-22.04
+            host: x86_64-pc-linux-gnu
+            file_arch: x86-64
           - os: macos-15
             host: arm64-apple-darwin
             file_arch: arm64

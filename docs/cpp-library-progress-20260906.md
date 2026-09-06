@@ -1,5 +1,11 @@
 # Library compatibility recovery, 2026-09-06
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](variant-lifecycle.md).
+
 This is a development checkpoint, not a release qualification. Paths below are
 relative to the SDK checkout now at `D:\Git\stc51\arduino-stc51`; its sibling
 compiler checkout is `D:\Git\stc51\stcxx`.

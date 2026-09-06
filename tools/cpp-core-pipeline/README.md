@@ -1,5 +1,11 @@
 # 共享 LLVM / C 适配器与来源元数据
 
+> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
+> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> The 22-model / 25-profile / 31-workload set and removed-device details below are
+> historical toolchain/qualification records, not the current support list or new PASS evidence.
+> See the [lifecycle review](../../docs/variant-lifecycle.md).
+
 本目录保留 Arduino 实验性 C++ 构建使用的共享适配器，以及早期 K246 流水线的来源元数据。当前 Arduino 构建入口位于 [cpp-cli](../cpp-cli/README.md)，完整编译器的源码准备和构建由 **stcxx** 项目维护，入口见[平台 README](../../README.md)。
 
 ## 当前文件

@@ -3,6 +3,7 @@
   "as_of": "2026-09-05",
   "pin_encoding": "(port << 4) | bit",
   "notes": [
+    "Lifecycle review 2026-09-06: removed STC8A8K64S4A12 and STC32F12K54; see docs/variant-lifecycle.md for evidence. Retained devices have no confirmed model-wide discontinuation notice in this review.",
     "Port masks describe the maximum logical pin set implemented by the device model.",
     "A concrete package may bond fewer pins; always check the package pinout before wiring hardware.",
     "Popularity groups are the 2026-08 research snapshot used to select this support set, not STC sales data."
@@ -405,41 +406,6 @@
       "package_dependent": true,
       "data_quality_note": "The official dual execution modes use different program address views: MCS51 mode uses the low 0x0000-0xFFFF window, while MCS251 Source mode uses the physical 64 KiB Flash window at 0xFF0000-0xFFFFFF with reset HOME at 0xFF0000. The LQFP48/QFN48 pinout exposes 46 logical port names on 45 physical GPIO pads because P4.4 and P4.5 share one package pad. P5 contains P5.0-P5.3 and P5.6-P5.7; P5.4/P5.5 are not bonded in this maximum mask.",
       "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf"
-    },
-    {
-      "id": "stc8a8k64s4a12",
-      "model": "STC8A8K64S4A12",
-      "macro": "STC8A8K64S4A12",
-      "family": "STC8A",
-      "selection": "additional_common",
-      "target": "mcs51",
-      "experimental": false,
-      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
-      "cpp_heap_bytes": 4096,
-      "capabilities": {
-        "ports": [0, 1, 2, 3, 4, 5, 6, 7],
-        "port_mode": true,
-        "timer1_1t": true
-      },
-      "adc": {
-        "layout": "modern_bc_adccfg",
-        "resolution_bits": 12,
-        "channels": {"P1.0": 0, "P1.1": 1, "P1.2": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7, "P0.0": 8, "P0.1": 9, "P0.2": 10, "P0.3": 11, "P0.4": 12, "P0.5": 13, "P0.6": 14}
-      },
-      "flash_bytes": 65536,
-      "maximum_code_bytes": 65536,
-      "idata_bytes": 256,
-      "xdata_bytes": 8192,
-      "edata_bytes": 0,
-      "eeprom": "IAP configurable in program flash",
-      "memory_models": ["large", "small"],
-      "default_memory_model": "large",
-      "default_clock_hz": 24000000,
-      "clock_options_hz": [12000000, 24000000, 33000000],
-      "port_masks": [255, 255, 255, 255, 31, 63, 255, 255],
-      "max_io": 59,
-      "package_dependent": true,
-      "official_url": "https://www.stcmicro.com/cn/stc/stc8a8k64s4a12.html"
     },
     {
       "id": "stc8c2k64s4",
@@ -1006,85 +972,6 @@
       "package_dependent": true,
       "data_quality_note": "Program Flash in MCS251 Source mode is 0xFF0000-0xFF3FFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. MCS51 mode maps the same 16 KiB program at 0x0000. The experimental C++11 core profile is exposed for both execution modes at 12 MHz using the compact workload contract; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings. The 46 logical port names represent 45 physical pads; P4.4/P4.5 remain aliases. DATA/IDATA is a compatibility view of EDATA in MCS251 mode.",
       "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf"
-    },
-    {
-      "id": "stc32f12k54",
-      "model": "STC32F12K54",
-      "macro": "STC32F12K54",
-      "family": "STC32F",
-      "selection": "mcs251_catalog",
-      "target": "mcs251",
-      "experimental": true,
-      "cpp_core_profile": "stc-cxx11-12mhz-experimental",
-      "cpp_heap_bytes": 3584,
-      "cpp_static_xdata_reserve_bytes": 512,
-      "capabilities": {
-        "ports": [
-          0,
-          1,
-          2,
-          3,
-          4,
-          5
-        ],
-        "port_mode": true,
-        "timer1_1t": true
-      },
-      "adc": {
-        "layout": "modern_bc_adccfg",
-        "resolution_bits": 12,
-        "channels": {
-          "P1.0": 0,
-          "P1.1": 1,
-          "P5.4": 2,
-          "P1.3": 3,
-          "P1.4": 4,
-          "P1.5": 5,
-          "P1.6": 6,
-          "P1.7": 7,
-          "P0.0": 8,
-          "P0.1": 9,
-          "P0.2": 10,
-          "P0.3": 11,
-          "P0.4": 12,
-          "P0.5": 13,
-          "P0.6": 14
-        }
-      },
-      "flash_bytes": 55296,
-      "maximum_code_bytes": 55296,
-      "idata_bytes": 0,
-      "xdata_bytes": 4096,
-      "edata_bytes": 8192,
-      "eeprom": "IAP configurable in the 54 KiB user program Flash",
-      "memory_models": [
-        "large"
-      ],
-      "default_memory_model": "large",
-      "default_clock_hz": 24000000,
-      "clock_options_hz": [
-        12000000,
-        24000000
-      ],
-      "linker": {
-        "layout": "post_home_contiguous",
-        "code_loc": 16711680,
-        "flash_loc": 16711680
-      },
-      "port_masks": [
-        255,
-        251,
-        255,
-        255,
-        255,
-        31,
-        0,
-        0
-      ],
-      "max_io": 44,
-      "package_dependent": true,
-      "data_quality_note": "The STC32F manual (2024-02-02), sections 1.4, 2.1 and 10.1, documents STC32F12K54 with 54 KiB program Flash at 0xFF0000-0xFFD7FF, 8 KiB EDATA and 4 KiB XDATA. The LQFP48 pin table exposes 44 GPIOs; P1.2 is absent and ADC channel 2 uses P5.4. The section 12 heading says 45 GPIOs but conflicts with the actual pin table; this variant follows the pin table. TFPU and its vendor ROM/library region are not exposed as Arduino APIs or user Flash. The 12 MHz experimental C++11 core uses a constrained 3584-byte heap and preserves 512 XDATA bytes for static state; exact-QEMU qualification is tracked separately. It is unrelated to ARM-based STC32F03x parts.",
-      "official_url": "https://www.stcmicro.com/datasheet/stc32f-cn.pdf"
     }
   ]
 }
