@@ -28,9 +28,13 @@
 
 #if STC_CORE_HAS_UART1
 
-/* INTCLKO/WAKE_CLKO is common at 0x8f from STC12 onward. */
+/* STC16F relocates INTCLKO; other supported modern families use 0x8f. */
 # if !defined(STC_CORE_FAMILY_89)
+#  if defined(STC_CORE_FAMILY_16)
+__sfr __at (0x95) STC_SERIAL_INTCLKO;
+#  else
 __sfr __at (0x8f) STC_SERIAL_INTCLKO;
+#  endif
 # endif
 
 # if STC_CORE_SERIAL_BUFFERED_RX
@@ -378,8 +382,8 @@ void Serial_begin(unsigned long baud)
 # endif
 
 # if STC_CORE_HAS_MODERN_UART1_BRT
-    /* A2 is P_SW1 only on STC15 and newer. Do not emit this access for
-     * STC12, where A2 is AUXR1 and bits 7:6 control unrelated hardware. */
+    /* The family SFR layout selects P_SW1 (0x9a on STC16, otherwise 0xa2).
+     * Do not emit this routing access on the classic STC12 UART profile. */
     P_SW1 &= (uint8_t)~STC_SERIAL_UART1_ROUTE;
     TMOD &= 0x0fu;             /* Timer1, 16-bit auto reload, not gated. */
     TH1 = (uint8_t)(reload >> 8);

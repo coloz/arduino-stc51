@@ -6,6 +6,14 @@
 > historical toolchain/qualification records, not the current support list or new PASS evidence.
 > See the [lifecycle review](../../docs/variant-lifecycle.md).
 
+> Source candidate update (2026-09-09): the mirrored complete patch now adds
+> bounded MCS251 full-Flash placement and optional function/data sections.
+> The compiler audit additionally fixes wide objects, DPX reloads, heap
+> exhaustion/extent, pointer formatting and assembler/linker boundary handling.
+> Linux/macOS packaging scripts target revision 3. This source update does
+> not publish replacement packages or inherit the older runtime qualification
+> recorded below; that release evidence applies only to its original hashes.
+
 This directory and its sibling `tools/clang-stc-target`/
 `tools/llvm-cbe-stc` directories contain packaging mirrors of source-level
 fixes for the pinned dual-target toolchain.
@@ -15,27 +23,27 @@ core at `D:\Git\stc51\stcxx` (WSL:
 project's `out/` directory; they are not compiler source and are not vendored
 into this core repository.
 
-The authoritative standalone project is branch `arduino-cpp-core`, commit
-`7f7127e65368eb4fb67c9f93cfb0ecd558ff456b`. Repository validation requires a
-clean worktree at exactly that commit and byte-identical Core/standalone
-patches:
+The prior qualified standalone snapshot was branch `arduino-cpp-core`, commit
+`7f7127e65368eb4fb67c9f93cfb0ecd558ff456b`. The current source candidate is
+committed as `f16b00a71e3da804b52b796b332ff5696db4280a` and requires byte-identical
+Core/standalone patches:
 
 | component | Core mirror | SHA-256 |
 |---|---|---|
 | Clang 20.1.8 STC frontend | `tools/clang-stc-target/clang-20.1.8-stcsdcc-ir-only.patch` | `f8fda423712d808dd087d4e789b1e824911cde62d738078bf9325a898d8476c0` |
 | LLVM-CBE STC lowering | `tools/llvm-cbe-stc/llvm-cbe-83f1bea-stc-sdcc.patch` | `0a332f0000aa9d335eb4c0b67bbd40b3020d9acf586c4279b5e8a0ecd2c3025f` |
-| patched SDCC/ASlink | `tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch` | `cf69ac0418f940e1ccc950ecff72d81e29a017847172747dc2cf3e31d26fabb3` |
+| patched SDCC/ASlink source candidate | `tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch` | `fcb1342a77a412dbb8b0c8c6e8e4df5e1b59744790e63e40c32dd812c9472e12` |
 
 The checked standalone fixed-output bundle passed `check-out-wsl.sh`; its
 `out/MANIFEST.sha256` and `out/toolchain-lock.json` SHA-256 values are
-`2e7e343a0a5b7f8f0a66366ec92d5ff181a64f1380c9b0f252d28719768eed6f` and
-`1ee5d850baa1dbee4ddfd4d51bbf9187f95d814d9c552558eeea27a6fa268960`.
+`35b33920150a280dcb10bc1252bf490a350ce51b01b639855df1ad000761f735` and
+`127cbed44a13052360a403bde6495de9de08f0b6bb1614e1613681660105f595`.
 
-## Final Arduino C++ compiler patch
+## Current Arduino C++ compiler source patch
 
 `sdcc-mcs251-arduino-cpp.patch` is the complete patch consumed by the current
 Arduino C++ build. Its SHA-256 is
-`cf69ac0418f940e1ccc950ecff72d81e29a017847172747dc2cf3e31d26fabb3`.
+`fcb1342a77a412dbb8b0c8c6e8e4df5e1b59744790e63e40c32dd812c9472e12`.
 It applies to exactly:
 
 - repository: `https://github.com/gevico/sdcc-c251.git`
@@ -49,6 +57,26 @@ DPTR operands. The authoritative file is maintained by the standalone compiler
 project as `arduino/patches/sdcc-mcs251-arduino-cpp.patch`. This Core copy is a
 packaging mirror; repository checks require both files and hashes to be exactly
 equal before an installed platform can claim the locked compiler provenance.
+
+For MCS251, `--function-sections --data-sections` creates independently
+placeable function and constant-object areas. The linker option
+`-Wl--code-window=0xFE0000:0x1000000` bounds STC32G12K128 placement to its
+128 KiB Flash window; STC32G144K246 uses
+`-Wl--code-window=0xFC2800:0x1000000` for 246 KiB. The end is exclusive.
+Explicit HOME/reset and absolute CODE allocations are reserved first.
+GSINIT0 through GSFINAL remain contiguous, as does each XINIT image and
+individual constant object. The map includes a `Code Window` allocation
+ledger with physical addresses; out-of-window or overlapping fixed areas
+and unplaceable sections fail the link. Layouts without this option retain
+the legacy behavior.
+
+The candidate also fixes an existing backend error exposed by placing code
+and constants in different 64 KiB regions. A flat 24-bit `__code` pointer
+previously loaded DPXL but read through the region-relative `MOVC @A+DPTR`
+instruction, which ignored that region byte. Flat code and data reads now
+use native `MOV @DPX`. Small and large switch-table paths likewise add the
+selector through all 24 address bits and use flat reads/extended jumps, so
+table access does not fall back to the caller's 64 KiB region.
 
 Apply it only to the pinned revision:
 
@@ -179,7 +207,7 @@ then pops the results into the destination tuple. The independent reproducer
 retains the real object-field load and `__gptrput`, and the checker asserts
 that the high source `r5` is read before destination `r5` is written.
 
-## Final Linux qualification
+## Historical Linux qualification before the full-Flash candidate
 
 A clean out-of-tree x86-64 Linux build was published into the standalone
 project-local `out/` bundle. The fixed driver is:
@@ -190,13 +218,13 @@ project-local `out/` bundle. The fixed driver is:
 
 - version: `SDCC : mcs51/mcs251 TD- 4.6.0 #0 (Linux)`
 - launcher/wrapper SHA-256:
-  `8db337e32dd8809280dd5f2e3c2539c67976a741118ae027f2f5916c18dec96c`
+  `e4674cb08f4db442ef7485318c49c47a90e1a319e5ca2cb3ac38123d99a7a234`
 - compiler frontend ELF (`out/libexec/sdcc`) SHA-256:
-  `5b212e57752a65cbb7f61ea50dd23290375f9dbee9c594db8cd2a1efd941d808`
+  `9c53d67813ce37e2ea883922bac2d0764d387742952ac10592de7719eb1b4e2b`
 - MCS251 extended linker (`out/bin/sdldmcs251`) SHA-256:
-  `c7ca41167f3b606ae98a2f78e8c0170f3c4f7e7994f93346c2032dcbb82e4cfb`
+  `d7a2f51d6b931170014317ea999aca0163a5b91ec1547e83871f9ad32d7de588`
 - complete source patch SHA-256:
-  `cf69ac0418f940e1ccc950ecff72d81e29a017847172747dc2cf3e31d26fabb3`
+  `b28f5ae2c520fa1c9dffc6c51aeb5025415d80212d33e893e1a3a8837b3b8f9e`
 - `make -C build/sdas/as251 check`: pass (269 legal forms, 65 families,
   two opcode maps)
 - `make -C build/src/mcs251 check`: pass, including the new indirect-load
@@ -225,7 +253,7 @@ locked workloads. AI8051U-34K16 contributes two compact profiles with a
 static-XDATA reserve. The final clean runtime run is being regenerated, and
 only the authoritative hash-bound JSON may state its outcome.
 
-## Remaining release gates and known backend issue
+## Remaining release gates and compiler audit
 
 This result qualifies the complete patch and the project-local Linux bundle.
 It does not qualify Windows/macOS packages, physical hardware, or broad
@@ -244,9 +272,12 @@ embedded `sdcc` SHA-256 was
 which was not the final patched compiler. It must not be restored, used as
 release evidence, or republished as the ISR+ar9 build.
 
-A separate MCS251 backend problem remains: some semantically generic pointer
-loads produced from `*(&generic_array[i])` lose their generic/code/xdata tag
-and select a near `@r1` access. The C++ adapter currently normalizes 13 such
-sites and its diagnostic QEMU gate passes, but this patch intentionally does
-not add a syntax-pattern workaround. A general address-space-preserving
-lowering fix and regression are still required.
+The 2026-09-09 source audit fixes the formerly documented address-space loss
+in `*(&generic_array[i])`, for both loads and stores. Array-subscript lvalues
+now preserve the originating pointer's output class and named address space;
+the compiler no longer depends on a syntax-pattern rewrite for this case.
+The adapter's existing normalization remains compatible with older compilers.
+The audit also corrects the pointer-difference intermediate type to match
+`ptrdiff_t`, rather than truncating wide differences to a 16-bit `int`.
+Detailed scope, regressions and limitations are recorded in the standalone
+compiler's `doc/mcs251/compiler-audit-20260909.md`.

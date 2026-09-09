@@ -85,6 +85,14 @@ def parse_rel(path: Path) -> dict[str, Any]:
     return parse_rel_bytes(path.read_bytes(), str(path))
 
 
+def default_function_code_bytes(areas: dict[str, int]) -> int:
+    # --function-sections leaves CSEG empty and places each default function
+    # in CSEG_F_*. Keep the original whole-TU budget trigger in either form;
+    # source/symbol audits still decide whether splitting is permitted.
+    return sum(size for name, size in areas.items()
+               if name == "CSEG" or name.startswith("CSEG_F_"))
+
+
 @dataclass
 class Member:
     meta_path: Path
@@ -121,7 +129,7 @@ def verify_metadata(meta_path: Path, actual_rel: Path, code_limit: int, xram_lim
     original = parse_rel(original_rel)
     actual = parse_rel(actual_rel)
     candidate = (
-        original["areas"].get("CSEG", 0) > code_limit
+        default_function_code_bytes(original["areas"]) > code_limit
         or original["areas"].get("XSEG", 0) + original["areas"].get("XISEG", 0) > xram_limit
     )
     return Member(meta_path, actual_rel, metadata, original, actual, candidate)

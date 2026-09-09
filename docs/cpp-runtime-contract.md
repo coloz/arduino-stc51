@@ -162,10 +162,15 @@ The default target allocator also samples the pinned SDCC free list after
 heap initialization and after every successful `stcxx_malloc()` or
 `stcxx_realloc()`.  The layout contract is the standalone compiler source
 `device/lib/malloc.c`, raw SHA-256
-`71bfac56f93cbd6cc8cd0d2d16e87205ac03e6fdca1a9a7baf463ea284ab818c`
-(Git blob `588a1eeee50440d91d474fa37b4edc06ec91deb2`).  The two toolchain
+`344c80c4bf8f4bb5fbe03e9e3bbbd63be76328340033c943947a15105bb86fba`
+(Git blob `fd17c388683fe100ecd5cedd8a4194194d1c1f32`).  The two toolchain
 locks, runtime/Core manifests, build evidence and repository gate bind that
 same identity. The single
+MCS251 heap extent provider is now `__sdcc_heap_size32` (four bytes), while
+MCS51 retains `__sdcc_heap_size` (two bytes). Custom heap objects must be
+rebuilt with the matching runtime. This does not enlarge the board profiles'
+qualified 32 KiB maximum arena or change their 16-bit telemetry fields.
+The single
 `stcxx_allocator_read_telemetry(stcxx_allocator_telemetry_t *)` snapshot returns
 six packed `uint16_t` fields: arena size, initial/current total free, current
 largest free block, and minimum total/largest values. It fails closed if the list is

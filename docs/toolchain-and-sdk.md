@@ -70,18 +70,18 @@ AiCube-ISP 是 Windows 下的配置生成、ISP 烧录、远程升级和调试�
 前端、LLVM 20、固定提交的 LLVM-CBE，以及带 MCS251 ISR、间接访问、指针偏移、
 重叠寄存器和扩展 SPX/SSEG 栈修复的 Linux SDCC。最终身份为：
 
-- standalone branch/commit：`arduino-cpp-core` / `7f7127e65368eb4fb67c9f93cfb0ecd558ff456b`；
+- standalone 分支：`arduino-cpp-core`；本轮源码已提交为 `f16b00a71e3da804b52b796b332ff5696db4280a`，输入同时由下列补丁和锁的哈希绑定。`7f7127e65368eb4fb67c9f93cfb0ecd558ff456b` 是以前的快照，历史资格不转移至新提交；
 - Clang source patch：`f8fda423712d808dd087d4e789b1e824911cde62d738078bf9325a898d8476c0`；
 - LLVM-CBE source patch：`0a332f0000aa9d335eb4c0b67bbd40b3020d9acf586c4279b5e8a0ecd2c3025f`；
-- launcher/wrapper：`8db337e32dd8809280dd5f2e3c2539c67976a741118ae027f2f5916c18dec96c`；
-- SDCC frontend ELF：`5b212e57752a65cbb7f61ea50dd23290375f9dbee9c594db8cd2a1efd941d808`；
-- `sdldmcs251`：`c7ca41167f3b606ae98a2f78e8c0170f3c4f7e7994f93346c2032dcbb82e4cfb`；
-- 完整源补丁：`cf69ac0418f940e1ccc950ecff72d81e29a017847172747dc2cf3e31d26fabb3`。
+- launcher/wrapper：`e4674cb08f4db442ef7485318c49c47a90e1a319e5ca2cb3ac38123d99a7a234`；
+- SDCC frontend ELF：`64c9a96111e94795841f0e05e4664d6c2c0d9eaa117a2ce996e1bc32cca3dda2`；
+- `sdldmcs251`：`dc3ceeee91443710efb32edec129ec6a0202b59454af58fbb50517c689c5bb0e`；
+- 完整源补丁：`fcb1342a77a412dbb8b0c8c6e8e4df5e1b59744790e63e40c32dd812c9472e12`。
 
 standalone `check-out-wsl.sh` 的固定输出清单也被锁定：`out/MANIFEST.sha256`
-SHA-256 为 `2e7e343a0a5b7f8f0a66366ec92d5ff181a64f1380c9b0f252d28719768eed6f`，
+SHA-256 为 `35b33920150a280dcb10bc1252bf490a350ce51b01b639855df1ad000761f735`，
 `out/toolchain-lock.json` SHA-256 为
-`1ee5d850baa1dbee4ddfd4d51bbf9187f95d814d9c552558eeea27a6fa268960`。
+`127cbed44a13052360a403bde6495de9de08f0b6bb1614e1613681660105f595`。
 
 锁及其余工具身份记录在 `tools/cpp-cli/toolchain-lock.json` 与
 `tools/cpp-core-pipeline/toolchain-lock.json`；补丁、独立 regression 和验证边界见

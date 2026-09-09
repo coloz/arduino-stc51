@@ -1,18 +1,34 @@
 # Arduino C++ 构建桥接层
 
-> Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
-> (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
+> Lifecycle update (2026-09-08): the active platform now has **21 models / 24 execution profiles**
+> (13 MCS51 + 11 MCS251), including STC16F40K128. STC8A8K64S4A12 and STC32F12K54 were removed.
 > The 22-model / 25-profile / 31-workload set and removed-device details below are
 > historical toolchain/qualification records, not the current support list or new PASS evidence.
 > See the [lifecycle review](../../docs/variant-lifecycle.md).
 
-本目录是 Arduino 构建配方使用的运行时工具，连接 Clang、LLVM-CBE 和 SDCC。当前实验性 C++ 配置覆盖 20 个物理型号、23 个执行配置（13 个 MCS51、10 个 MCS251），时钟限定为 12 MHz。编译和链接支持不代表全部配置已完成运行时或实板验证。
+本目录是 Arduino 构建配方使用的运行时工具，连接 Clang、LLVM-CBE 和 SDCC。当前实验性 C++ 配置覆盖 21 个物理型号、24 个执行配置（13 个 MCS51、11 个 MCS251）。STC16F40K128 的 MCS251 模式支持 30 MHz，AI8051U-34K64 的 MCS251 模式另支持 40 MHz，STC32G144K246 的 MCS251 模式支持 48 MHz；其余 C++ 配置仍限 12 MHz。编译和链接支持不代表全部配置已完成运行时或实板验证。
 
 普通 C 配方仍是默认入口。启用 C++ 时使用相应板卡的 `cppcore=enabled,clock=12m`，例如：
 
 ```text
 arduino-stc51:mcs51:stc32g144k246:cppcore=enabled,clock=12m
 ```
+
+实际系统时钟为 40 MHz 的 AI8051U-34K64 使用：
+
+```text
+arduino-stc51:mcs51:ai8051u_34k64:cppcore=enabled,execution=mcs251,clock=40m
+```
+
+逐飞 STC16F40K128 核心板使用与 ISP 设置一致的 30 MHz 内部 IRC：
+
+```text
+arduino-stc51:mcs51:stc16f40k128:cppcore=enabled,clock=30m
+```
+
+STC16F40K128 的内部 RAM 为 8 KiB，扩展 RAM 为 32 KiB。C++ 硬件栈固定在内部 RAM 的 `0x100..0x1fff`，普通全局对象使用从 `0x10000` 开始的扩展 RAM。当前配置采用 `0xff0000..0xffefff` 的连续 60 KiB 代码区，保留复位及中断向量所在区域。类、模板、全局构造和普通平坦指针可用于最小验证；`setjmp/longjmp` 与 `pdata` 指针转换中的设备寄存器地址尚未适配 STC16，不在该配置的支持范围内。
+
+驱动要求恰好一个 `F_CPU` 定义，并同时检查 30/40 MHz 所需的芯片宏与 MCS251 后端。该配置不修改硬件时钟或执行模式。工具锁保留原有编译器和适配器校验；适配器嵌套审计中的 `12MHZ` 资格标签描述历史 ABI 验证基线，本次实际编译时钟记录在 build-manifest 的 `target.build_f_cpu_hz` 和顶层资格标签中。
 
 板卡选择、Arduino CLI 用法及 stcxx 工具链项目入口见[平台 README](../../README.md)。
 

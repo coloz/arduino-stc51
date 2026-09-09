@@ -197,6 +197,15 @@ verify_sdcc() {
   verify_tool "${sdld}" "$(json_value tools.sdld.sha256)" patched-sdld
   verify_tool "${sdldmcs251}" "$(json_value tools.sdldmcs251.sha256)" patched-sdldmcs251
   verify_tool "${sdcpp}" "$(json_value tools.sdcpp.sha256)" patched-sdcpp
+  if [[ ${#sdcc_section_args[@]} -ne 0 ]]; then
+    local section_help
+    section_help="$("${sdcc}" -mmcs251 --help)"
+    [[ "${section_help}" == *--function-sections* &&
+       "${section_help}" == *--data-sections* ]] || {
+      printf 'full-Flash layout requires rebuilt sdcc-c251 section support\n' >&2
+      exit 2
+    }
+  fi
   local version
   version="$(${sdcc} --version | head -n 1)"
   [[ "${version}" == "$(json_value tools.sdcc.version_prefix)"* ]] || {
@@ -229,10 +238,15 @@ normalize_include_arg() {
 
 clang_user_args=()
 sdcc_user_args=()
+sdcc_section_args=()
 dependency_file=""
 expect_dependency_file=0
 cpp_enabled=0
-qualified_clock=0
+clock_hz=""
+clock_definition_count=0
+target_ai8051u_34k64=0
+target_stc16f40k128=0
+target_stc32g144k246=0
 declared_target_mcs51=0
 declared_target_mcs251=0
 mcs251_iram_size=""
@@ -280,8 +294,30 @@ for argument in "${original_args[@]}"; do
       printf 'STCXX_MCS251_CONSTRAINED_HEAP must be exactly 1\n' >&2
       exit 2
       ;;
-    -DF_CPU=12000000L|-DF_CPU=12000000UL|-DF_CPU=12000000)
-      qualified_clock=1
+    -DAI8051U_34K64)
+      target_ai8051u_34k64=1
+      clang_user_args+=("${argument}")
+      sdcc_user_args+=("${argument}")
+      ;;
+    -DSTC16F40K128)
+      target_stc16f40k128=1
+      clang_user_args+=("${argument}")
+      sdcc_user_args+=("${argument}")
+      ;;
+    -DSTC32G144K246)
+      target_stc32g144k246=1
+      clang_user_args+=("${argument}")
+      sdcc_user_args+=("${argument}")
+      ;;
+    -DF_CPU=*)
+      clock_definition_count=$((clock_definition_count + 1))
+      case "${argument#-DF_CPU=}" in
+        12000000L|12000000UL|12000000) clock_hz=12000000 ;;
+        30000000L|30000000UL|30000000) clock_hz=30000000 ;;
+        40000000L|40000000UL|40000000) clock_hz=40000000 ;;
+        48000000L|48000000UL|48000000) clock_hz=48000000 ;;
+        *) clock_hz="" ;;
+      esac
       clang_user_args+=("${argument}")
       sdcc_user_args+=("${argument}")
       ;;
@@ -309,6 +345,10 @@ for argument in "${original_args[@]}"; do
         clang_user_args+=("${normalized}")
       fi
       sdcc_user_args+=("${normalized}")
+      ;;
+    --function-sections|--data-sections)
+      sdcc_user_args+=("${argument}")
+      sdcc_section_args+=("${argument}")
       ;;
     -c|--std-sdcc11|--opt-code-size|--less-pedantic|--stack-auto|--model-large|-MMD|-Wp-Wall|-V)
       sdcc_user_args+=("${argument}")
@@ -340,11 +380,31 @@ done
 }
 
 [[ ${cpp_enabled} -eq 1 ]] || { printf 'STCXX_CPP_CORE=1 is missing\n' >&2; exit 2; }
-[[ ${qualified_clock} -eq 1 &&
-   ("${sdcc_target}" == "mcs51" || "${sdcc_target}" == "mcs251") ]] || {
-  printf 'the Arduino CLI C++ compile/link route requires MCS51 or MCS251 at 12 MHz\n' >&2
+[[ ${clock_definition_count} -eq 1 &&
+   ("${sdcc_target}" == "mcs51" || "${sdcc_target}" == "mcs251") &&
+   ("${clock_hz}" == "12000000" ||
+    ("${clock_hz}" == "30000000" && ${target_stc16f40k128} -eq 1 &&
+     "${sdcc_target}" == "mcs251") ||
+    ("${clock_hz}" == "40000000" && ${target_ai8051u_34k64} -eq 1 &&
+     "${sdcc_target}" == "mcs251") ||
+    ("${clock_hz}" == "48000000" && ${target_stc32g144k246} -eq 1 &&
+     "${sdcc_target}" == "mcs251")) ]] || {
+  printf 'the Arduino CLI C++ route requires one F_CPU: 12 MHz for MCS51/MCS251, 30 MHz only for STC16F40K128 MCS251, 40 MHz only for AI8051U_34K64 MCS251, or 48 MHz only for STC32G144K246 MCS251\n' >&2
   exit 2
 }
+
+if [[ ${target_stc32g144k246} -eq 1 &&
+      ("${sdcc_target}" != "mcs251" || ${target_ai8051u_34k64} -ne 0 ||
+       ${target_stc16f40k128} -ne 0) ]]; then
+  printf 'STC32G144K246 requires its own MCS251 target identity\n' >&2
+  exit 2
+fi
+
+if [[ ${target_stc16f40k128} -eq 1 &&
+      ("${sdcc_target}" != "mcs251" || ${target_ai8051u_34k64} -ne 0) ]]; then
+  printf 'STC16F40K128 requires its own MCS251 target identity\n' >&2
+  exit 2
+fi
 
 if [[ ("${sdcc_target}" == "mcs51" && ${declared_target_mcs251} -eq 1) ||
       ("${sdcc_target}" == "mcs251" && ${declared_target_mcs51} -eq 1) ]]; then
@@ -398,6 +458,12 @@ else
         exit 2
       }
     done
+    if [[ ${target_stc16f40k128} -eq 1 ]] &&
+       (( mcs251_iram_size != 0x2000 || mcs251_stack_loc != 0x100 ||
+          mcs251_stack_size != 0x1f00 )); then
+      printf 'STC16F40K128 requires 8 KiB IRAM with the stack at 0x100..0x1fff\n' >&2
+      exit 2
+    fi
     target_stack_link_args=(
       --iram-size "${mcs251_iram_size}"
       --stack-loc "${mcs251_stack_loc}"
@@ -819,10 +885,17 @@ heap_rel = Path(sys.argv[1])
 state_rel = Path(sys.argv[2])
 target = sys.argv[3]
 constrained = int(sys.argv[4])
+heap_size_symbol = "___sdcc_heap_size32" if target == "mcs251" else "___sdcc_heap_size"
+opposite_heap_size_symbol = "___sdcc_heap_size" if target == "mcs251" else "___sdcc_heap_size32"
 payload = heap_rel.read_text(encoding="ascii")
+if re.search(
+    rf"^S {re.escape(opposite_heap_size_symbol)} Def[0-9A-Fa-f]+$",
+    payload, re.MULTILINE,
+):
+    raise SystemExit(f"STCXX heap must not provide opposite-ABI {opposite_heap_size_symbol}: {heap_rel}")
 if len(re.findall(r"^M stcxx_heap$", payload, re.MULTILINE)) != 1:
     raise SystemExit(f"unexpected STCXX heap module identity: {heap_rel}")
-for symbol in ("___sdcc_heap", "___sdcc_heap_size", "___stcxx_heap_init"):
+for symbol in ("___sdcc_heap", heap_size_symbol, "___stcxx_heap_init"):
     count = len(re.findall(
         rf"^S {re.escape(symbol)} Def[0-9A-Fa-f]+$", payload, re.MULTILINE
     ))
@@ -849,7 +922,7 @@ state_xseg = re.findall(
 )
 if len(state_xseg) != 1 or int(state_xseg[0], 16) != 8:
     raise SystemExit(f"STCXX heap-state XSEG is not exactly 8 bytes: {state_rel}")
-for symbol in ("___sdcc_heap", "___sdcc_heap_size", "___stcxx_heap_init"):
+for symbol in ("___sdcc_heap", "___sdcc_heap_size", "___sdcc_heap_size32", "___stcxx_heap_init"):
     if re.search(
         rf"^S {re.escape(symbol)} Def[0-9A-Fa-f]+$",
         state_payload, re.MULTILINE,
@@ -1083,6 +1156,7 @@ PY
       "${bridge_prior_even_rst}"
     "${sdcc}" "${sdcc_target_option}" --model-large --stack-auto --std-sdcc11 \
       --opt-code-size --nogcse --less-pedantic \
+      "${sdcc_section_args[@]}" \
       "-I${sdcc_include_root}" "-I${sdcc_mcs51_include}" \
       -S "${work}/adapted.c" -o "${bridge_raw_asm}" 2>&1 | tee "${bridge_log}"
     test -s "${bridge_raw_asm}"
@@ -1854,15 +1928,24 @@ PY
     done
     declare -A oversized_function_groups=()
     for original_rel in "${!actual_rel_by_original[@]}"; do
-      cseg_hex="$(awk '$1 == "A" && $2 == "CSEG" { print $4 }' "${original_rel}")"
+      mapfile -t cseg_area_hex < <(
+        awk '$1 == "A" && ($2 == "CSEG" || $2 ~ /^CSEG_F_/) { print $4 }' "${original_rel}"
+      )
       mapfile -t xram_area_hex < <(
         awk '$1 == "A" && ($2 == "XSEG" || $2 == "XISEG") { print $4 }' "${original_rel}"
       )
-      [[ -n "${cseg_hex}" && "${cseg_hex}" =~ ^[0-9A-F]+$ ]] || {
+      [[ ${#cseg_area_hex[@]} -gt 0 ]] || {
         printf 'invalid CSEG/XRAM area sizes for C function split candidate: %s\n' "${original_rel}" >&2
         exit 2
       }
-      cseg_size=$((16#${cseg_hex}))
+      cseg_size=0
+      for cseg_hex in "${cseg_area_hex[@]}"; do
+        [[ "${cseg_hex}" =~ ^[0-9A-F]+$ ]] || {
+          printf 'invalid CSEG area size for C function split candidate: %s\n' "${original_rel}" >&2
+          exit 2
+        }
+        cseg_size=$((cseg_size + 16#${cseg_hex}))
+      done
       xseg_size=0
       for xram_hex in "${xram_area_hex[@]}"; do
         [[ "${xram_hex}" =~ ^[0-9A-F]+$ ]] || {
@@ -2097,6 +2180,8 @@ if arguments.index(heap_rel) >= arguments.index(core_lib):
     raise SystemExit("STCXX heap object is not linked before core.lib")
 
 heap_payload = heap_rel_path.read_text(encoding="ascii")
+heap_size_symbol = "___sdcc_heap_size32" if target_profile == "mcs251" else "___sdcc_heap_size"
+opposite_heap_size_symbol = "___sdcc_heap_size" if target_profile == "mcs251" else "___sdcc_heap_size32"
 heap_xseg = re.findall(
     r"^A XSEG size ([0-9A-Fa-f]+) flags ", heap_payload, re.MULTILINE
 )
@@ -2117,7 +2202,7 @@ state_heap_provider_counts = {
         heap_state_payload,
         re.MULTILINE,
     ))
-    for symbol in ("___sdcc_heap", "___sdcc_heap_size", "___stcxx_heap_init")
+    for symbol in ("___sdcc_heap", "___sdcc_heap_size", "___sdcc_heap_size32", "___stcxx_heap_init")
 }
 if any(state_heap_provider_counts.values()):
     raise SystemExit("STCXX telemetry-state object provides a heap symbol")
@@ -2150,6 +2235,11 @@ if archive_state_members != 1:
     raise SystemExit("STCXX telemetry-state archive member is not unique")
 
 link_map = map_path.read_text(encoding="utf-8", errors="replace")
+if re.search(
+    rf"^[A-Z]:[ \t]+[0-9A-Fa-f]+[ \t]+{re.escape(opposite_heap_size_symbol)}(?:[ \t]+[^\r\n]*)?$",
+    link_map, re.MULTILINE,
+):
+    raise SystemExit(f"final map contains opposite-ABI heap-size provider: {opposite_heap_size_symbol}")
 default_heap_members = len(re.findall(
     r"\[\s*_heap\.rel\s*\]", link_map
 ))
@@ -2172,7 +2262,7 @@ def provider_count(symbol: str) -> int:
 
 providers = {
     "___sdcc_heap": provider_count("___sdcc_heap"),
-    "___sdcc_heap_size": provider_count("___sdcc_heap_size"),
+    heap_size_symbol: provider_count(heap_size_symbol),
     "___stcxx_heap_init": provider_count("___stcxx_heap_init"),
 }
 try:
@@ -2279,6 +2369,7 @@ PY
       "${bridge_lst}" "${bridge_rst}" \
       "${sdcc_target}" "${target_triple}" "${data_layout}" "${abi_symbol}" \
       "${mcs251_iram_size}" "${mcs251_stack_loc}" "${mcs251_stack_size}" \
+      "${clock_hz}" \
       -- "${bitcode_files[@]}" <<'PY'
 import hashlib
 import json
@@ -2326,11 +2417,13 @@ from pathlib import Path
     mcs251_iram_size,
     mcs251_stack_loc,
     mcs251_stack_size,
+    build_f_cpu_hz,
     separator,
     *bitcode,
 ) = sys.argv[1:]
 if separator != "--":
     raise SystemExit("manifest argument separator is missing")
+build_f_cpu_hz = int(build_f_cpu_hz)
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def load_json(path):
@@ -2589,7 +2682,7 @@ for path in bitcode:
         metadata["selection_reason"] = candidate["selection_reason"]
     modules.append(metadata)
 qualification = (
-    f"EXPERIMENTAL_{target_profile.upper()}_12MHZ_ARDUINO_CLI_COMPILE_LINK"
+    f"EXPERIMENTAL_{target_profile.upper()}_{build_f_cpu_hz // 1000000}MHZ_ARDUINO_CLI_COMPILE_LINK"
 )
 runtime_qualification = "SEPARATE_EXACT_QEMU_VARIANT_MATRIX_GATE"
 stack_identity = None
@@ -2606,6 +2699,7 @@ result = {
     "runtime_qualification": runtime_qualification,
     "target": {
         "profile": target_profile,
+        "build_f_cpu_hz": build_f_cpu_hz,
         "target_triple": target_triple,
         "data_layout": data_layout,
         "abi_identity_symbol": abi_identity_symbol,

@@ -12,12 +12,12 @@
   ],
   "memory": {
     "flash_bytes": 131072,
-    "maximum_code_bytes": 65536,
+    "maximum_code_bytes": 131072,
     "idata_bytes": 0,
     "xdata_bytes": 8192,
     "edata_bytes": 4096,
     "flash_origin": "0xfe0000",
-    "linker_layout": "pre_home_contiguous",
+    "linker_layout": "segmented_home",
     "code_origin": "0xff0000",
     "gsinit0_origin": "0xfe0000"
   },
@@ -138,5 +138,5 @@
   },
   "official_product_page": "https://www.stcmicro.com/cn/stc/stc32g12k128.html",
   "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks.",
-  "data_quality_note": "The physical 128 KiB program Flash is 0xFE0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout places GSINIT0 and ordinary code at 0xFE0000 while retaining HOME at 0xFF0000. maximum_code_bytes is conservatively limited to the continuous 64 KiB pre-HOME interval; the upper HOME window is not advertised until segmented-link support is implemented and verified."
+  "data_quality_note": "The physical 128 KiB program Flash is 0xFE0000-0xFFFFFF and reset starts at HOME 0xFF0000. The segmented_home layout retains GSINIT0 at 0xFE0000 and HOME at 0xFF0000, placing function and read-only data sections in the available intervals around HOME. maximum_code_bytes includes startup and vector bytes and equals the complete physical program Flash. This layout requires the rebuilt SDCC/ASlink toolchain with --function-sections, --data-sections and --code-window support; historical 64 KiB firmware qualification does not establish full-Flash hardware qualification."
 }

@@ -67,45 +67,47 @@
       "source_project_windows": "D:\\Git\\stc51\\stcxx",
       "source_project_wsl": "/mnt/d/Git/stc51/stcxx",
       "source_project_branch": "arduino-cpp-core",
-      "source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
+      "source_project_commit": "f16b00a71e3da804b52b796b332ff5696db4280a",
+      "source_project_state": "committed-source-candidate; exact compiler sources are bound by patch_sha256",
+      "previous_qualified_source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
       "source_project_patch_file": "arduino/patches/sdcc-mcs251-arduino-cpp.patch",
       "malloc_abi_source_file": "device/lib/malloc.c",
-      "malloc_abi_source_sha256": "71bfac56f93cbd6cc8cd0d2d16e87205ac03e6fdca1a9a7baf463ea284ab818c",
-      "malloc_abi_source_git_blob": "588a1eeee50440d91d474fa37b4edc06ec91deb2",
+      "malloc_abi_source_sha256": "344c80c4bf8f4bb5fbe03e9e3bbbd63be76328340033c943947a15105bb86fba",
+      "malloc_abi_source_git_blob": "fd17c388683fe100ecd5cedd8a4194194d1c1f32",
       "upstream_base_commit": "b09075b6a93e6afe10645181e3aeff041ea37f87",
       "fixed_entry": "/mnt/d/Git/stc51/stcxx/out/bin/sdcc",
       "published_out_lock_file": "out/toolchain-lock.json",
-      "published_out_lock_sha256": "1ee5d850baa1dbee4ddfd4d51bbf9187f95d814d9c552558eeea27a6fa268960",
+      "published_out_lock_sha256": "127cbed44a13052360a403bde6495de9de08f0b6bb1614e1613681660105f595",
       "published_out_manifest_file": "out/MANIFEST.sha256",
-      "published_out_manifest_sha256": "2e7e343a0a5b7f8f0a66366ec92d5ff181a64f1380c9b0f252d28719768eed6f",
+      "published_out_manifest_sha256": "35b33920150a280dcb10bc1252bf490a350ce51b01b639855df1ad000761f735",
       "standalone_bridge_adapter_sha256": "d5786ada45174a4da0fd6c01ac0e2b589533e87fd8090347a136e60459b1ad24",
       "standalone_bridge_regression_sha256": "8d4ab2140b002754a56b7cbec2d32b3bb610fe1aa92cd9ac08baeea46e8b417d",
       "patch_file": "tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch",
-      "patch_sha256": "cf69ac0418f940e1ccc950ecff72d81e29a017847172747dc2cf3e31d26fabb3",
-      "sha256": "8db337e32dd8809280dd5f2e3c2539c67976a741118ae027f2f5916c18dec96c",
-      "elf_sha256": "5b212e57752a65cbb7f61ea50dd23290375f9dbee9c594db8cd2a1efd941d808"
+      "patch_sha256": "fcb1342a77a412dbb8b0c8c6e8e4df5e1b59744790e63e40c32dd812c9472e12",
+      "sha256": "e4674cb08f4db442ef7485318c49c47a90e1a319e5ca2cb3ac38123d99a7a234",
+      "elf_sha256": "64c9a96111e94795841f0e05e4664d6c2c0d9eaa117a2ce996e1bc32cca3dda2"
     },
     "sdar": {
       "sha256": "11ff1c60f9173ae51de587661e09cfc1d38957f5f5f6b9f16d2c0375626f40c3"
     },
     "sdas251": {
-      "sha256": "e27a8b44f55d6584c53fe17d119f9fd21f1707a604568be3fe3c907eae7116ad"
+      "sha256": "533adb4542bb3af1a42ead0fc54baff3dbfe0808557f713cda8fc1f7cdb55208"
     },
     "sdas8051": {
-      "sha256": "932764ccba45a2169b7bfe91e1d493b92c5aee9d5c37ecc4cdb0ba14940bf7bb"
+      "sha256": "48754173ecfe5e38a729c9c8bee2a8d16f98e0250485c3dcc1925f4477dca9d2"
     },
     "sdld": {
-      "sha256": "c7ca41167f3b606ae98a2f78e8c0170f3c4f7e7994f93346c2032dcbb82e4cfb"
+      "sha256": "dc3ceeee91443710efb32edec129ec6a0202b59454af58fbb50517c689c5bb0e"
     },
     "sdldmcs251": {
-      "sha256": "c7ca41167f3b606ae98a2f78e8c0170f3c4f7e7994f93346c2032dcbb82e4cfb"
+      "sha256": "dc3ceeee91443710efb32edec129ec6a0202b59454af58fbb50517c689c5bb0e"
     },
     "sdcpp": {
       "sha256": "406f8472d33ab0f275fd2238fc45076561446923d4b92799b0551d6195ebbaa8"
     },
     "sdcc_inputs": {
-      "libsdcc_sha256": "4f42aa8c50810765868550361d7eb0eb3de4692a8a830c5b372249e5299b7768",
-      "mcs251_sha256": "6f46d3cbf9a10279a7ad8f4bf48ea957a9f1a227f6e6e9311db7086df5fd7ee3",
+      "libsdcc_sha256": "e245ac872e501c8dd472bf235936a748aeed243ff0181ba28cee7191174e52c4",
+      "mcs251_sha256": "43fb5aa8cf703f3ad93aa1993906244c5309709afd355d6d28912ce9d1b41d22",
       "stddef_sha256": "5ef86cd924d140f80152f0e5463c605e43855b0d23e5692ccda93469470d4a9d",
       "stdint_sha256": "7275e563d168934bb86333bd3e4a072946da43480c3f711c19e1ea2f1169a435"
     }
@@ -149,7 +151,7 @@
     },
     "arduino_cli_driver": {
       "path": "tools/cpp-cli/stcxx-cli.sh",
-      "sha256": "7b799e948057d0f1100c94e9a1edea718826acbb69d46aa0f01fc574bff7f8b7"
+      "sha256": "dd87bfe49d828f6dd11750c7911cff01be542fee7acbc09d8236c96b60f978f9"
     },
     "arduino_cli_sdcc_gcse_regression": {
       "path": "tests/cpp/test_ptrdiff_pointer_audit.py",
@@ -172,7 +174,7 @@
       "member_pointer_codegen_integer_bits": 16,
       "member_call_program_address_space": 1,
       "sdcc_inputs": {
-        "libsdcc_sha256": "37a82420cc38cb9c173eaf43bbd492a8b0b87d2ffdd9923ba5ef49875af57206",
+        "libsdcc_sha256": "23c0abcfecedfe6f112ff8e54de718f8798dcc7fbbb1a930d9b214871fae8dfa",
         "target_runtime_sha256": "e4f302ed82fb57da3d197c6e5e848719798dc4e2fb7a45f5e546d6af3a006653"
       }
     },
@@ -187,8 +189,8 @@
       "member_pointer_codegen_integer_bits": 24,
       "member_call_program_address_space": 0,
       "sdcc_inputs": {
-        "libsdcc_sha256": "4f42aa8c50810765868550361d7eb0eb3de4692a8a830c5b372249e5299b7768",
-        "target_runtime_sha256": "6f46d3cbf9a10279a7ad8f4bf48ea957a9f1a227f6e6e9311db7086df5fd7ee3"
+        "libsdcc_sha256": "e245ac872e501c8dd472bf235936a748aeed243ff0181ba28cee7191174e52c4",
+        "target_runtime_sha256": "43fb5aa8cf703f3ad93aa1993906244c5309709afd355d6d28912ce9d1b41d22"
       }
     }
   }

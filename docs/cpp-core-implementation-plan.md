@@ -113,7 +113,7 @@ STC32F12K54 的 4 KiB XDATA 配置使用 3,584 字节 heap，并为静态 XDATA 
 | A | AI8051U-34K64/MCS51 | 64 KiB Flash、32 KiB XDATA、2 KiB EDATA | 首个语言、运行时和大库 bring-up |
 | B | STC8H8K64U/MCS51 | 64 KiB Flash、8 KiB XDATA | 现实 8 位内存门与首块稳定 MCS51 实板 |
 | C | AI8051U-34K64/MCS251 | 同一芯片切换实验 MCS251 | 排除外设差异的双 ABI 对照 |
-| D | STC32G144K246/MCS251 | 246 KiB（251,904 B）物理 Flash；当前连续代码上限 186,368 B；128 KiB XDATA、16 KiB EDATA | MCS251 高地址链接/启动与大代码目标；同名锁定 QEMU 已用于其建模范围内的确定性 smoke/differential |
+| D | STC32G144K246/MCS251 | 246 KiB（251,904 B）程序 Flash，使用保留 HOME 的分区链接；128 KiB XDATA、16 KiB EDATA | MCS251 高地址链接/启动与大代码目标；同名锁定 QEMU 已用于其建模范围内的确定性 smoke/differential，旧结果不自动覆盖新布局 |
 | E | STC32G12K128、STC32F12K54/MCS251 | 8 KiB 或 4 KiB XDATA；F12K54 为 3,584 B heap + 512 B 静态 reserve | 受限内存的纯 MCS251 约束门，防止 K246 大内存掩盖问题 |
 | F | 其余 64 KiB 型号 | 2--8 KiB XDATA | 外设、引脚和容量回归 |
 | G | 8/12 KiB 型号与 AI8051U-34K16 | 1 KiB XDATA 或 16 KiB Flash 上限 | compact profile 和逐用例容量结果 |
@@ -140,23 +140,28 @@ P8--PB、ADC、USB、PLL、模拟/电气行为和断电启动必须由静态映�
 不能因 QEMU 启动成功而推导为 PASS。
 
 K246 的物理用户 Flash 是半开区间 `[0xFC2800, 0x1000000)`，大小为
-`0x1000000 - 0xFC2800 = 0x3D800 = 251,904 B`。当前 SDCC/ASlink 启动布局把
+`0x1000000 - 0xFC2800 = 0x3D800 = 251,904 B`。SDCC/ASlink 启动布局把
 `GSINIT0` 放在 `0xFC2800`，并把必须执行的复位 `HOME` 区固定在 `0xFF0000`。
-普通 `CSEG` 只能可靠地在 `HOME` 前连续增长，不能跨过这个向量岛再自动续接，
-因此当前板定义的安全代码上限是
-`0xFF0000 - 0xFC2800 = 0x2D800 = 186,368 B`。余下的
-`0x1000000 - 0xFF0000 = 0x10000 = 65,536 B` 仍属于物理 Flash，但在现有链接
-方案下不作为普通 Arduino 程序容量宣传。`flash_bytes` 保留 251,904，
-`maximum_code_bytes` 固定为 186,368；生成器必须拒绝任何使
-`gsinit0_loc + maximum_code_bytes > code_loc` 的配置。
+K128 对应区间是 `[0xFE0000, 0x1000000)`，`GSINIT0` 位于 `0xFE0000`，
+`HOME` 同样位于 `0xFF0000`。旧发布布局只向普通代码开放 HOME 前的
+182/64 KiB；相关历史编译、QEMU 和实板记录保留其原始范围。
 
-恢复完整 251,904 B 容量必须作为独立的 linker gate，而不是简单调大
-`--code-size`：先让后端/链接器生成显式分区（低段止于 `0xFEFFFF`，`HOME` 保持
-在 `0xFF0000`，其后的高段从向量区末尾开始），再实现跨段函数放置、24 位调用与
-函数指针重定位、构造器表和常量表重定位，并让 size/HEX 工具按并集而非地址跨度
-计数。验收需要构造同时填满向量岛两侧的链接压力程序，检查 map/IHX 无重叠、所有
-重定位落在物理 Flash 内，再在 QEMU 和实板验证复位、中断、跨段直接/间接调用及
-断电重启。只有这些测试通过，才能把 `maximum_code_bytes` 恢复到 251,904。
+当前板定义使用 `segmented_home`：`maximum_code_bytes` 分别为 251,904 和
+131,072，包含实际启动和向量字节。`build.flash_flags` 将
+`--function-sections --data-sections` 传给 MCS251 编译和链接流程；
+`-Wl--code-window=0xfc2800:0x1000000`（K128 起点为 `0xfe0000`）
+限定允许的物理地址半开区间。链接器保留实际 HOME 区间以及启动段连续性，
+在剩余低、高地址空闲区放置完整函数和只读数据对象。单个函数或对象不能跨越
+HOME，碎片化或单个对象过大仍可能在累计字节数达到总容量前导致链接失败。
+生成器必须验证 GSINIT0 是物理 Flash 起点、HOME 位于窗口内且声明容量准确，
+不能把该规则套到 STC16 Beta 的非连续可编程分区或 EEPROM 区。
+
+此布局要求重建带相应编译器和 ASlink 修改的工具链，并同步 C++ 工具锁及
+发布清单；旧的 `gevico/sdcc-c251` 发布二进制没有这些新增选项。size 报告按
+CODE 区的实际字节总和计数，map/HEX 验证检查物理边界、各区不重叠以及 HOME
+复位跳板。完整 Flash 的验证使用同时占用 HOME 两侧的压力程序，覆盖 24 位
+直接/间接调用、函数指针、常量、初始化和中断；QEMU 结果限于模型覆盖项，
+断电重启及实板发布资格仍需对应固件的硬件记录。
 
 ## 4. 编译器与 ABI 工作包
 

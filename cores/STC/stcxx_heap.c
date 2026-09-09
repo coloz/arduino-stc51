@@ -46,7 +46,12 @@
 #endif
 
 __xdata unsigned char __sdcc_heap[STCXX_HEAP_SIZE];
+#if defined(__SDCC_mcs251)
+/* Match the compiler runtime's explicit 32-bit custom-heap contract. */
+const unsigned long __sdcc_heap_size32 = STCXX_HEAP_SIZE;
+#else
 const unsigned int __sdcc_heap_size = STCXX_HEAP_SIZE;
+#endif
 
 extern void __sdcc_heap_init(void);
 

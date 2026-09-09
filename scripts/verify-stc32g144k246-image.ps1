@@ -134,9 +134,10 @@ foreach ($Vector in @(
 )) {
     [uint32]$VectorAddress = $HomeAddress + $Vector.offset
     [uint32]$Target = Get-EjmpTarget $Image $VectorAddress "$($Vector.name) vector"
-    if (($Target -lt $CodeFloor) -or ($Target -ge $HomeAddress)) {
-        throw "$($Vector.name) EJMP target 0x$($Target.ToString('X6')) is outside the linked K246 code range."
+    if (($Target -lt $CodeFloor) -or ($Target -gt 0xffffff)) {
+        throw "$($Vector.name) EJMP target 0x$($Target.ToString('X6')) is outside physical K246 user Flash."
     }
+    [void](Get-ImageByte $Image $Target "$($Vector.name) handler")
 }
 
 [uint32]$Timer1Address = $HomeAddress + 0x1b

@@ -40,6 +40,17 @@ function Add-HashReplacement([hashtable]$Table, [string]$Old, [string]$New) {
     if ($Table.ContainsKey($Old) -and $Table[$Old] -ne $New) { throw "Ambiguous hash replacement: $Old" }
     $Table[$Old] = $New
 }
+function Update-CliDriverBindings([string]$Content, [string]$DriverHash, [int]$ExpectedCount) {
+    if ($DriverHash -cnotmatch '^[0-9a-f]{64}$') { throw 'Invalid CLI driver hash' }
+    $pattern = '(?<prefix>"(?:path"\s*:\s*"tools/cpp-cli/stcxx-cli\.sh"\s*,\s*"sha256|driver_path"\s*:\s*"tools/cpp-cli/stcxx-cli\.sh"\s*,\s*"driver_sha256)"\s*:\s*")[0-9a-f]{64}(?<suffix>")'
+    if ([regex]::Matches($Content, $pattern).Count -ne $ExpectedCount) {
+        throw "Expected $ExpectedCount active CLI driver bindings"
+    }
+    return [regex]::Replace($Content, $pattern, [Text.RegularExpressions.MatchEvaluator]{
+        param($match)
+        return $match.Groups['prefix'].Value + $DriverHash + $match.Groups['suffix'].Value
+    })
+}
 $sourceLock = Join-Path $compilerRoot 'arduino/toolchain-lock.json'
 if ((Hash $sourceLock) -ne $CompilerLockSha256) { throw 'Compiler lock changed' }
 $compilerLock = Get-Content -LiteralPath $sourceLock -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -61,15 +72,33 @@ foreach ($name in @('sdld', 'sdldmcs251')) {
 }
 $paths = @('tools/cpp-cli/toolchain-lock.json', 'tools/cpp-core-pipeline/toolchain-lock.json',
            'tools/cpp-core-pipeline/source-manifest.json', 'cores/STC/cpp/core-manifest.json',
+           'cores/STC/cpp/runtime-manifest.json', 'docs/cpp-runtime-contract.md',
            'docs/toolchain-and-sdk.md', 'tools/toolchain-patches/README.md')
+$driverBindingCounts = @{
+    'tools/cpp-cli/toolchain-lock.json' = 1
+    'tools/cpp-core-pipeline/toolchain-lock.json' = 1
+    'tools/cpp-core-pipeline/source-manifest.json' = 2
+    'cores/STC/cpp/core-manifest.json' = 2
+}
+$driverHash = Hash (Join-Path $sdkRoot 'tools/cpp-cli/stcxx-cli.sh')
 $nextManifest = if ($PublishedOutAlreadyPrepared) { $manifest } else { $manifest.Replace("$oldPublishedLock  toolchain-lock.json", "$CompilerLockSha256  toolchain-lock.json") }
 $hasher = [Security.Cryptography.SHA256]::Create()
 try { $nextManifestHash = [BitConverter]::ToString($hasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($nextManifest))).Replace('-', '').ToLowerInvariant() }
 finally { $hasher.Dispose() }
 $replacements = @{}
+$mallocSource = Join-Path $compilerRoot 'device/lib/malloc.c'
+$mallocBlob = & git -C $compilerRoot -c core.safecrlf=false hash-object device/lib/malloc.c
+if ($LASTEXITCODE -ne 0 -or $mallocBlob -cnotmatch '^[0-9a-f]{40}$') { throw 'Cannot identify malloc ABI source' }
+if ($compilerLock.sdcc.patched_source_blobs -and
+    $compilerLock.sdcc.patched_source_blobs.'device/lib/malloc.c' -ne $mallocBlob) {
+    throw 'Malloc source disagrees with the compiler source lock'
+}
+Add-HashReplacement $replacements $sdkLock.tools.sdcc.malloc_abi_source_sha256 (Hash $mallocSource)
 Add-HashReplacement $replacements $sdkLock.tools.llvm_cbe.patch_sha256 $compilerLock.llvm_cbe.patch_sha256
 Add-HashReplacement $replacements $sdkLock.tools.llvm_cbe.sha256 $compilerLock.llvm_cbe.reference_binary_sha256
-Add-HashReplacement $replacements $sdkLock.tools.sdcc.standalone_bridge_regression_sha256 $compilerLock.bridge.regression_sha256
+if ($compilerLock.bridge.regression_sha256) {
+    Add-HashReplacement $replacements $sdkLock.tools.sdcc.standalone_bridge_regression_sha256 $compilerLock.bridge.regression_sha256
+}
 Add-HashReplacement $replacements $sdkLock.tools.sdcc.patch_sha256 $compilerLock.sdcc.patch_sha256
 Add-HashReplacement $replacements $sdkLock.tools.sdcc.sha256 $compilerLock.sdcc.reference_wrapper_sha256
 Add-HashReplacement $replacements $sdkLock.tools.sdcc.elf_sha256 $compilerLock.sdcc.reference_elf_sha256
@@ -89,24 +118,54 @@ foreach ($header in @('stddef', 'stdint')) {
     Add-HashReplacement $replacements $sdkLock.tools.sdcc_inputs."${header}_sha256" (Hash (Join-Path $outRoot "share/sdcc/include/$header.h"))
 }
 foreach ($helper in $sdkLock.pipeline_helpers.PSObject.Properties) {
+    # Historical regression sources are not executable pipeline inputs and
+    # may have been removed from a source-only worktree. Preserve their old
+    # evidence; never invent new qualification hashes for missing tests.
+    if ($helper.Name.EndsWith('_regression') -and
+        -not (Test-Path -LiteralPath (Join-Path $sdkRoot $helper.Value.path))) {
+        continue
+    }
     Add-HashReplacement $replacements $helper.Value.sha256 (Hash (Join-Path $sdkRoot $helper.Value.path))
 }
 $pending = @{}
 foreach ($relative in $paths) {
     $path = Join-Path $sdkRoot $relative
     $content = [IO.File]::ReadAllText($path)
+    # Historical qualification belongs to its original binaries. Rebinding
+    # those hashes to the new candidate would misrepresent old test evidence.
+    $historicalQualification = $null
+    if ($relative -eq 'tools/toolchain-patches/README.md') {
+        $historicalPattern = '(?ms)^## Historical Linux qualification.*?(?=^## Remaining release gates)'
+        $historicalMatches = [regex]::Matches($content, $historicalPattern)
+        if ($historicalMatches.Count -ne 1) {
+            throw 'Cannot identify exactly one historical qualification block; refusing to rebind its evidence'
+        }
+        $historicalMatch = $historicalMatches[0]
+        $historicalQualification = $historicalMatch.Value
+        $content = $content.Remove($historicalMatch.Index, $historicalMatch.Length).Insert(
+            $historicalMatch.Index, '<!-- PRESERVED-HISTORICAL-QUALIFICATION -->')
+    }
     # One pass prevents A->B and B->C mappings from accidentally turning A into C.
     $content = [regex]::Replace($content, '(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])', [Text.RegularExpressions.MatchEvaluator]{
         param($match)
         if ($replacements.ContainsKey($match.Value)) { return $replacements[$match.Value] }
         return $match.Value
     })
+    # Each active manifest may still contain an older driver digest than the
+    # CLI lock. Update only these path-bound fields, never historical evidence.
+    if ($driverBindingCounts.ContainsKey($relative)) {
+        $content = Update-CliDriverBindings $content $driverHash $driverBindingCounts[$relative]
+    }
+    $content = $content.Replace($sdkLock.tools.sdcc.malloc_abi_source_git_blob, $mallocBlob)
     $content = $content.Replace('D:\\Git\\sdcc-c251-arduino', $compilerRoot.Replace('\','\\'))
     $content = $content.Replace('D:\Git\sdcc-c251-arduino', $compilerRoot)
     $content = $content.Replace('D:\\Git\\stc51\\sdcc-c251-arduino', $compilerRoot.Replace('\','\\'))
     $content = $content.Replace('D:\Git\stc51\sdcc-c251-arduino', $compilerRoot)
     $content = $content.Replace('/mnt/d/Git/sdcc-c251-arduino', '/mnt/d/Git/stc51/stcxx')
     $content = $content.Replace('/mnt/d/Git/stc51/sdcc-c251-arduino', '/mnt/d/Git/stc51/stcxx')
+    if ($null -ne $historicalQualification) {
+        $content = $content.Replace('<!-- PRESERVED-HISTORICAL-QUALIFICATION -->', $historicalQualification)
+    }
     $pending[$relative] = $content
 }
 if ((Hash $sourceLock) -ne $CompilerLockSha256) { throw 'Compiler inputs changed during synchronization' }

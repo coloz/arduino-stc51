@@ -167,6 +167,24 @@ if [ ! -f "$SDCC" ] && [ -f "$SDCC.exe" ]; then
     SDCC="$SDCC.exe"
 fi
 
+# Older SDCC drivers only warn about unknown options.  Do not silently emit
+# an unsplit object for a board which requires the full-Flash allocator.
+for ARGUMENT in "$@"; do
+    case "$ARGUMENT" in
+        --function-sections|--data-sections)
+            STC_SECTION_HELP=$("$SDCC" -mmcs251 --help 2>&1) || exit $?
+            case "$STC_SECTION_HELP" in
+                *--function-sections*--data-sections*) ;;
+                *)
+                    printf 'Full-Flash layout requires rebuilt sdcc-c251 with --function-sections and --data-sections support.\n' >&2
+                    exit 2
+                    ;;
+            esac
+            break
+            ;;
+    esac
+done
+
 # Arduino captures dependency discovery from stdout and passes the host null
 # device as the nominal output path. Do not forward it to SDCC; on Windows the
 # compiler otherwise creates a repository-local file named nul.d.

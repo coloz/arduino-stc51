@@ -124,6 +124,11 @@ def parse_rel(path: Path, *, require_slice_shape: bool) -> RelFile:
     if int(header.group("symbols"), 16) != symbol_count:
         fail(f"{path}: H symbol count does not match S records")
 
+    if any(area.name.startswith("CONST_D_") and area.size for area in areas):
+        fail(
+            f"{path}: per-object CONST_D_ sections require a section-aware readonly "
+            "slicer; refusing to merge or discard unaudited areas"
+        )
     const_areas = [area for area in areas if area.name == "CONST"]
     if len(const_areas) != 1:
         fail(f"{path}: expected exactly one CONST area")

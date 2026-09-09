@@ -37,6 +37,7 @@
 #if (defined(STC_CORE_FAMILY_89) + \
      defined(STC_CORE_FAMILY_12) + \
      defined(STC_CORE_FAMILY_15) + \
+     defined(STC_CORE_FAMILY_16) + \
      defined(STC_CORE_FAMILY_8) + \
      defined(STC_CORE_FAMILY_32) + \
      defined(STC_CORE_FAMILY_AI8051U)) != 1
@@ -141,7 +142,7 @@
 # error "Select only one STC execution mode"
 #endif
 
-#if defined(STC_CORE_FAMILY_32)
+#if defined(STC_CORE_FAMILY_16) || defined(STC_CORE_FAMILY_32)
 # define STC_CORE_USES_MCS251 1
 #elif defined(STC_CORE_FAMILY_AI8051U)
 /* AI8051U supports its documented MCS-51 compatibility execution mode. */
@@ -159,11 +160,12 @@
 #endif
 
 /*
- * Timer mode 0 is the STC 16-bit auto-reload mode on STC15 and newer
+ * Timer mode 0 is the STC 16-bit auto-reload mode on STC15/STC16 and newer
  * families. STC89 and STC12 retain the classic 8051 timer layout, so the
  * core uses mode 1 and reloads Timer0 in software on those devices.
  */
-#if defined(STC_CORE_FAMILY_15) || defined(STC_CORE_FAMILY_8) || \
+#if defined(STC_CORE_FAMILY_15) || defined(STC_CORE_FAMILY_16) || \
+    defined(STC_CORE_FAMILY_8) || \
     defined(STC_CORE_FAMILY_32) || defined(STC_CORE_FAMILY_AI8051U)
 # define STC_CORE_HAS_TIMER01_16BIT_AUTO_RELOAD 1
 # define STC_CORE_HAS_MODERN_UART1_BRT 1
@@ -182,7 +184,7 @@
 # error "STC_EXECUTION_MODE_MCS251 requires an MCS251 compiler target"
 #elif STC_CORE_USES_MCS251
 # if !STC_CORE_COMPILER_TARGET_MCS251
-#  error "STC32/AI8051U targets require an MCS251 compiler target"
+#  error "STC16/STC32/AI8051U targets require an MCS251 compiler target"
 # endif
 #elif STC_CORE_COMPILER_TARGET_MCS251
 # error "STC8 targets require an MCS51 compiler target"

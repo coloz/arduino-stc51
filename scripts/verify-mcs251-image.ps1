@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$MapPath,
     [Parameter(Mandatory = $true)]
-    [ValidateSet('post_home_contiguous', 'pre_home_contiguous')]
+    [ValidateSet('post_home_contiguous', 'pre_home_contiguous', 'segmented_home')]
     [string]$Layout,
     [Parameter(Mandatory = $true)]
     [uint32]$FlashFloor,
@@ -39,13 +39,21 @@ if ($Layout -eq 'post_home_contiguous') {
         ([uint64]$FlashCeiling - [uint64]$HomeAddress + [uint64]1)) {
         throw 'The post-HOME code limit must equal the complete HOME-to-FlashCeiling window.'
     }
-} else {
+} elseif ($Layout -eq 'pre_home_contiguous') {
     if ($CodeFloor -lt $FlashFloor -or $CodeFloor -ge $HomeAddress) {
         throw 'A pre-HOME layout must start code inside Flash and below HOME.'
     }
     if ([uint64]$MaximumCodeBytes -ne
         ([uint64]$HomeAddress - [uint64]$CodeFloor)) {
         throw 'The pre-HOME code limit must equal the continuous interval below HOME.'
+    }
+} else {
+    if ($CodeFloor -ne $FlashFloor -or $CodeFloor -ge $HomeAddress) {
+        throw 'A segmented-HOME layout must start code at the Flash floor below HOME.'
+    }
+    if ([uint64]$MaximumCodeBytes -ne
+        ([uint64]$FlashCeiling - [uint64]$FlashFloor + [uint64]1)) {
+        throw 'The segmented-HOME code limit must equal the complete physical Flash window.'
     }
 }
 
@@ -160,17 +168,52 @@ foreach ($Address in $Image.Keys) {
 }
 
 $CodeAreas = [Collections.Generic.List[object]]::new()
-foreach ($Line in Get-Content -LiteralPath $MapPath) {
-    if ($Line -match '^([A-Z][A-Z0-9_]*)\s+([0-9A-F]{8})\s+([0-9A-F]{8})\s+=\s+\d+\. bytes \([^)]*CODE\)\s*$') {
+$AreaDefinitions = @{}
+$MapLines = @(Get-Content -LiteralPath $MapPath)
+if ($Layout -eq 'segmented_home') {
+    $WindowHeaders = @($MapLines | Where-Object { $_ -match '^Code Window:' })
+    if ($WindowHeaders.Count -ne 1 -or
+        $WindowHeaders[0] -notmatch '^Code Window: 0x([0-9A-Fa-f]+):0x([0-9A-Fa-f]+)$') {
+        throw 'The segmented-HOME map must contain exactly one valid Code Window ledger header.'
+    }
+    if ([Convert]::ToUInt64($Matches[1], 16) -ne [uint64]$FlashFloor -or
+        [Convert]::ToUInt64($Matches[2], 16) -ne [uint64]$FlashCeiling + [uint64]1) {
+        throw 'The linked Code Window does not match the configured physical Flash interval.'
+    }
+}
+foreach ($Line in $MapLines) {
+    $AreaRecord = if ($Layout -eq 'segmented_home') {
+        # This ledger preserves full area names and real ABS fragment addresses,
+        # unlike the paginated, fixed-width historical area summary.
+        $Line -match '^Code Window Area: (\S+) 0x([0-9A-Fa-f]+) 0x([0-9A-Fa-f]+)$'
+    } else {
+        $Line -match '^([A-Za-z_][A-Za-z0-9_]*)\s+([0-9A-Fa-f]{8})\s+([0-9A-Fa-f]{8})\s+=\s+\d+\. bytes \([^)]*CODE\)\s*$'
+    }
+    if ($AreaRecord) {
+        $AreaName = $Matches[1]
         [uint32]$AreaAddress = [Convert]::ToUInt32($Matches[2], 16)
         [uint32]$AreaSize = [Convert]::ToUInt32($Matches[3], 16)
         if ($AreaSize -ne 0) {
-            $CodeAreas.Add([pscustomobject]@{
-                name = $Matches[1]
+            # ASlink can repeat an area's heading on a new map page. The
+            # segmented ledger has one record per allocation; repeated names
+            # may describe separate absolute fragments and are checked below.
+            if ($Layout -ne 'segmented_home' -and $AreaDefinitions.ContainsKey($AreaName)) {
+                $PreviousArea = $AreaDefinitions[$AreaName]
+                if ($PreviousArea.address -ne $AreaAddress -or $PreviousArea.size -ne $AreaSize) {
+                    throw "The map contains inconsistent definitions for CODE area $AreaName."
+                }
+                continue
+            }
+            $MappedArea = [pscustomobject]@{
+                name = $AreaName
                 address = $AreaAddress
                 size = $AreaSize
-            })
+            }
+            $AreaDefinitions[$AreaName] = $MappedArea
+            $CodeAreas.Add($MappedArea)
         }
+    } elseif ($Layout -eq 'segmented_home' -and $Line.StartsWith('Code Window Area:')) {
+        throw 'The map contains a malformed Code Window Area ledger record.'
     }
 }
 if ($CodeAreas.Count -eq 0) { throw 'The linker map contains no non-empty CODE areas.' }
@@ -184,12 +227,22 @@ if ($Gsinit0Areas.Count -ne 1) {
     throw 'The linker map does not contain exactly one non-empty GSINIT0 area.'
 }
 
-foreach ($Area in $CodeAreas) {
+[uint64]$MappedCodeBytes = 0
+[uint64]$PreviousAreaEnd = $FlashFloor
+$PreviousAreaName = ''
+$SortedCodeAreas = @($CodeAreas | Sort-Object address, name)
+foreach ($Area in $SortedCodeAreas) {
     [uint64]$AreaEnd = [uint64]$Area.address + [uint64]$Area.size
     if ([uint32]$Area.address -lt $FlashFloor -or
         $AreaEnd -gt ([uint64]$FlashCeiling + [uint64]1)) {
         throw "CODE area $($Area.name) is outside $Model program Flash."
     }
+    if ([uint64]$Area.address -lt $PreviousAreaEnd) {
+        throw "CODE areas $PreviousAreaName and $($Area.name) overlap."
+    }
+    $PreviousAreaEnd = $AreaEnd
+    $PreviousAreaName = $Area.name
+    $MappedCodeBytes += [uint64]$Area.size
     if ($Layout -eq 'pre_home_contiguous' -and $Area.name -ne 'HOME' -and
         ([uint32]$Area.address -lt $CodeFloor -or $AreaEnd -gt $HomeAddress)) {
         throw "CODE area $($Area.name) escapes the continuous pre-HOME link interval."
@@ -197,6 +250,26 @@ foreach ($Area in $CodeAreas) {
     if ($Layout -eq 'post_home_contiguous' -and
         [uint32]$Area.address -lt $HomeAddress) {
         throw "CODE area $($Area.name) falls below the post-HOME link interval."
+    }
+}
+if ($MappedCodeBytes -gt [uint64]$MaximumCodeBytes -or
+    [uint64]$Image.Count -gt [uint64]$MaximumCodeBytes) {
+    throw 'The mapped CODE or Intel HEX byte total exceeds the configured program capacity.'
+}
+if ($Layout -eq 'segmented_home') {
+    # Reserved .ds bytes need not be emitted, but every emitted byte must
+    # belong to the allocator ledger. Missing records must not pass silently.
+    $AreaIndex = 0
+    foreach ($Address in ($Image.Keys | Sort-Object)) {
+        while ($AreaIndex -lt $SortedCodeAreas.Count -and
+            [uint64]$Address -ge ([uint64]$SortedCodeAreas[$AreaIndex].address +
+                                [uint64]$SortedCodeAreas[$AreaIndex].size)) {
+            $AreaIndex++
+        }
+        if ($AreaIndex -ge $SortedCodeAreas.Count -or
+            [uint64]$Address -lt [uint64]$SortedCodeAreas[$AreaIndex].address) {
+            throw "Image byte 0x$(([uint32]$Address).ToString('X6')) is absent from the Code Window ledger."
+        }
     }
 }
 
@@ -209,13 +282,17 @@ if ((Get-ImageByte $Image $HomeAddress 'reset vector') -ne 0x02) {
 if ($ResetTrampoline -lt $HomeAddress -or $ResetTrampoline -gt ($FlashCeiling - [uint32]3)) {
     throw "Reset LJMP target 0x$($ResetTrampoline.ToString('X6')) is outside the HOME window."
 }
+if ([uint64]$ResetTrampoline + [uint64]4 -gt
+    [uint64]$HomeAreas[0].address + [uint64]$HomeAreas[0].size) {
+    throw 'The reset trampoline is not contained in the mapped HOME area.'
+}
 [uint32]$StartupTarget = Get-EjmpTarget $Image $ResetTrampoline 'reset trampoline'
 [uint32]$MappedGsinit0 = $Gsinit0Areas[0].address
 if ($StartupTarget -ne $MappedGsinit0) {
     throw "Reset trampoline targets 0x$($StartupTarget.ToString('X6')); map GSINIT0 is 0x$($MappedGsinit0.ToString('X6'))."
 }
-if ($Layout -eq 'pre_home_contiguous' -and $StartupTarget -ne $CodeFloor) {
-    throw "Pre-HOME reset trampoline does not target CodeFloor/GSINIT0."
+if ($Layout -in @('pre_home_contiguous', 'segmented_home') -and $StartupTarget -ne $CodeFloor) {
+    throw "Pre-HOME startup does not target CodeFloor/GSINIT0."
 }
 if ($Layout -eq 'post_home_contiguous' -and $StartupTarget -lt $HomeAddress) {
     throw 'Post-HOME reset trampoline targets below HOME.'

@@ -2,7 +2,7 @@
 
 面向 STC 8051 / 251 单片机的 Arduino core，提供芯片级开发板定义、GPIO / 定时 / 串口等 API、常用外设库，以及生成 Intel HEX 的 SDCC 构建流程。默认使用 plain C；需要 C++ 类和 Arduino 类库接口时，可显式启用实验 C++ 配置。
 
-当前发布版本为 **0.0.2**，包含 20 个具体型号、23 种执行配置。Boards Manager 支持 Windows x64、Linux x86_64、macOS arm64 / x86_64（macOS 11+）；发布资产与验证记录见 [v0.0.2](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.2)。当前功能尚未完成实板验证，编译成功和模拟器运行不能替代硬件验证。版本信息见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
+当前发布版本为 **0.0.2**，包含 20 个具体型号、23 种执行配置。Boards Manager 支持 Windows x64、Linux x86_64、macOS arm64 / x86_64（macOS 11+）；发布资产与验证记录见 [v0.0.2](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.2)。各型号及外设的硬件验证进度不同，编译成功和模拟器运行不能替代实板验证。版本信息见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
 
 三个项目分别负责开发流程中的不同部分：
 
@@ -18,14 +18,21 @@
 
 型号来自 [devices.json](tools/variants/devices.json)，由生成器维护 `boards.txt` 和 `variants/`。不要仅凭相近型号替代选择；封装实际引脚还应核对对应芯片手册。
 
+当前源码在 0.0.2 发布范围之外新增 STC16F40K128，合计 21 个型号、24 种执行配置；新增型号需按下方“构建当前源码”安装，已有发布归档不会自动获得它。
+
 | 执行体系 | 型号 | 数量 |
 | --- | --- | ---: |
 | MCS51 / STC8 | STC8C2K64S4、STC8G1K08、STC8G1K08A、STC8G2K64S4、STC8H1K08、STC8H1K28、STC8H3K64S4、STC8H8K64U | 8 |
 | MCS51 / Ai8H | Ai8H2K12U、Ai8H2K32U | 2 |
 | MCS251 / STC32 | STC32CL8K48、STC32CL8K64、STC32G12K64、STC32G12K128、STC32G144K246、STC32G8K48、STC32G8K64 | 7 |
+| MCS251 / STC16 | STC16F40K128（Beta，独立寄存器布局） | 1 |
 | MCS51 / MCS251 双模式 | AI8051U-34K16、AI8051U-34K32、AI8051U-34K64 | 3 |
 
-AI8051U 默认 MCS51，可选择 `execution=mcs251`。三款双模式芯片带来 13 个 MCS51、10 个 MCS251 配置；切换编译配置不会改变芯片的硬件执行模式。MCS251 的地址布局与链接边界见 [variants-mcs251.md](docs/variants-mcs251.md)。
+AI8051U 默认 MCS51，可选择 `execution=mcs251`。当前源码有 13 个 MCS51、11 个 MCS251 配置；切换编译配置不会改变芯片的硬件执行模式。MCS251 的地址布局与链接边界见 [variants-mcs251.md](docs/variants-mcs251.md)。
+
+STC16F40K128 使用 MCS251，首期支持 GPIO、UART1 和 Timer0 计时，依据[逐飞官方板库及其中的 STC 手册](https://gitee.com/seekfree/STC16F)实现独立的 STC16 SFR 地址。本次逐飞板测试配置为 **30 MHz、UART1 115200 8N1、P5.2 低电平点亮 LED**；UART1 的 RX/TX 分别使用 P3.0/P3.1。测试程序每 500 ms 翻转 LED、每秒输出状态，并支持串口收发。plain C 编译配置为 `arduino-stc51:mcs51:stc16f40k128:clock=30m`，C++ 为 `arduino-stc51:mcs51:stc16f40k128:cppcore=enabled,clock=30m`。芯片仍由 ISP 配置实际频率，core 不改 IRC；芯片级 variant 不将该板的 LED 接线设为通用 `LED_BUILTIN`。
+
+此次连接的芯片识别为 **F7E0 Beta**。其用户 Flash 分为 `FE0000–FEEFFF`、`FF0000–FFEFFF` 两个 60 KiB 区域；当前构建仅使用 **`FF0000–FFEFFF` 的 60 KiB**，复位地址为 `FF0000`。型号中的 128 KiB 是地址映射跨度，ISP catalog 总量为 124 KiB，两个可编程区域合计为 120 KiB；不能按任一总量扩展为连续写入范围。完整布局保留在 [variant 元数据](variants/STC16F40K128/variant.json)中。ADC、其他硬件外设及 `setjmp`/`longjmp`、`pdata` 不在该型号的初期支持范围，F7E0 Beta 的测试结果也不代表其他芯片修订版已验证。
 
 2026-09-06 移除了已停产的 STC8A8K64S4A12，以及原厂明确不量产、已有下架记录的 STC32F12K54。逐型号核查依据和保留结论见[变体生命周期记录](docs/variant-lifecycle.md)。旧版发布索引仍描述其对应归档，不代表当前源码的型号范围。
 
@@ -76,7 +83,7 @@ arduino-cli compile --config-file $build.config `
 
 随平台提供 Wire、SPI、SoftwareSerial、LiquidCrystal、Stepper 和受限 SD 接口；兼容范围、软件实现和引脚限制见 [核心 API](docs/core-api-compatibility.md) 与 [库兼容说明](docs/library-compatibility.md)。一般 Arduino C++ 库不能直接按 plain C 编译。
 
-实验 C++ 配置使用定制 Clang → LLVM-CBE → SDCC 流程，提供 `String`、`Print`、`Stream`、`HardwareSerial`、`SPIClass`、`TwoWire` 等类接口及受限运行时。20 个型号均有显式配置，**当前只允许 12 MHz**。先按 `stcxx` 仓库说明准备工具链，再按 [工具链说明](docs/toolchain-and-sdk.md) 配置对应的 Clang / LLVM 工具。Windows 配方通过 WSL 调用这些 Linux 工具，Boards Manager 平台包不包含它们。
+实验 C++ 配置使用定制 Clang → LLVM-CBE → SDCC 流程，提供 `String`、`Print`、`Stream`、`HardwareSerial`、`SPIClass`、`TwoWire` 等类接口及受限运行时。当前源码 21 个型号均有显式的 12 MHz 配置；**AI8051U-34K64 的 MCS251 模式另支持 40 MHz，STC16F40K128 另支持 30 MHz**，必须与板卡实际系统时钟一致。其他型号及 AI8051U 的 C++ MCS51 模式仍限 12 MHz。先按 `stcxx` 仓库说明准备工具链，再按 [工具链说明](docs/toolchain-and-sdk.md) 配置对应的 Clang / LLVM 工具。Windows 配方通过 WSL 调用这些 Linux 工具，Boards Manager 平台包不包含它们。
 
 ```powershell
 $env:STCXX_WSL_DISTRO = 'Ubuntu'
@@ -88,6 +95,8 @@ $build = .\scripts\build-example.ps1 `
 当前独立工具链默认路径为 `D:\Git\stc51\stcxx`，WSL 对应 `/mnt/d/Git/stc51/stcxx`，SDCC 入口为 `out/bin/sdcc`。路径可在 WSL 中通过 `STCXX_TOOLCHAIN_ROOT` / `STCXX_SDCC` 覆盖，其他二进制也有相应 `STCXX_*` 变量；实际文件必须匹配工具锁的校验值。仅准备普通 SDCC 或仅启用菜单不足以启用 C++。
 
 AI8051U 的 C++ MCS251 配置示例为 `arduino-stc51:mcs51:ai8051u_34k32:execution=mcs251,cppcore=enabled,clock=12m`。不支持异常、RTTI、线程或完整 STL / libstdc++；详细边界见 [C++ 运行时约定](docs/cpp-runtime-contract.md)。
+
+AI8051U-34K64 板卡实际使用 40 MHz 时钟时，使用 `arduino-stc51:mcs51:ai8051u_34k64:execution=mcs251,cppcore=enabled,clock=40m`。时钟菜单只配置编译时的 `F_CPU`，不会切换芯片的外部晶振、IRC 或执行模式；选错时钟会同时影响 UART 波特率和 `millis()` / LED 闪烁周期。
 
 ## 用 stc-cli 烧录
 
@@ -109,13 +118,13 @@ $stc = '..\stc-cli\target\release\stc-cli.exe'
 & $stc flash --port COM5 --expect AI8051U_34K32 --file MySketch.hex --execution-mode mcs251 --allow-experimental --force-unverified-target
 ```
 
-独立 `stc-cli` 为当前 20 款型号都实现了烧录路径，其中 6 款标记 stable、14 款 experimental；该等级不等于本 Arduino core 已获实板验证。9 款官方协议目标因尚无可核实的 UART 身份映射，要求同时传入 `--allow-experimental` 与 `--force-unverified-target`：STC32CL8K48/64、STC32G12K64、STC32G144K246、三款 AI8051U，以及 Ai8H2K12U/32U。
+0.0.2 发布时对应的独立 `stc-cli` 为当时 20 款型号都实现了烧录路径，其中 6 款标记 stable、14 款 experimental；该等级不等于本 Arduino core 已获实板验证。9 款官方协议目标因尚无可核实的 UART 身份映射，要求同时传入 `--allow-experimental` 与 `--force-unverified-target`：STC32CL8K48/64、STC32G12K64、STC32G144K246、三款 AI8051U，以及 Ai8H2K12U/32U。新增 STC16F40K128 F7E0 Beta 应使用包含本次 STC16 协议和分区修复的当前 `stc-cli` 源码构建，旧版下载工具不因新增 Arduino variant 而自动获得支持。
 
 AI8051U 烧录前需用官方 ISP 将芯片设置为与 HEX 一致的 MCS51 / MCS251 模式；`stc-cli --execution-mode` 只选择镜像处理模式，不修改芯片硬件选项。型号、容量、实验协议和完整参数应以 `stc-cli` 的 README 与 `docs/PROTOCOL_SUPPORT.md` 为准。
 
 ## 使用边界与开发资料
 
-- STC32G144K246 物理 Flash 为 246 KiB，当前普通程序链接窗口为 182 KiB；STC32G12K128 物理 Flash 为 128 KiB，当前普通程序窗口为 64 KiB。不要按物理容量直接扩大链接范围。
+- STC32G144K246、STC32G12K128 的 `segmented_home` 布局使用完整 246/128 KiB 程序 Flash（包含启动和中断向量）。编译器按函数和只读对象分区，链接器保留 `0xFF0000` 的 `HOME`，自动利用两侧空间。必须使用包含 `--function-sections`、`--data-sections` 和 `--code-window` 支持的重建工具链；旧发布包的 182/64 KiB 验证记录仍只适用于旧布局，不能用调大容量代替工具链更新。单个函数或只读对象仍须放入一个连续空闲区，空间碎片可能使链接在总容量用尽前失败。详见 [完整 Flash 布局](docs/cpp-core-implementation-plan.md)。
 - Timer0 用于系统计时，UART1 占用 Timer1。ADC 能力和 GPIO 可用掩码按型号定义，具体封装可能引出更少的引脚。
 - PWM、EEPROM / IAP、USB、CAN、DAC、硬件 I²C / SPI、多路 UART、tone 和 Servo 尚未作为通用 API 提供。
 - 模拟器覆盖 CPU、内存和部分 UART / 定时器行为，不能验证模拟外设、电气条件或周期精度。硬件验证要求见 [hardware-validation.md](docs/hardware-validation.md)。

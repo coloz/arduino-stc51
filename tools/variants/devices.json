@@ -46,8 +46,50 @@
       "package_dependent": true,
       "official_url": "https://www.stcmicro.com/cn/stc/stc8h8k64u.html"
     },
-    {
-      "id": "stc32g12k128",
+      {
+        "id": "stc16f40k128",
+        "model": "STC16F40K128",
+        "macro": "STC16F40K128",
+        "family": "STC16F",
+        "selection": "board_validation",
+        "target": "mcs251",
+        "experimental": true,
+        "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+        "cpp_mcs251_clock_options_hz": [12000000, 30000000],
+        "cpp_heap_bytes": 4096,
+        "capabilities": {
+          "ports": [0, 1, 2, 3, 4, 5, 6, 7],
+          "port_mode": true,
+          "timer1_1t": true
+        },
+        "adc": false,
+        "flash_bytes": 131072,
+        "maximum_code_bytes": 61440,
+        "programmable_flash_regions": [
+          {"origin": 16646144, "bytes": 61440},
+          {"origin": 16711680, "bytes": 61440}
+        ],
+        "idata_bytes": 0,
+        "xdata_bytes": 32768,
+        "edata_bytes": 8192,
+        "eeprom": "Not supported by the first-sample/Beta ISP profile",
+        "memory_models": ["large"],
+        "default_memory_model": "large",
+        "default_clock_hz": 30000000,
+        "clock_options_hz": [12000000, 30000000],
+        "linker": {
+          "layout": "post_home_contiguous",
+          "code_loc": 16711680,
+          "build_window": {"origin": 16711680, "bytes": 61440}
+        },
+        "port_masks": [255, 251, 255, 255, 255, 31, 255, 255],
+        "max_io": 60,
+        "package_dependent": true,
+        "data_quality_note": "Initial support targets the Seekfree STC16F40K128 LQFP64 board and ISP ID F7E0 (Beta), with GPIO, UART1 and Timer0 timekeeping only. flash_bytes is the nominal 128 KiB address-map span 0xFE0000-0xFFFFFF, not a claim of contiguous usable Flash. The ISP catalog separately reports total=124 KiB and code=120 KiB for F7E0. Beta user Flash is two separate 60 KiB banks, 0xFE0000-0xFEEFFF and 0xFF0000-0xFFEFFF. The current build uses only the upper 60 KiB bank, including reset HOME at 0xFF0000. Never fill or program the intervening 0xFEF000-0xFEFFFF hole. EDATA is 8 KiB, including the 256-byte DATA/IDATA compatibility window; XDATA is 32 KiB at 0x010000-0x017FFF. The Seekfree board example selects a 30 MHz ISP-configured IRC and P5.2 LED; this MCU variant does not change oscillator settings or assume a built-in LED. ADC is intentionally unavailable until its separate STC16 register layout is implemented. setjmp/longjmp and pdata are outside the initial C++ support boundary. Source is the STC-authored 2020-12-17 manual and STC16Fxx.h distributed by the board manufacturer.",
+        "official_url": "https://gitee.com/seekfree/STC16F"
+      },
+      {
+        "id": "stc32g12k128",
       "model": "STC32G12K128",
       "macro": "STC32G12K128",
       "family": "STC32G",
@@ -68,7 +110,7 @@
         "channels": {"P1.0": 0, "P1.1": 1, "P5.4": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7, "P0.0": 8, "P0.1": 9, "P0.2": 10, "P0.3": 11, "P0.4": 12, "P0.5": 13, "P0.6": 14}
       },
       "flash_bytes": 131072,
-      "maximum_code_bytes": 65536,
+      "maximum_code_bytes": 131072,
       "idata_bytes": 0,
       "xdata_bytes": 8192,
       "edata_bytes": 4096,
@@ -78,14 +120,14 @@
       "default_clock_hz": 24000000,
       "clock_options_hz": [12000000, 24000000, 48000000],
       "linker": {
-        "layout": "pre_home_contiguous",
+        "layout": "segmented_home",
         "code_loc": 16711680,
         "gsinit0_loc": 16646144
       },
       "port_masks": [255, 251, 255, 255, 255, 31, 255, 255],
       "max_io": 60,
       "package_dependent": true,
-      "data_quality_note": "The physical 128 KiB program Flash is 0xFE0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout places GSINIT0 and ordinary code at 0xFE0000 while retaining HOME at 0xFF0000. maximum_code_bytes is conservatively limited to the continuous 64 KiB pre-HOME interval; the upper HOME window is not advertised until segmented-link support is implemented and verified.",
+      "data_quality_note": "The physical 128 KiB program Flash is 0xFE0000-0xFFFFFF and reset starts at HOME 0xFF0000. The segmented_home layout retains GSINIT0 at 0xFE0000 and HOME at 0xFF0000, placing function and read-only data sections in the available intervals around HOME. maximum_code_bytes includes startup and vector bytes and equals the complete physical program Flash. This layout requires the rebuilt SDCC/ASlink toolchain with --function-sections, --data-sections and --code-window support; historical 64 KiB firmware qualification does not establish full-Flash hardware qualification.",
       "official_url": "https://www.stcmicro.com/cn/stc/stc32g12k128.html"
     },
     {
@@ -244,6 +286,7 @@
       "target": "mcs251",
       "experimental": true,
       "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_mcs251_clock_options_hz": [12000000, 48000000],
       "cpp_heap_bytes": 32768,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
@@ -258,7 +301,7 @@
         "channels": {"P1.0": 0, "P1.1": 1, "P5.4": 2, "P1.3": 3, "P1.4": 4, "P1.5": 5, "P1.6": 6, "P1.7": 7, "P0.0": 8, "P0.1": 9, "P0.2": 10}
       },
       "flash_bytes": 251904,
-      "maximum_code_bytes": 186368,
+      "maximum_code_bytes": 251904,
       "executable_ram_bytes": 4096,
       "usb_ram_bytes": 5760,
       "idata_bytes": 0,
@@ -270,7 +313,7 @@
       "default_clock_hz": 24000000,
       "clock_options_hz": [12000000, 24000000, 48000000],
       "linker": {
-        "layout": "pre_home_contiguous",
+        "layout": "segmented_home",
         "code_loc": 16711680,
         "gsinit0_loc": 16525312
       },
@@ -279,7 +322,7 @@
       "physical_io": 91,
       "pin_alias_groups": [["P1.3", "P1.7"]],
       "package_dependent": true,
-      "data_quality_note": "The chip has 251,904 bytes of physical user Flash at 0xFC2800-0xFFFFFF. The current SDCC/ASlink layout fixes GSINIT0 at 0xFC2800 and the reset HOME area at 0xFF0000; because ordinary code cannot yet be scattered reliably around that HOME island, maximum_code_bytes is conservatively limited to the continuous pre-HOME interval: 0xFF0000 - 0xFC2800 = 0x2D800 = 186,368 bytes. The upper 64 KiB physical window remains unadvertised for general code until segmented-link support is implemented and verified. The maximum package exposes 92 logical port names on 91 physical GPIO pads because P1.3 and P1.7 share one pad. P1.2 is intentionally omitted in favor of the canonical P5.4 name for its shared pad and ADC1 channel 2. Arduino analog aliases currently expose ADC1 external channels 0 through 10 only; ADC2 and the internal reference channel are outside this variant mapping. The 256-byte DATA/IDATA compatibility window is part of EDATA and is not counted a second time. The separately mapped 4 KiB executable RAM and 5,760-byte USB endpoint FIFO are reported but are not added to the normal heap. CPU options above 48 MHz remain hidden until the PLL startup path is implemented and hardware-validated.",
+      "data_quality_note": "The chip has 251,904 bytes of physical user Flash at 0xFC2800-0xFFFFFF. The segmented_home layout retains GSINIT0 at 0xFC2800 and reset HOME at 0xFF0000, placing function and read-only data sections in the available intervals around HOME. maximum_code_bytes includes startup and vector bytes and equals the complete physical program Flash. This layout requires the rebuilt SDCC/ASlink toolchain with --function-sections, --data-sections and --code-window support; historical 182 KiB firmware qualification does not establish full-Flash hardware qualification. The maximum package exposes 92 logical port names on 91 physical GPIO pads because P1.3 and P1.7 share one pad. P1.2 is intentionally omitted in favor of the canonical P5.4 name for its shared pad and ADC1 channel 2. Arduino analog aliases currently expose ADC1 external channels 0 through 10 only; ADC2 and the internal reference channel are outside this variant mapping. The 256-byte DATA/IDATA compatibility window is part of EDATA and is not counted a second time. The separately mapped 4 KiB executable RAM and 5,760-byte USB endpoint FIFO are reported but are not added to the normal heap. CPU options above 48 MHz remain hidden until the PLL startup path is implemented and hardware-validated.",
       "official_url": "https://www.stcmicro.com/stc/stc32g144k246.html"
     },
     {
@@ -373,6 +416,7 @@
       "target": "dual",
       "experimental": false,
       "cpp_core_profile": "stc-cxx11-12mhz-experimental",
+      "cpp_mcs251_clock_options_hz": [12000000, 40000000],
       "cpp_heap_bytes": 16384,
       "capabilities": {
         "ports": [0, 1, 2, 3, 4, 5, 6, 7],
@@ -394,7 +438,7 @@
       "memory_models": ["large"],
       "default_memory_model": "large",
       "default_clock_hz": 24000000,
-      "clock_options_hz": [12000000, 24000000, 48000000],
+      "clock_options_hz": [12000000, 24000000, 40000000, 48000000],
       "mcs251_linker": {
         "layout": "post_home_contiguous",
         "code_loc": 16711680

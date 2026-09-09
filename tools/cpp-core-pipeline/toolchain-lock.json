@@ -119,7 +119,7 @@
     },
     "arduino_cli_driver": {
       "path": "tools/cpp-cli/stcxx-cli.sh",
-      "sha256": "7b799e948057d0f1100c94e9a1edea718826acbb69d46aa0f01fc574bff7f8b7"
+      "sha256": "dd87bfe49d828f6dd11750c7911cff01be542fee7acbc09d8236c96b60f978f9"
     },
     "arduino_cli_sdcc_gcse_regression": {
       "path": "tests/cpp/test_ptrdiff_pointer_audit.py",
@@ -138,24 +138,26 @@
     "standalone_source_project_windows": "D:\\Git\\stc51\\stcxx",
     "standalone_source_project_wsl": "/mnt/d/Git/stc51/stcxx",
     "standalone_source_project_branch": "arduino-cpp-core",
-    "standalone_source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
+    "standalone_source_project_commit": "f16b00a71e3da804b52b796b332ff5696db4280a",
+    "standalone_source_project_state": "committed-source-candidate; exact compiler sources are bound by the patch hash",
+    "previous_qualified_source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
     "standalone_cpp_patch_file": "arduino/patches/sdcc-mcs251-arduino-cpp.patch",
     "malloc_abi_source_file": "device/lib/malloc.c",
-    "malloc_abi_source_sha256": "71bfac56f93cbd6cc8cd0d2d16e87205ac03e6fdca1a9a7baf463ea284ab818c",
-    "malloc_abi_source_git_blob": "588a1eeee50440d91d474fa37b4edc06ec91deb2",
+    "malloc_abi_source_sha256": "344c80c4bf8f4bb5fbe03e9e3bbbd63be76328340033c943947a15105bb86fba",
+    "malloc_abi_source_git_blob": "fd17c388683fe100ecd5cedd8a4194194d1c1f32",
     "fixed_entry": "/mnt/d/Git/stc51/stcxx/out/bin/sdcc",
     "fixed_linker": "/mnt/d/Git/stc51/stcxx/out/bin/sdldmcs251",
     "published_out_lock_file": "out/toolchain-lock.json",
-    "published_out_lock_sha256": "1ee5d850baa1dbee4ddfd4d51bbf9187f95d814d9c552558eeea27a6fa268960",
+    "published_out_lock_sha256": "127cbed44a13052360a403bde6495de9de08f0b6bb1614e1613681660105f595",
     "published_out_manifest_file": "out/MANIFEST.sha256",
-    "published_out_manifest_sha256": "2e7e343a0a5b7f8f0a66366ec92d5ff181a64f1380c9b0f252d28719768eed6f",
+    "published_out_manifest_sha256": "35b33920150a280dcb10bc1252bf490a350ce51b01b639855df1ad000761f735",
     "standalone_bridge_adapter_sha256": "d5786ada45174a4da0fd6c01ac0e2b589533e87fd8090347a136e60459b1ad24",
     "standalone_bridge_regression_sha256": "8d4ab2140b002754a56b7cbec2d32b3bb610fe1aa92cd9ac08baeea46e8b417d",
-    "linux_patched_binary_sha256": "8db337e32dd8809280dd5f2e3c2539c67976a741118ae027f2f5916c18dec96c",
-    "linux_patched_elf_sha256": "5b212e57752a65cbb7f61ea50dd23290375f9dbee9c594db8cd2a1efd941d808",
-    "sdldmcs251_sha256": "c7ca41167f3b606ae98a2f78e8c0170f3c4f7e7994f93346c2032dcbb82e4cfb",
+    "linux_patched_binary_sha256": "e4674cb08f4db442ef7485318c49c47a90e1a319e5ca2cb3ac38123d99a7a234",
+    "linux_patched_elf_sha256": "64c9a96111e94795841f0e05e4664d6c2c0d9eaa117a2ce996e1bc32cca3dda2",
+    "sdldmcs251_sha256": "dc3ceeee91443710efb32edec129ec6a0202b59454af58fbb50517c689c5bb0e",
     "cpp_patch_file": "tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch",
-    "cpp_patch_sha256": "cf69ac0418f940e1ccc950ecff72d81e29a017847172747dc2cf3e31d26fabb3"
+    "cpp_patch_sha256": "fcb1342a77a412dbb8b0c8c6e8e4df5e1b59744790e63e40c32dd812c9472e12"
   },
   "qemu": {
     "lock_file": "tests/qemu/qemu-lock.json",

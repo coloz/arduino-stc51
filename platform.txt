@@ -21,10 +21,10 @@ compiler.wrapper.path={runtime.platform.path}/tools/wrapper
 compiler.c.cmd=sdcc
 compiler.c.wrapper=sdcc.sh
 compiler.dep.flags=-MMD
-compiler.c.flags=-c --std-sdcc11 --opt-code-size -Ddouble=float --model-{build.memory_model} {compiler.warning_flags}
+compiler.c.flags=-c --std-sdcc11 --opt-code-size -Ddouble=float --model-{build.memory_model} {compiler.warning_flags} {build.flash_flags}
 compiler.c.elf.cmd=sdcc
 compiler.c.elf.wrapper=sdcc-link.sh
-compiler.c.elf.flags=--code-size {upload.maximum_size} --xram-size {upload.maximum_xdata_size} --model-{build.memory_model} {build.link_flags}
+compiler.c.elf.flags=--code-size {upload.maximum_size} --xram-size {upload.maximum_xdata_size} --model-{build.memory_model} {build.link_flags} {build.flash_flags}
 
 # Plain-C remains the default. Every explicit cppcore=enabled/12 MHz profile
 # routes genuine .cpp translation units through the locked WSL
@@ -44,6 +44,7 @@ compiler.systemincludes="-I{runtime.tools.sdcc-mcs251.path}/include" "-I{runtime
 
 build.extra_flags=
 build.link_flags=
+build.flash_flags=
 build.cpp_core_flags=
 build.cpp_link_flags=
 build.cpp_target_link_flags=

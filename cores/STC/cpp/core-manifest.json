@@ -282,7 +282,7 @@
       "policy": "Audited MCS51 generic-to-program casts are normalized through uintptr_t and must emit no warning 244; at most one source-located warning 357 is accepted, only for the exact ArduinoJson 7.4.3 DeserializationError::f_str two-level read-only pgm_read chain; all other source warnings and every ASxxxx address truncation fail closed",
       "target_profiles": ["mcs51", "mcs251"],
       "driver_path": "tools/cpp-cli/stcxx-cli.sh",
-      "driver_sha256": "7b799e948057d0f1100c94e9a1edea718826acbb69d46aa0f01fc574bff7f8b7",
+      "driver_sha256": "dd87bfe49d828f6dd11750c7911cff01be542fee7acbc09d8236c96b60f978f9",
       "regression_path": "tests/cpp/library-compat/test-warning357-fail-closed.py",
       "regression_sha256": "b24c3490588f1b7c814b823a3d37ac8f8c20dd098a827fc0c8b56ef8b06af765",
       "audit_count_field": "verified_source_pgm_warning_count",
@@ -296,7 +296,7 @@
       "required_sdcc_flag": "--nogcse",
       "unaffected_compilation_paths": ["native-c", "cpp-placeholder-rel"],
       "driver_path": "tools/cpp-cli/stcxx-cli.sh",
-      "driver_sha256": "7b799e948057d0f1100c94e9a1edea718826acbb69d46aa0f01fc574bff7f8b7",
+      "driver_sha256": "dd87bfe49d828f6dd11750c7911cff01be542fee7acbc09d8236c96b60f978f9",
       "regression_path": "tests/cpp/test_ptrdiff_pointer_audit.py",
       "regression_sha256": "f6153f67bd5e56862163134a1a943b0c876f48362d5d4672ead6021aac9c4083",
       "build_manifest_binding": "toolchain-lock hash binding the driver and regression plus generated bridge artifact hashes"
@@ -310,8 +310,8 @@
       "standalone_source_project": "D:\\Git\\stc51\\stcxx",
       "standalone_source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
       "standalone_bridge_regression_sha256": "8d4ab2140b002754a56b7cbec2d32b3bb610fe1aa92cd9ac08baeea46e8b417d",
-      "published_out_lock_sha256": "1ee5d850baa1dbee4ddfd4d51bbf9187f95d814d9c552558eeea27a6fa268960",
-      "published_out_manifest_sha256": "2e7e343a0a5b7f8f0a66366ec92d5ff181a64f1380c9b0f252d28719768eed6f"
+      "published_out_lock_sha256": "127cbed44a13052360a403bde6495de9de08f0b6bb1614e1613681660105f595",
+      "published_out_manifest_sha256": "35b33920150a280dcb10bc1252bf490a350ce51b01b639855df1ad000761f735"
     },
     "flash_strings": [
       "STCXX_FLASH_STRINGS=1",
@@ -331,8 +331,8 @@
       "snapshot_api": "stcxx_allocator_read_telemetry",
       "snapshot_result": "six packed uint16_t fields: arena, initial total, current total, current largest, minimum total, minimum largest",
       "sdcc_malloc_abi_source": "device/lib/malloc.c",
-      "sdcc_malloc_abi_source_sha256": "71bfac56f93cbd6cc8cd0d2d16e87205ac03e6fdca1a9a7baf463ea284ab818c",
-      "sdcc_malloc_abi_source_git_blob": "588a1eeee50440d91d474fa37b4edc06ec91deb2",
+      "sdcc_malloc_abi_source_sha256": "344c80c4bf8f4bb5fbe03e9e3bbbd63be76328340033c943947a15105bb86fba",
+      "sdcc_malloc_abi_source_git_blob": "fd17c388683fe100ecd5cedd8a4194194d1c1f32",
       "sampled_operations": ["stcxx_malloc", "stcxx_realloc"],
       "excluded_operations": "third-party direct libc malloc/realloc/free calls",
       "state_translation_unit": "cores/STC/stcxx_heap_state.c",
