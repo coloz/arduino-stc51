@@ -34,7 +34,10 @@ function instructionsForFunction(filePath, symbol) {
   return text.slice(start, reti + '\n\treti'.length)
     .split(/\r?\n/u)
     .map((line) => line.split(';', 1)[0].trim().toLowerCase()
-      .replace(/\s+/gu, ' '))
+      .replace(/\s+/gu, ' ')
+      // SDCC revisions differ in hexadecimal zero-padding. Compare the
+      // same numeric operands without weakening offset or context checks.
+      .replace(/\b0x0+([0-9a-f]+)\b/gu, '0x$1'))
     .filter(Boolean);
 }
 
@@ -66,7 +69,7 @@ const checks = [
   ['stc_external0_isr', 'WInterrupts_isr.c.asm',
     'mov dptr,#_stc_external_callbacks'],
   ['stc_external1_isr', 'WInterrupts_isr.c.asm',
-    'mov dptr,#(_stc_external_callbacks + 0x0003)'],
+    'mov dptr,#(_stc_external_callbacks + 0x3)'],
 ];
 
 for (const [symbol, fileName, firstCOperation] of checks) {
