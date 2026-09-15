@@ -6,7 +6,7 @@
     {
       "id": "sdcc-mcs251",
       "packageName": "sdcc-mcs251",
-      "version": "4.6.0-stc.0.0.4",
+      "version": "4.6.0-stc.0.0.1",
       "purpose": "Compiler, assembler and linker for the MCS251 Arduino platform (-mmcs251)",
       "upstream": "https://github.com/gevico/sdcc-c251",
       "sourceTag": "v4.6.0-mcs251-20260804",
@@ -20,7 +20,8 @@
           "size": 14570039,
           "sha256": "09e649c72e66387dc48b888d9fc1ecb753ac22ac466288db4edd559d29ec78e3",
           "sourcePatchSha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
-          "buildHost": "Windows x64 cross build r8"
+          "buildHost": "Windows x64 cross build r8",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.zip"
         },
         {
           "host": "arm64-apple-darwin",
@@ -29,10 +30,10 @@
           "size": 4387332,
           "sha256": "9c8c5bafa339e4cd72c513be673f15e3fdf36d51acbb89f029864035a38d97cf",
           "sourcePatchSha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
-          "buildHost": "Native macOS ARM64 r9"
+          "buildHost": "Native macOS ARM64 r9",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2"
         }
       ]
     }
-  ],
-  "distributionStatus": "withdrawn; use matching local archives until a new release is published"
+  ]
 }

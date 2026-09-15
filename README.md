@@ -1,6 +1,6 @@
 # arduino-stc51
 
-面向 STC **MCS251** 芯片的 Arduino core。当前开发版本 **0.0.4（未发布）**，仅维护 10 个型号；所有型号固定使用 `-mmcs251`，Arduino 架构标识为 `mcs251`。
+面向 STC **MCS251** 芯片的 Arduino core。当前版本 **0.0.1**，仅维护 10 个型号；所有型号固定使用 `-mmcs251`，Arduino 架构标识为 `mcs251`。
 
 MCS51 芯片、板项和 C++ 适配路径已移除。旧的 `arduino-stc51:mcs51:…` FQBN 不再适用，需要重新安装当前源码并选择新板项。工程名仍为 `arduino-stc51`。
 
@@ -8,13 +8,24 @@ MCS51 芯片、板项和 C++ 适配路径已移除。旧的 `arduino-stc51:mcs51
 
 当前维护范围为 **Windows x64 和 Apple Silicon Mac（macOS 15+）**。Windows C++ 需要 WSL Ubuntu；macOS C++ 需要 `brew install bash coreutils python`。Linux 独立宿主和 Intel Mac 不在当前支持范围内。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
 
-## 当前分发状态
+## 安装
 
-**0.0.2 和 0.0.3 安装版已撤下，当前没有可安装的 Release。** 开发板管理器索引暂为空，后续版本尚未发布。历史安装包和下载地址已停用。
+在 Arduino IDE 的“附加开发板管理器网址”中加入：
 
-Windows 的编译辅助操作使用系统自带的 Windows PowerShell 5.1，无需额外的 shell 工具包。普通 C 使用原生 SDCC；C++ 继续通过 WSL Ubuntu 调用已锁定的 Clang/LLVM-CBE/SDCC 工具链。macOS 使用原生工具与系统 `/bin/sh`。
+```text
+https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
+```
 
-维护者可用本地、经过 SHA-256 校验的工具包构建源码。`scripts/create-release-index.py` 用于生成候选安装索引，输出应放在本地工作目录；仓库根目录的公开索引保持为空，直到重新发布。
+在开发板管理器中安装 **arduino-stc51 0.0.1**，然后选择对应型号。Arduino CLI 可使用：
+
+```powershell
+arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
+arduino-cli core install arduino-stc51:mcs251@0.0.1 --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
+```
+
+安装资源见 [v0.0.1 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.1)。此前的 0.0.2、0.0.3 已撤下；装过旧版的用户请先卸载，再选择 0.0.1 安装，并清理原有构建缓存。
+
+Windows 的编译辅助操作使用系统自带的 Windows PowerShell 5.1，无需额外的 shell 工具包。普通 C 使用原生 SDCC；C++ 通过 WSL Ubuntu 调用已锁定的 Clang/LLVM-CBE/SDCC 工具链。macOS 使用原生工具与系统 `/bin/sh`。
 
 ## 支持型号
 
@@ -52,7 +63,7 @@ $build.firmware
 
 省略 `cppcore=enabled` 时使用 plain C。安装脚本不传 FQBN 时默认编译 STC32G8K64、12 MHz 的 plain C Blink，可使用固定的原生工具包。G12K128、G144K246 等完整 Flash 布局需要重建后的 SDCC 分区功能；旧原版工具包不满足时构建会明确拒绝。C++ 路径使用相邻 `stcxx` 项目的已锁定工具链，Windows 下通过 WSL 调用，默认 SDCC 为 `D:\Git\stc51\stcxx\out\bin\sdcc`。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
 
-源码安装脚本用于维护者调试。公开工具下载暂停期间，须通过 `-ToolCacheDirectory` 提供锁定的 SDCC 归档，或通过 `-ToolManifestPath` 指定已验证的本地工具清单。打包不会自动发布。版本变化见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
+源码安装脚本用于维护者调试。脚本会下载并校验锁定的 SDCC 归档，也可通过 `-ToolCacheDirectory` 复用本地归档，或通过 `-ToolManifestPath` 指定已验证的工具清单。打包不会自动发布。版本变化见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
 
 ## C++ 与 Arduino API
 
@@ -64,7 +75,7 @@ ABI 使用 16 位 `int`、32 位 `long`/`size_t`/`ptrdiff_t`、24 位指针，�
 
 ## 烧录
 
-使用相邻 `stc-cli` 项目的当前源码构建烧录工具，或使用已经验证的本地副本。先用 `validate` 检查生成的 HEX，再按实物型号和端口烧录，例如：
+从 [v0.0.1 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.1) 下载对应系统的 `stc-cli` 烧录工具，或使用相邻 `stc-cli` 项目的源码构建。先用 `validate` 检查生成的 HEX，再按实物型号和端口烧录，例如：
 
 ```powershell
 $stc = '..\stc-cli\target\release\stc-cli.exe'

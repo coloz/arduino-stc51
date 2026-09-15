@@ -2,7 +2,7 @@
 # See README.md and tools/cpp-cli/README.md for compiler usage and support boundaries.
 
 name=arduino-stc51
-version=0.0.4
+version=0.0.1
 
 compiler.warning_flags=--less-pedantic
 compiler.warning_flags.none=--less-pedantic

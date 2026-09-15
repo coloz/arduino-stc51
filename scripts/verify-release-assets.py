@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify every versioned release asset against the committed manifest."""
+"""Verify release assets against an Arduino index or an internal manifest."""
 import argparse
 import hashlib
 import json
@@ -25,6 +25,22 @@ def verify_file(path, asset):
 
 def verify(manifest_path, directory, platform_archive=None):
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    if 'packages' in manifest:
+        packages = manifest['packages']
+        require(isinstance(packages, list) and len(packages) == 1, 'Expected one Arduino package')
+        package = packages[0]
+        platforms = package.get('platforms', [])
+        require(len(platforms) == 1, 'Expected one published platform version')
+        rows = platforms + [system for tool in package.get('tools', []) for system in tool['systems']]
+        assets = {}
+        for row in rows:
+            checksum = row.get('checksum', '')
+            require(checksum.startswith('SHA-256:'), 'Expected SHA-256 archive checksum')
+            asset = {'name': row['archiveFileName'], 'size': int(row['size']), 'sha256': checksum[8:]}
+            require(asset['name'] not in assets or assets[asset['name']] == asset,
+                    'Conflicting archive bindings: ' + asset['name'])
+            assets[asset['name']] = asset
+        manifest = {'schema_version': 1, 'version': platforms[0]['version'], 'assets': list(assets.values())}
     require(manifest.get('schema_version') == 1, 'Unsupported manifest schema')
     require(isinstance(manifest.get('version'), str) and
             re.fullmatch(r'\d+\.\d+\.\d+', manifest['version']), 'Invalid release version')
@@ -57,7 +73,7 @@ def verify(manifest_path, directory, platform_archive=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('manifest', type=Path)
+    parser.add_argument('manifest', type=Path, help='Arduino package index or internal asset manifest')
     parser.add_argument('directory', type=Path)
     parser.add_argument('--platform-archive', type=Path)
     args = parser.parse_args()

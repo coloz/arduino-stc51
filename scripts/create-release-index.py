@@ -17,7 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--assets', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--version', default='0.0.4')
+    parser.add_argument('--version', default='0.0.1')
     args = parser.parse_args()
     base = 'https://github.com/coloz/arduino-stc51/releases/download/v' + args.version
     assets = args.assets.resolve()
@@ -30,9 +30,9 @@ def main():
     with tempfile.TemporaryDirectory() as temporary:
         win_path, mac_path = [Path(temporary) / n for n in ('windows.json', 'macos.json')]
         candidate.create(platform, assets / f'sdcc-mcs251-windows-x86_64-{commit}-r8.zip',
-                         assets / 'stcxx-frontend-20.1.8-linux-x86_64-r3.tar.bz2',
+                         assets / 'stcxx-frontend-20.1.8-linux-x86_64-r4.tar.bz2',
                          sdcc_version, base, win_path, 'x86_64-mingw32',
-                         wsl_sdcc=assets / f'sdcc-mcs251-linux-x86_64-{commit}-r8.tar.bz2')
+                         wsl_sdcc=assets / f'sdcc-mcs251-linux-x86_64-{commit}-r9.tar.bz2')
         candidate.create(platform, assets / f'sdcc-mcs251-macos-arm64-{commit}-r9.tar.bz2',
                          assets / 'stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2',
                          sdcc_version, base, mac_path, 'arm64-apple-darwin')

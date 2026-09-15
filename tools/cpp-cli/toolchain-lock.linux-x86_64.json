@@ -39,7 +39,7 @@
         "stock_msp430_probe.cpp": "c8f3c0d3d2ba62bbd1f15896c0da52bb14e802f0fcc3a615ff69356bf51d3cc8",
         "stock_relative_vtable_probe.cpp": "7d2a46a447d298324f37207457d676e326e23f82c3f902d4ca0748f556fb31ae"
       },
-      "sha256": "da021790edaccc662e20d211ee8073a7b0e42043ced6432638da9e63aca7784a",
+      "sha256": "a3ff6f92c0eb74053f69ccea622712515dbd7f1a1f700dd0a8246a9692bc341d",
       "shared_library_sha256": "9d6b05a888960f2645e245189da5bba4b8f019d8b6fb0c929ecb8f6a8c5d8f2f"
     },
     "llvm_shared_library": {
@@ -100,8 +100,8 @@
       "patch_sha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
       "sha256": "c67d3661e7ff6438a54270d0552dd88df8bf4a87eba16822807b4b3234dcf8bc",
       "elf_sha256": "c67d3661e7ff6438a54270d0552dd88df8bf4a87eba16822807b4b3234dcf8bc",
-      "distribution_archive_sha256": "1cc208786fbb65245053294c7e5af770291dc3ccf30425238afb47008bfd6d65",
-      "distribution_provenance_sha256": "35467132a05b2bf6730857b529304f8264d626daff45ad2bba44c8a2179e509e",
+      "distribution_archive_sha256": "c020bdaae04c29dec104e9ac7ca1ac14569b6a3182f3c7bb89c521d16260f264",
+      "distribution_provenance_sha256": "f32561d40b1fe5b200c3e31619e1c66af7376df4f898cf703fcfc93fc625100e",
       "windows_package_archive_sha256": "09e649c72e66387dc48b888d9fc1ecb753ac22ac466288db4edd559d29ec78e3"
     },
     "sdar": {
@@ -201,15 +201,15 @@
   "arduino_frontend": {
     "packager": "arduino-stc51",
     "name": "stcxx-frontend",
-    "version": "20.1.8-stc.1"
+    "version": "20.1.8-stc.2"
   },
   "linux_frontend": {
-    "archive_sha256": "c93c8a8a347febd5a34f6840a40a980d0eba43501f99955ce834fd69979d214c",
-    "manifest_sha256": "b720d017958325b01afef37029bc897789b506b1285051c344e69ff91d04a0a4"
+    "archive_sha256": "8f9834106f74ff99efed7715473fb5146ee870d118e4bfc302df5961a4b1c24d",
+    "manifest_sha256": "b97112af0c087635f2cfcef65e1005edfb02c58068947c61e8f4827e11734bcf"
   },
   "arduino_wsl_sdcc": {
     "packager": "arduino-stc51",
     "name": "sdcc-mcs251-wsl",
-    "version": "4.6.0-mcs251-20260804-r8"
+    "version": "4.6.0-mcs251-20260804-r9"
   }
 }

@@ -123,12 +123,15 @@ fi
 mkdir -p "$WORK_DIRECTORY/build"
 cd "$WORK_DIRECTORY/build"
 
+# Compressed debug sections are unused. Prevent BFD from linking Homebrew's
+# optional libzstd, so the archive needs only macOS system libraries.
 CC=/usr/bin/clang CXX=/usr/bin/clang++ \
 CFLAGS="-std=gnu17 -O2 -arch $ARCH -mmacosx-version-min=$MINIMUM_MACOS_VERSION -ffile-prefix-map=$WORK_DIRECTORY=." \
 CXXFLAGS="-O2 -arch $ARCH -mmacosx-version-min=$MINIMUM_MACOS_VERSION -ffile-prefix-map=$WORK_DIRECTORY=." \
 CPPFLAGS="-I$(brew --prefix boost)/include" \
 LDFLAGS="-arch $ARCH -mmacosx-version-min=$MINIMUM_MACOS_VERSION -Wl,-no_uuid" \
 ../source/configure \
+    --without-zstd \
     --enable-mcs251-port \
     --prefix=/sdcc-mcs251 \
     --datarootdir=/sdcc-mcs251 \

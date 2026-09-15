@@ -8,8 +8,129 @@
       "help": {
         "online": "https://github.com/coloz/arduino-stc51/issues"
       },
-      "platforms": [],
-      "tools": []
+      "platforms": [
+        {
+          "name": "arduino-stc51",
+          "architecture": "mcs251",
+          "version": "0.0.1",
+          "category": "Contributed",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/arduino-stc51-0.0.1.tar.bz2",
+          "archiveFileName": "arduino-stc51-0.0.1.tar.bz2",
+          "checksum": "SHA-256:fafe5cb6472f16539c70918c075d1b4949f739647bb8c594c7362fce806c4118",
+          "size": "238894",
+          "boards": [
+            {
+              "name": "STC32G12K128"
+            },
+            {
+              "name": "STC32G144K246"
+            },
+            {
+              "name": "STC32G8K64"
+            },
+            {
+              "name": "STC32CL8K64"
+            },
+            {
+              "name": "AI8051U-34K64"
+            },
+            {
+              "name": "STC32G12K64"
+            },
+            {
+              "name": "STC32G8K48"
+            },
+            {
+              "name": "STC32CL8K48"
+            },
+            {
+              "name": "AI8051U-34K32"
+            },
+            {
+              "name": "AI8051U-34K16"
+            }
+          ],
+          "toolsDependencies": [
+            {
+              "packager": "arduino-stc51",
+              "name": "sdcc-mcs251",
+              "version": "4.6.0-stc.0.0.1"
+            },
+            {
+              "packager": "arduino-stc51",
+              "name": "stcxx-frontend",
+              "version": "20.1.8-stc.2"
+            },
+            {
+              "packager": "arduino-stc51",
+              "name": "sdcc-mcs251-wsl",
+              "version": "4.6.0-mcs251-20260804-r9"
+            }
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "sdcc-mcs251",
+          "version": "4.6.0-stc.0.0.1",
+          "systems": [
+            {
+              "host": "x86_64-mingw32",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.zip",
+              "archiveFileName": "sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.zip",
+              "checksum": "SHA-256:09e649c72e66387dc48b888d9fc1ecb753ac22ac466288db4edd559d29ec78e3",
+              "size": "14570039"
+            },
+            {
+              "host": "arm64-apple-darwin",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2",
+              "archiveFileName": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2",
+              "checksum": "SHA-256:9c8c5bafa339e4cd72c513be673f15e3fdf36d51acbb89f029864035a38d97cf",
+              "size": "4387332"
+            }
+          ]
+        },
+        {
+          "name": "stcxx-frontend",
+          "version": "20.1.8-stc.2",
+          "systems": [
+            {
+              "host": "x86_64-mingw32",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stcxx-frontend-20.1.8-linux-x86_64-r4.tar.bz2",
+              "archiveFileName": "stcxx-frontend-20.1.8-linux-x86_64-r4.tar.bz2",
+              "checksum": "SHA-256:8f9834106f74ff99efed7715473fb5146ee870d118e4bfc302df5961a4b1c24d",
+              "size": "86128906"
+            },
+            {
+              "host": "arm64-apple-darwin",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2",
+              "archiveFileName": "stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2",
+              "checksum": "SHA-256:f0850765b5edf5f667a87a8910c9581510aa30febb1e297cfc036a38acf3e77a",
+              "size": "54382979"
+            }
+          ]
+        },
+        {
+          "name": "sdcc-mcs251-wsl",
+          "version": "4.6.0-mcs251-20260804-r9",
+          "systems": [
+            {
+              "host": "x86_64-mingw32",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-linux-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2",
+              "archiveFileName": "sdcc-mcs251-linux-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2",
+              "checksum": "SHA-256:c020bdaae04c29dec104e9ac7ca1ac14569b6a3182f3c7bb89c521d16260f264",
+              "size": "5991722"
+            },
+            {
+              "host": "arm64-apple-darwin",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stc51-native-macos-host-0.0.1.tar.bz2",
+              "archiveFileName": "stc51-native-macos-host-0.0.1.tar.bz2",
+              "size": "262",
+              "checksum": "SHA-256:6b0e3ce5165531b3caf1cbfae8a369e8d7c5efafc9448a4872cfbe3ecb0caeb5"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

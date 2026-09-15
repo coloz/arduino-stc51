@@ -208,6 +208,6 @@
   "arduino_frontend": {
     "packager": "arduino-stc51",
     "name": "stcxx-frontend",
-    "version": "20.1.8-stc.1"
+    "version": "20.1.8-stc.2"
   }
 }
