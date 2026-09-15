@@ -33,6 +33,11 @@ bool Serial_overflow(void);
 
 /* Stable C SPI boundary implemented by libraries/SPI/src/SPI.c. */
 void SPI_begin(void) STCXX_HAL_REENTRANT;
+uint8_t SPI_configurationError(void) STCXX_HAL_REENTRANT;
+uint8_t SPI_setPinsChecked(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
+                           uint8_t ss_pin) STCXX_HAL_REENTRANT;
+uint8_t SPI_beginTransactionChecked(unsigned long clock_hz, uint8_t bit_order,
+                                     uint8_t data_mode) STCXX_HAL_REENTRANT;
 void SPI_setPins(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
                  uint8_t ss_pin) STCXX_HAL_REENTRANT;
 void SPI_beginTransaction(unsigned long clock_hz, uint8_t bit_order,
@@ -50,6 +55,9 @@ void SPI_end(void) STCXX_HAL_REENTRANT;
 void Wire_begin(void) STCXX_HAL_REENTRANT;
 void Wire_end(void) STCXX_HAL_REENTRANT;
 void Wire_setPins(uint8_t sda_pin, uint8_t scl_pin) STCXX_HAL_REENTRANT;
+uint8_t Wire_setPinsChecked(uint8_t sda_pin, uint8_t scl_pin) STCXX_HAL_REENTRANT;
+uint8_t Wire_configurationError(void) STCXX_HAL_REENTRANT;
+uint8_t Wire_lastError(void) STCXX_HAL_REENTRANT;
 void Wire_setClock(unsigned long clock_hz) STCXX_HAL_REENTRANT;
 void Wire_setClockStretchTimeout(unsigned long timeout_us)
     STCXX_HAL_REENTRANT;

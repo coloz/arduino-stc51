@@ -1,0 +1,3 @@
+BEGIN small-control
+CHECKS 14
+PASS small-control

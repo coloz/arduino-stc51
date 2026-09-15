@@ -18,12 +18,7 @@ STC_SFR(TL0,  0x8a);
 STC_SFR(TL1,  0x8b);
 STC_SFR(TH0,  0x8c);
 STC_SFR(TH1,  0x8d);
-#if defined(STC_CORE_FAMILY_16)
-/* STC16F relocates AUXR; 0x8e is CKCON on this family. */
-STC_SFR(AUXR, 0x93);
-#else
 STC_SFR(AUXR, 0x8e);
-#endif
 STC_SFR(P1,   0x90);
 STC_SFR(SCON, 0x98);
 STC_SFR(SBUF, 0x99);
@@ -32,12 +27,7 @@ STC_SFR(IE,   0xa8);
 STC_SFR(P3,   0xb0);
 
 #if STC_CORE_HAS_PORT4
-# if defined(STC_CORE_FAMILY_89)
-/* STC89C5xRC/RD+: P4 is 0xe8 and XICON is 0xc0. */
-STC_SFR(P4, 0xe8);
-# else
 STC_SFR(P4, 0xc0);
-# endif
 #endif
 #if STC_CORE_HAS_PORT5
 STC_SFR(P5, 0xc8);
@@ -89,29 +79,23 @@ STC_SFR(P7, 0xf8);
 # define PBCLRB STC_XFR8(0x7ef72bUL)
 #endif
 
-#if STC_CORE_HAS_MODERN_UART1_BRT
-# if defined(STC_CORE_FAMILY_16)
-STC_SFR(P_SW1, 0x9a);
-# else
 STC_SFR(P_SW1, 0xa2);
-# endif
-#endif
 
 #if (STC_CORE_HAS_ADC && \
      (STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_MODERN_BC_ADCCFG)) || \
     STC_CORE_HAS_PORT8 || STC_CORE_HAS_PORT9 || \
-    STC_CORE_HAS_PORTA || STC_CORE_HAS_PORTB
-# if defined(STC_CORE_FAMILY_16)
-STC_SFR(P_SW2, 0x9b);
-# else
+    STC_CORE_HAS_PORTA || STC_CORE_HAS_PORTB || STC_CORE_PWM_LAYOUT || \
+    STC_CORE_WIRE_LAYOUT
 STC_SFR(P_SW2, 0xba);
-# endif
 #endif
 
-#if STC_CORE_HAS_PORT8 || STC_CORE_HAS_PORT9 || \
+#if STC_CORE_MEMORY_TIMING_LAYOUT || STC_CORE_HAS_PORT8 || STC_CORE_HAS_PORT9 || \
     STC_CORE_HAS_PORTA || STC_CORE_HAS_PORTB
 STC_SFR(WTST,  0xe9);
 STC_SFR(CKCON, 0xea);
+#endif
+#if STC_CORE_HAS_PORT8 || STC_CORE_HAS_PORT9 || \
+    STC_CORE_HAS_PORTA || STC_CORE_HAS_PORTB
 # define TM0PS STC_XFR8(0x7efea0UL)
 #endif
 
@@ -132,31 +116,6 @@ STC_SFR(CKCON, 0xea);
 #endif
 
 #if STC_CORE_HAS_PORT_MODE
-# if defined(STC_CORE_FAMILY_16)
-/* STC16Fxx.h and the STC16 manual SFR table use this separate layout. */
-STC_SFR(P0M1, 0xf1);
-STC_SFR(P0M0, 0xf2);
-STC_SFR(P1M1, 0xf3);
-STC_SFR(P1M0, 0xf4);
-STC_SFR(P2M1, 0xf5);
-STC_SFR(P2M0, 0xf6);
-STC_SFR(P3M1, 0xf9);
-STC_SFR(P3M0, 0xfa);
-STC_SFR(P4M1, 0xfb);
-STC_SFR(P4M0, 0xfc);
-#  if STC_CORE_HAS_PORT5
-STC_SFR(P5M1, 0xec);
-STC_SFR(P5M0, 0xed);
-#  endif
-#  if STC_CORE_HAS_PORT6
-STC_SFR(P6M1, 0xee);
-STC_SFR(P6M0, 0xef);
-#  endif
-#  if STC_CORE_HAS_PORT7
-STC_SFR(P7M1, 0xd2);
-STC_SFR(P7M0, 0xd3);
-#  endif
-# else
 STC_SFR(P1M1, 0x91);
 STC_SFR(P1M0, 0x92);
 STC_SFR(P0M1, 0x93);
@@ -179,37 +138,15 @@ STC_SFR(P6M0, 0xcc);
 STC_SFR(P7M1, 0xe1);
 STC_SFR(P7M0, 0xe2);
 # endif
-# endif
 #endif
 
 #if STC_CORE_HAS_ADC
-# if STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_STC12C2052AD_C5_8BIT
-STC_SFR(ADC_CONTR, 0xc5);
-STC_SFR(ADC_DATA,  0xc6);
-# else
 STC_SFR(ADC_CONTR, 0xbc);
 STC_SFR(ADC_RES,   0xbd);
 STC_SFR(ADC_RESL,  0xbe);
-# endif
-# if STC_CORE_ADC_USES_P1ASF
-STC_SFR(P1ASF, 0x9d);
-# endif
-# if STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_LEGACY_BC_10BIT_AUXR1
-STC_SFR(STC_ADC_ADJUST, 0xa2);
-# elif STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_LEGACY_BC_10BIT_CLKDIV
-STC_SFR(STC_ADC_ADJUST, 0x97);
-# elif STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_MODERN_BC_ADCCFG
 STC_SFR(ADCCFG, 0xde);
-# endif
 #endif
 
-#if STC_CORE_PINMUX_PSWX1_BIT0_CLEAR
-/*
- * AI8H2K maps P_SWX1 into the extended SFR window at XDATA 0xFD69.
- * P_SW2.7 must be set only while this lvalue is accessed.
- */
-# define STC_P_SWX1 (*(volatile __xdata unsigned char *)0xfd69u)
-#endif
 
 #undef STC_SFR
 

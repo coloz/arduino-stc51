@@ -9,20 +9,13 @@ tmp/
 *.py[cod]
 *.d
 *.part
-/dist/arduino-stc51-*.tar.bz2
+/.hardware-test/
 
 # Downloaded vendor sources and tool archives are local caches.
 /sdk/downloads/*
 !/sdk/downloads/.gitignore
 
-# Separate local QEMU development checkout; not part of this Arduino platform.
-/arduino-stc51-qemu-source-all-variants-v1/
+# Release binaries are generated locally or downloaded from GitHub Releases.
+/dist/
 
-# Versioned release binaries are GitHub Release assets, not source files.
-/dist/*-r1.tar.bz2
-/dist/*.tar.gz
-/dist/stc-cli-*.zip
-/dist/sdcc-mcs251-windows-*.zip
-/dist/SHA256SUMS
-/dist/release-*.json
-/dist/package_arduino-stc51_index.json
+# Tests are versioned; package-platform.ps1 excludes them from board archives.

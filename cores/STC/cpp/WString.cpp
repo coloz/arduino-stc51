@@ -798,7 +798,7 @@ void String::replace(const String &findValue, const String &replacement)
         replacement._buffer == 0) {
         return;
     }
-    while (searchIndex + findValue._length <= _length) {
+    while (findValue._length <= _length - searchIndex) {
         if (memcmp(_buffer + searchIndex, findValue._buffer,
                    findValue._length) == 0) {
             ++occurrences;
@@ -817,7 +817,7 @@ void String::replace(const String &findValue, const String &replacement)
         sourceIndex = 0u;
         destinationIndex = 0u;
         while (sourceIndex < _length) {
-            if (sourceIndex + findValue._length <= _length &&
+            if (findValue._length <= _length - sourceIndex &&
                 memcmp(_buffer + sourceIndex, findValue._buffer,
                        findValue._length) == 0) {
                 memmove(_buffer + destinationIndex, replacement._buffer,
@@ -850,7 +850,7 @@ void String::replace(const String &findValue, const String &replacement)
         return;
     }
     while (sourceIndex < _length) {
-        if (sourceIndex + findValue._length <= _length &&
+        if (findValue._length <= _length - sourceIndex &&
             memcmp(_buffer + sourceIndex, findValue._buffer,
                    findValue._length) == 0) {
             memcpy(replacementBuffer + destinationIndex, replacement._buffer,

@@ -34,7 +34,7 @@ C_IDENTIFIER_SHORTENING_PREFIX = "stcxx_cbe_id_"
 C_IDENTIFIER_SHORTENING_HASH = "sha256"
 C_IDENTIFIER_SHORTENING_DOMAIN = "stcxx-cbe-c-identifier-v1"
 C_IDENTIFIER_SHORTENING_POLICY = "final-c-preprocessing-token-sha256-v1"
-SUPPORTED_PROFILES = ("mcs51", "mcs251")
+SUPPORTED_PROFILES = ("mcs251",)
 SUPPORTED_LOCAL_PARITIES = ("even", "odd")
 SAFE_SYMBOL = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 SAFE_LLVM_SYMBOL = re.compile(r"[A-Za-z0-9_.$-]+\Z")
@@ -144,7 +144,7 @@ def sdcc_assembly_label(c_symbol: str) -> str:
     """Map a C identifier to the global label emitted by SDCC.
 
     SDCC limits the C identifier itself to ``SDCC_SYMNAME_MAX`` characters;
-    the MCS51/MCS251 backend then prepends the ASxxxx global-symbol prefix.
+    the MCS251 backend then prepends the ASxxxx global-symbol prefix.
     ``SAFE_SYMBOL`` restricts identifiers to ASCII, so character and byte
     truncation are identical here.
     """
@@ -915,7 +915,7 @@ def verify_relocated_listing(
         fail(f"relocated listing is not UTF-8/ASCII: {error}")
     require("\x00" not in listing, "relocated listing contains a NUL byte")
 
-    maximum_address = 0xFFFF if target_profile == "mcs51" else 0xFFFFFF
+    maximum_address = 0xFFFFFF
     relocated_records: list[dict[str, object]] = []
     for alignment_record in alignment_records:
         symbol = alignment_record["c_symbol"]

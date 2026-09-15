@@ -340,6 +340,156 @@ def emit_sliced_rel(
     return ("\n".join(header_lines + body_lines) + "\n").encode("ascii"), selected_audit
 
 
+def parse_sectioned_arrays(path: Path, arrays: dict[str, int]):
+    """Validate pure const arrays with SDCC --data-sections, without merging.
+
+    ASxxxx area indices are 16-bit, even when a module contains >255 arrays.
+    No symbol/area relocation fixups are accepted; retained T/R pairs and area
+    indices can consequently stay byte-for-byte identical.
+    """
+    raw = path.read_bytes()
+    try:
+        lines = raw.decode('ascii').splitlines()
+    except UnicodeDecodeError:
+        fail(f'{path}: non-ASCII sectioned REL')
+    if len(lines) < 4 or lines[0] != 'XH3' or not HEADER_RE.fullmatch(lines[1]):
+        fail(f'{path}: unsupported sectioned REL header')
+    areas, definitions, symbols = [], {}, set()
+    current = -1
+    first = next((i for i, line in enumerate(lines) if line.startswith('T ')), len(lines))
+    absolute = 0
+    for line in lines[2:first]:
+        area = AREA_RE.fullmatch(line)
+        if area:
+            current += 1
+            areas.append(dict(name=area['name'], size=int(area['size'], 16),
+                              flags=int(area['flags'], 16), addr=int(area['addr'], 16)))
+            continue
+        symbol = SYMBOL_RE.fullmatch(line)
+        if not symbol:
+            if not line.startswith(('M ', 'O ')):
+                fail(f'{path}: unknown sectioned header record')
+            continue
+        if symbol['kind'] != 'Def' or symbol['name'] in symbols:
+            fail(f'{path}: references or duplicate definitions are not sliceable')
+        symbols.add(symbol['name'])
+        if symbol['name'] == '.__.ABS.' and current == -1 and int(symbol['value'],16) == 0:
+            absolute += 1
+            continue
+        if current < 0 or current in definitions or int(symbol['value'],16) != 0:
+            fail(f'{path}: section aliases or nonzero definition offset')
+        definitions[current] = symbol['name']
+    header = HEADER_RE.fullmatch(lines[1])
+    if absolute != 1 or int(header['areas'],16) != len(areas) or int(header['symbols'],16) != len(symbols):
+        fail(f'{path}: sectioned header counts mismatch')
+    data, coverage = {}, {}
+    for index, area in enumerate(areas):
+        if area['name'].startswith('CONST_D_'):
+            if area['flags'] != 0x20 or area['addr'] != 0:
+                fail(f'{path}: unsupported CONST_D flags/address')
+            name = definitions.get(index)
+            if area['size']:
+                if name is None or arrays.get(name.removeprefix('_')) != area['size']:
+                    fail(f'{path}: CONST_D section does not match one source-sized array')
+            elif name is not None:
+                fail(f'{path}: exported zero-sized section')
+            data[index] = bytearray(area['size']); coverage[index] = bytearray(area['size'])
+        elif index in definitions or (area['size'] and area != dict(name='REG_BANK_0',size=8,flags=4,addr=0)):
+            fail(f'{path}: non-array data/code in sectioned candidate')
+    pairs = []
+    if (len(lines)-first) % 2:
+        fail(f'{path}: incomplete T/R pair')
+    for i in range(first, len(lines), 2):
+        if not lines[i].startswith('T ') or not lines[i+1].startswith('R '):
+            fail(f'{path}: expected sectioned T/R pair')
+        try:
+            t = bytes.fromhex(lines[i][2:]); r = bytes.fromhex(lines[i+1][2:])
+        except ValueError:
+            fail(f'{path}: invalid sectioned T/R hex')
+        if len(t) < 3 or len(r) != 4 or r[:2] != b'\0\0':
+            fail(f'{path}: real relocation or unsupported T/R width')
+        index = int.from_bytes(r[2:], 'big'); offset = int.from_bytes(t[:3], 'big'); payload = t[3:]
+        if index >= len(areas) or offset + len(payload) > areas[index]['size']:
+            fail(f'{path}: sectioned T/R range error')
+        if payload:
+            if index not in data or any(coverage[index][offset:offset+len(payload)]):
+                fail(f'{path}: non-CONST_D or overlapping payload')
+            data[index][offset:offset+len(payload)] = payload
+            coverage[index][offset:offset+len(payload)] = b'\1' * len(payload)
+        elif offset:
+            if i+3 >= len(lines) or not lines[i+2].startswith('T ') or not lines[i+3].startswith('R '):
+                fail(f'{path}: unsupported section location marker')
+            nt = bytes.fromhex(lines[i+2][2:]); nr = bytes.fromhex(lines[i+3][2:])
+            if len(nt) <= 3 or nt[:3] != t or nr != r:
+                fail(f'{path}: section location marker lacks matching payload')
+        pairs.append((index, lines[i:i+2]))
+    if any(not all(value) for value in coverage.values()):
+        fail(f'{path}: sectioned CONST_D byte coverage has gaps')
+    return raw, lines, first, areas, definitions, data, pairs
+
+
+def slice_sectioned_arrays(args):
+    path = args.input.resolve()
+    source = args.source.resolve() if args.source else source_from_depfile(path)
+    arrays = source_arrays(source)
+    raw, lines, first, areas, definitions, data, pairs = parse_sectioned_arrays(path, arrays)
+    if args.expect_input_sha256 and digest_bytes(raw) != args.expect_input_sha256.lower():
+        fail(f'{path}: input hash does not match pinned value')
+    if args.expect_source_sha256 and digest_path(source) != args.expect_source_sha256.lower():
+        fail(f'{source}: source hash does not match pinned value')
+    roots = list(args.root_rel)
+    for root_list in args.root_list:
+        for value in root_list.read_text().splitlines():
+            if not value.strip().endswith('.rel'): continue
+            if not Path(value).is_absolute(): fail('root-list REL path must be absolute')
+            roots.append(Path(value))
+    refs, root_hashes = set(), []
+    for root in roots:
+        root = root.resolve()
+        if root == path: continue
+        refs.update(references_from_rel(root))
+        root_hashes.append(dict(path=str(root),sha256=digest_path(root)))
+    keep = {index for index, name in definitions.items() if name in refs}
+    selected = [dict(symbol=definitions[i],area=areas[i]['name'],original_offset=0,
+                     rebased_offset=0,size=len(data[i]),sha256=digest_bytes(data[i])) for i in sorted(keep)]
+    output = []; current = -1
+    for i, line in enumerate(lines[:first]):
+        if i == 1:
+            output.append(f'H {len(areas):X} areas {len(keep)+1:X} global symbols'); continue
+        area = AREA_RE.fullmatch(line)
+        if area:
+            current += 1
+            if current in data and current not in keep:
+                line = f'A {area["name"]} size 0 flags {area["flags"]} addr {area["addr"]}'
+        symbol = SYMBOL_RE.fullmatch(line)
+        if symbol and symbol['name'] != '.__.ABS.' and current not in keep: continue
+        output.append(line)
+    for index, pair in pairs:
+        if index in keep or index not in data: output.extend(pair)
+    emitted = ('\n'.join(output)+'\n').encode('ascii')
+    args.output.parent.mkdir(parents=True,exist_ok=True); args.output.write_bytes(emitted)
+    _, _, _, after_areas, after_defs, after_data, _ = parse_sectioned_arrays(args.output, arrays)
+    if after_defs != {i:definitions[i] for i in keep} or len(after_areas) != len(areas):
+        fail('sectioned output symbol/area identity mismatch')
+    if any(after_data[i] != data[i] for i in keep) or any(after_data[i] for i in data if i not in keep):
+        fail('sectioned output payload mismatch')
+    packed = b''.join(data[i] for i in sorted(keep))
+    audit = dict(schema_version=1,policy='fail-closed-asxxxx-relocation-free-readonly-const-array-slicing',
+                 input=dict(path=str(path),sha256=digest_bytes(raw),const_size=sum(map(len,data.values())),definition_count=len(definitions)),
+                 source=dict(path=str(source),sha256=digest_path(source)),roots=root_hashes,
+                 root_policy='conservative union of all external Refs in the actual direct-REL link closure',
+                 selected=selected,
+                 discarded=[dict(symbol=name,area=areas[i]['name'],offset=0,size=len(data[i])) for i,name in definitions.items() if i not in keep],
+                 output=dict(path=str(args.output.resolve()),sha256=digest_bytes(emitted),const_size=len(packed),payload_sha256=digest_bytes(packed)),
+                 gates=dict(format='XH3',single_const_area=False,section_indices_preserved=True,
+                            const_flags='0x20',payload_only_in_const=True,real_relocations=0,aliases=0,
+                            undefined_symbols_in_candidate=0,source_arrays_match_section_sizes=True))
+    args.audit.parent.mkdir(parents=True,exist_ok=True)
+    args.audit.write_text(json.dumps(audit,indent=2)+'\n')
+    print(f'READONLY_CONST_REL_SLICE=PASS input={audit["input"]["const_size"]} output={len(packed)} selected={len(keep)} sections=preserved')
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, type=Path)
@@ -352,6 +502,8 @@ def main() -> int:
     parser.add_argument("--audit", required=True, type=Path)
     args = parser.parse_args()
 
+    if re.search(rb'^A CONST_D_\S+ size [1-9A-F][0-9A-F]* ', args.input.read_bytes(), re.M):
+        return slice_sectioned_arrays(args)
     candidate = parse_rel(args.input.resolve(), require_slice_shape=True)
     source = args.source.resolve() if args.source else source_from_depfile(candidate.path)
     if (args.expect_input_sha256 and

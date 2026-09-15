@@ -9,9 +9,13 @@ shift 4
 
 STCXX_CPP_PROFILE=0
 for ARGUMENT in "$@"; do
+    case "$ARGUMENT" in
+        -mmcs51|-DSTCXX_TARGET_MCS51=1|-DSTC_EXECUTION_MODE_MCS51|-DSTC_EXECUTION_MODE_MCS51=*|-DSTC16F40K128)
+            printf 'Target support has been removed; select a current MCS251 board.\n' >&2
+            exit 2 ;;
+    esac
     if [ "$ARGUMENT" = "-DSTCXX_CPP_CORE=1" ]; then
         STCXX_CPP_PROFILE=1
-        break
     fi
 done
 
@@ -20,7 +24,7 @@ convert_stcxx_wsl_path() {
     STCXX_PATH_ATTEMPT=1
     STCXX_PATH_STATUS=4
     while [ "$STCXX_PATH_ATTEMPT" -le 3 ]; do
-        STCXX_PATH_CANDIDATE=$(wsl.exe -d "$WSL_DISTRIBUTION" -- \
+        STCXX_PATH_CANDIDATE=$("$STCXX_WSL_EXECUTABLE" -d "$WSL_DISTRIBUTION" -- \
             wslpath -a "$STCXX_PATH_INPUT")
         STCXX_PATH_STATUS=$?
         STCXX_PATH_CANDIDATE=$(printf '%s' "$STCXX_PATH_CANDIDATE" | \
@@ -61,9 +65,14 @@ run_stcxx_wsl_cli() {
         # only after its tool/provenance preflight, immediately before the
         # actual compiler pipeline.  Keeping inline shell source out of argv
         # avoids a second round of Windows BusyBox argument parsing.
-        wsl.exe -d "$WSL_DISTRIBUTION" -- sh "$WSL_LAUNCHER_LINUX" \
-            "$CLI_SCRIPT_LINUX" "$STCXX_HANDSHAKE_MARKER" \
-            "$STCXX_PIPELINE_READY_MARKER" "$@"
+        if [ "$STCXX_NATIVE_UNIX" -eq 1 ]; then
+            STCXX_ARDUINO_SDCC="$SDCC" sh "$WSL_LAUNCHER_LINUX" "$CLI_SCRIPT_LINUX" \
+                "$STCXX_HANDSHAKE_MARKER" "$STCXX_PIPELINE_READY_MARKER" "$@"
+        else
+            "$STCXX_WSL_EXECUTABLE" -d "$WSL_DISTRIBUTION" -- sh "$WSL_LAUNCHER_LINUX" --windows-host \
+                "$CLI_SCRIPT_LINUX" "$STCXX_HANDSHAKE_MARKER" \
+                "$STCXX_PIPELINE_READY_MARKER" "$@"
+        fi
         STCXX_LAUNCH_STATUS=$?
         if [ -f "$STCXX_PIPELINE_READY_MARKER" ]; then
             return "$STCXX_LAUNCH_STATUS"
@@ -89,7 +98,19 @@ run_stcxx_wsl() {
     WRAPPER_DIRECTORY=${WRAPPER_PATH%/*}
     PLATFORM_TOOLS=${WRAPPER_DIRECTORY%/wrapper}
     CLI_SCRIPT_WINDOWS="$PLATFORM_TOOLS/cpp-cli/stcxx-cli.sh"
-    CLI_SCRIPT_LINUX=$(convert_stcxx_wsl_path "$CLI_SCRIPT_WINDOWS") || return $?
+    STCXX_NATIVE_UNIX=0
+    case "$(uname -s)" in
+        Darwin)
+            . "$WRAPPER_DIRECTORY/stc-macos-env.sh" || return $?
+            STCXX_NATIVE_UNIX=1 ;;
+        Linux) STCXX_NATIVE_UNIX=1 ;;
+    esac
+    if [ "$STCXX_NATIVE_UNIX" -eq 1 ]; then
+        CLI_SCRIPT_LINUX=$(realpath -e "$CLI_SCRIPT_WINDOWS") || return $?
+    else
+        . "$WRAPPER_DIRECTORY/stc-wsl-env.sh" || return $?
+        CLI_SCRIPT_LINUX=$(convert_stcxx_wsl_path "$CLI_SCRIPT_WINDOWS") || return $?
+    fi
     case "$CLI_SCRIPT_LINUX" in
         */cpp-cli/stcxx-cli.sh)
             WSL_LAUNCHER_LINUX="${CLI_SCRIPT_LINUX%/cpp-cli/stcxx-cli.sh}/wrapper/stc-wsl-launch.sh"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install the host-side build dependencies used by the experimental C++
-# toolchain and the MCS51/MCS251 QEMU runner.  WSL installations behind a
+# toolchain and the MCS251 QEMU runner.  WSL installations behind a
 # transparent proxy can make apt's parallel downloader unreliable, while a
 # single HTTPS transfer remains reliable.  Ask apt for the exact package set,
 # download each authenticated archive serially, then let apt install only from

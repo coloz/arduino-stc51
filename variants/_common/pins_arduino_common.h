@@ -153,22 +153,30 @@
 
 #define PIN_SERIAL_RX P3_0
 #define PIN_SERIAL_TX P3_1
-#define PIN_WIRE_SDA P3_2
-#define PIN_WIRE_SCL P3_3
+#if STC_CORE_WIRE_LAYOUT != 0
+# define PIN_WIRE_SDA P3_3
+# define PIN_WIRE_SCL P3_2
+#else
+# define PIN_WIRE_SDA P3_2
+# define PIN_WIRE_SCL P3_3
+#endif
 #define SDA PIN_WIRE_SDA
 #define SCL PIN_WIRE_SCL
 
-#if (PIN_VALID_MASK_P3 & 0x30U) == 0x30U
+#if STC_CORE_BUS_LAYOUT == 1
+# define PIN_SPI_MOSI P1_3
+# define PIN_SPI_MISO P1_4
+# define PIN_SPI_SCK  P1_5
+# if (PIN_VALID_MASK_P1 & 0x01U)
+#  define PIN_SPI_SS  P1_0
+# else
+#  define PIN_SPI_SS  P1_2
+# endif
+#else
 # define PIN_SPI_MOSI P3_2
 # define PIN_SPI_MISO P3_3
 # define PIN_SPI_SCK  P3_4
 # define PIN_SPI_SS   P3_5
-#else
-/* STC8G1K08A exposes only P3.0..P3.3 plus P5.4/P5.5. */
-# define PIN_SPI_MOSI P3_2
-# define PIN_SPI_MISO P3_3
-# define PIN_SPI_SCK  P5_4
-# define PIN_SPI_SS   P5_5
 #endif
 #define MOSI PIN_SPI_MOSI
 #define MISO PIN_SPI_MISO

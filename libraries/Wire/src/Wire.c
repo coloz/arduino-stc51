@@ -5,6 +5,9 @@
  * Timing is approximate because it uses the core delayMicroseconds() API.
  */
 #include "Wire.h"
+#if defined(__SDCC)
+# include "stc_sfr.h"
+#endif
 
 #define WIRE_INTERNAL_ACK      0u
 #define WIRE_INTERNAL_NACK     1u
@@ -19,6 +22,21 @@ static uint8_t wire_reset_with_timeout;
 static uint8_t wire_timeout_flag;
 static uint8_t wire_initialized;
 static uint8_t wire_bus_held;
+static uint8_t wire_config_error;
+static uint8_t wire_last_error;
+
+#if defined(__SDCC_mcs251)
+/* The default pair is owned/configured as open drain by Wire_begin(). Bit
+ * instructions avoid pin validation, PWM detachment and port dispatch on
+ * every bus edge, and cannot overwrite unrelated P3 latch bits from an ISR.
+ * Other pin selections retain the portable GPIO path. */
+static __sbit __at (0xb2) wire_p32;
+static __sbit __at (0xb3) wire_p33;
+static uint8_t wire_fast_default;
+#endif
+
+uint8_t Wire_configurationError(void) STC_WIRE_REENTRANT { return wire_config_error; }
+uint8_t Wire_lastError(void) STC_WIRE_REENTRANT { return wire_last_error; }
 
 static uint8_t wire_tx_address;
 static uint8_t wire_tx_buffer[WIRE_BUFFER_LENGTH];
@@ -30,6 +48,8 @@ static uint8_t wire_rx_buffer[WIRE_BUFFER_LENGTH];
 static uint8_t wire_rx_index;
 static uint8_t wire_rx_length;
 
+#include "WireHardware.h"
+
 static void wire_delay_half_period(void)
 {
     delayMicroseconds(wire_half_period_us);
@@ -37,22 +57,50 @@ static void wire_delay_half_period(void)
 
 static void wire_drive_sda_low(void)
 {
+#if defined(__SDCC_mcs251)
+    if (wire_fast_default) { wire_p32 = 0; return; }
+#endif
     digitalWrite(wire_sda_pin, LOW);
 }
 
 static void wire_release_sda(void)
 {
+#if defined(__SDCC_mcs251)
+    if (wire_fast_default) { wire_p32 = 1; return; }
+#endif
     digitalWrite(wire_sda_pin, HIGH);
 }
 
 static void wire_drive_scl_low(void)
 {
+#if defined(__SDCC_mcs251)
+    if (wire_fast_default) { wire_p33 = 0; return; }
+#endif
     digitalWrite(wire_scl_pin, LOW);
 }
 
 static void wire_release_scl(void)
 {
+#if defined(__SDCC_mcs251)
+    if (wire_fast_default) { wire_p33 = 1; return; }
+#endif
     digitalWrite(wire_scl_pin, HIGH);
+}
+
+static uint8_t wire_read_sda(void)
+{
+#if defined(__SDCC_mcs251)
+    if (wire_fast_default) return wire_p32;
+#endif
+    return digitalRead(wire_sda_pin) != LOW;
+}
+
+static uint8_t wire_read_scl(void)
+{
+#if defined(__SDCC_mcs251)
+    if (wire_fast_default) return wire_p33;
+#endif
+    return digitalRead(wire_scl_pin) != LOW;
 }
 
 static void wire_handle_timeout(void)
@@ -61,9 +109,12 @@ static void wire_handle_timeout(void)
     if (wire_reset_with_timeout == 0u) {
         return;
     }
+#ifdef STC_WIRE_HARDWARE
+    if (wire_hardware) wire_hardware_reset();
+#endif
 
-    /* There is no hardware TWI block in this portable backend.  Reset its
-     * software state machine and release both open-drain lines instead. */
+    /* Also reset the shared transaction state and release both open-drain
+     * latches; the hardware block, when selected, was reset above. */
     wire_release_sda();
     wire_release_scl();
     wire_bus_held = 0u;
@@ -79,8 +130,14 @@ static uint8_t wire_wait_for_scl_high(void)
     unsigned long started;
 
     wire_release_scl();
+    /* Most slaves do not stretch the clock. Avoid the comparatively expensive
+     * micros() conversion on every bit when SCL is already high. A low line
+     * still follows the original bounded/unbounded stretch path below. */
+    if (wire_read_scl()) {
+        return 1u;
+    }
     if (wire_stretch_timeout_us == 0UL) {
-        while (digitalRead(wire_scl_pin) == LOW) {
+        while (!wire_read_scl()) {
             /* A zero timeout deliberately preserves Arduino's wait-forever
              * behavior. */
         }
@@ -88,7 +145,7 @@ static uint8_t wire_wait_for_scl_high(void)
     }
 
     started = micros();
-    while (digitalRead(wire_scl_pin) == LOW) {
+    while (!wire_read_scl()) {
         if ((unsigned long)(micros() - started) >= wire_stretch_timeout_us) {
             wire_handle_timeout();
             return 0u;
@@ -113,6 +170,19 @@ static void wire_ensure_initialized(void)
 
 static uint8_t wire_start_condition(void)
 {
+#if defined(__SDCC)
+    /* The timeout clock needs Timer0 interrupts. Wire is a foreground API. */
+    if (!(IE & STC_IE_EA) || !(IE & STC_IE_ET0) || !(TCON & STC_TCON_TR0))
+        return WIRE_STATUS_OTHER_ERROR;
+#endif
+    if (wire_config_error) return WIRE_STATUS_OTHER_ERROR;
+#ifdef STC_WIRE_HARDWARE
+    if (wire_hardware) {
+        if (!wire_bus_held && digitalRead(wire_sda_pin) == LOW) return WIRE_STATUS_OTHER_ERROR;
+        if (!wire_hardware_command(1u)) return WIRE_STATUS_TIMEOUT;
+        wire_bus_held = 1u; return WIRE_STATUS_SUCCESS;
+    }
+#endif
     wire_release_sda();
     wire_delay_half_period();
 
@@ -122,7 +192,7 @@ static uint8_t wire_start_condition(void)
     }
     wire_delay_half_period();
 
-    if (digitalRead(wire_sda_pin) == LOW) {
+    if (!wire_read_sda()) {
         wire_release_bus();
         return WIRE_STATUS_OTHER_ERROR;
     }
@@ -138,6 +208,12 @@ static uint8_t wire_start_condition(void)
 static uint8_t wire_stop_condition(void)
 {
     uint8_t status = WIRE_STATUS_SUCCESS;
+#ifdef STC_WIRE_HARDWARE
+    if (wire_hardware) {
+        status = wire_hardware_command(6u) ? WIRE_STATUS_SUCCESS : WIRE_STATUS_TIMEOUT;
+        wire_bus_held = 0u; return status;
+    }
+#endif
 
     wire_drive_sda_low();
     wire_delay_half_period();
@@ -156,6 +232,9 @@ static uint8_t wire_write_byte(uint8_t value)
 {
     uint8_t mask;
     uint8_t acknowledged;
+#ifdef STC_WIRE_HARDWARE
+    if (wire_hardware) return wire_hardware_write(value);
+#endif
 
     for (mask = 0x80u; mask != 0u; mask >>= 1) {
         wire_drive_scl_low();
@@ -180,7 +259,7 @@ static uint8_t wire_write_byte(uint8_t value)
         return WIRE_INTERNAL_TIMEOUT;
     }
     wire_delay_half_period();
-    acknowledged = (digitalRead(wire_sda_pin) == LOW) ? 1u : 0u;
+    acknowledged = !wire_read_sda();
     wire_drive_scl_low();
     wire_delay_half_period();
 
@@ -191,6 +270,9 @@ static uint8_t wire_read_byte(uint8_t send_ack, uint8_t *value)
 {
     uint8_t mask;
     uint8_t result = 0u;
+#ifdef STC_WIRE_HARDWARE
+    if (wire_hardware) return wire_hardware_read(send_ack, value);
+#endif
 
     wire_release_sda();
     for (mask = 0x80u; mask != 0u; mask >>= 1) {
@@ -201,7 +283,7 @@ static uint8_t wire_read_byte(uint8_t send_ack, uint8_t *value)
             return 0u;
         }
         wire_delay_half_period();
-        if (digitalRead(wire_sda_pin) != LOW) {
+        if (wire_read_sda()) {
             result |= mask;
         }
         wire_drive_scl_low();
@@ -229,11 +311,22 @@ static uint8_t wire_read_byte(uint8_t send_ack, uint8_t *value)
 
 void Wire_begin(void) STC_WIRE_REENTRANT
 {
+    if (!digitalPinIsValid(wire_sda_pin) || !digitalPinIsValid(wire_scl_pin) ||
+        wire_sda_pin == wire_scl_pin || STC_VARIANT_PHYSICAL_ALIAS(wire_sda_pin) == wire_scl_pin) {
+        wire_config_error = WIRE_STATUS_OTHER_ERROR;
+        return;
+    }
     if (wire_half_period_us == 0u) {
         Wire_setClock(WIRE_DEFAULT_CLOCK_HZ);
     }
     pinMode(wire_sda_pin, OUTPUT_OPEN_DRAIN);
     pinMode(wire_scl_pin, OUTPUT_OPEN_DRAIN);
+#ifdef STC_WIRE_HARDWARE
+    wire_hardware_begin();
+#endif
+#if defined(__SDCC_mcs251)
+    wire_fast_default = wire_sda_pin == P3_2 && wire_scl_pin == P3_3;
+#endif
     wire_release_bus();
     wire_tx_length = 0u;
     wire_tx_overflow = 0u;
@@ -252,6 +345,9 @@ void Wire_end(void) STC_WIRE_REENTRANT
     if (wire_bus_held != 0u) {
         (void)wire_stop_condition();
     }
+#ifdef STC_WIRE_HARDWARE
+    wire_hardware_end();
+#endif
     wire_release_bus();
     pinMode(wire_sda_pin, INPUT);
     pinMode(wire_scl_pin, INPUT);
@@ -266,9 +362,20 @@ void Wire_end(void) STC_WIRE_REENTRANT
 
 void Wire_setPins(uint8_t sda_pin, uint8_t scl_pin) STC_WIRE_REENTRANT
 {
-    uint8_t restart = wire_initialized;
+    (void)Wire_setPinsChecked(sda_pin, scl_pin);
+}
 
+uint8_t Wire_setPinsChecked(uint8_t sda_pin, uint8_t scl_pin) STC_WIRE_REENTRANT
+{
+    uint8_t restart = wire_initialized;
+    if (!digitalPinIsValid(sda_pin) || !digitalPinIsValid(scl_pin) ||
+        sda_pin == scl_pin || STC_VARIANT_PHYSICAL_ALIAS(sda_pin) == scl_pin) {
+        return wire_config_error = WIRE_STATUS_OTHER_ERROR;
+    }
     if (restart != 0u) {
+#ifdef STC_WIRE_HARDWARE
+        wire_hardware_end();
+#endif
         wire_release_bus();
         pinMode(wire_sda_pin, INPUT);
         pinMode(wire_scl_pin, INPUT);
@@ -278,6 +385,7 @@ void Wire_setPins(uint8_t sda_pin, uint8_t scl_pin) STC_WIRE_REENTRANT
     if (restart != 0u) {
         Wire_begin();
     }
+    return wire_config_error = WIRE_STATUS_SUCCESS;
 }
 
 void Wire_setClock(unsigned long clock_hz) STC_WIRE_REENTRANT
@@ -285,8 +393,13 @@ void Wire_setClock(unsigned long clock_hz) STC_WIRE_REENTRANT
     unsigned long half_period;
 
     if (clock_hz == 0UL) {
+        wire_config_error = WIRE_STATUS_OTHER_ERROR;
         return;
     }
+#ifdef STC_WIRE_HARDWARE
+    if (wire_bus_held) { wire_config_error = WIRE_STATUS_OTHER_ERROR; return; }
+    wire_clock_hz = clock_hz;
+#endif
     if (clock_hz >= 500000UL) {
         half_period = 1UL;
     } else {
@@ -296,6 +409,10 @@ void Wire_setClock(unsigned long clock_hz) STC_WIRE_REENTRANT
         half_period = 65535UL;
     }
     wire_half_period_us = (unsigned int)half_period;
+#ifdef STC_WIRE_HARDWARE
+    if (wire_initialized) wire_hardware_begin();
+#endif
+    wire_config_error = WIRE_STATUS_SUCCESS;
 }
 
 void Wire_setClockStretchTimeout(unsigned long timeout_us) STC_WIRE_REENTRANT
@@ -324,7 +441,7 @@ void Wire_clearWireTimeoutFlag(void) STC_WIRE_REENTRANT
 void Wire_beginTransmission(uint8_t address) STC_WIRE_REENTRANT
 {
     wire_ensure_initialized();
-    wire_tx_address = (uint8_t)(address & 0x7fu);
+    wire_tx_address = address;
     wire_tx_length = 0u;
     wire_tx_overflow = 0u;
     wire_transmitting = 1u;
@@ -343,7 +460,7 @@ size_t Wire_write(uint8_t value) STC_WIRE_REENTRANT
     return 1u;
 }
 
-uint8_t Wire_endTransmissionStop(uint8_t send_stop) STC_WIRE_REENTRANT
+static uint8_t wire_end_transmission(uint8_t send_stop) STC_WIRE_REENTRANT
 {
     uint8_t index;
     uint8_t byte_status;
@@ -354,6 +471,8 @@ uint8_t Wire_endTransmissionStop(uint8_t send_stop) STC_WIRE_REENTRANT
     }
     wire_transmitting = 0u;
     wire_ensure_initialized();
+
+    if (wire_tx_address > 0x7fu) return WIRE_STATUS_OTHER_ERROR;
 
     if (wire_tx_overflow != 0u) {
         wire_tx_length = 0u;
@@ -405,6 +524,12 @@ uint8_t Wire_endTransmission(void) STC_WIRE_REENTRANT
     return Wire_endTransmissionStop(1u);
 }
 
+uint8_t Wire_endTransmissionStop(uint8_t send_stop) STC_WIRE_REENTRANT
+{
+    wire_last_error = wire_end_transmission(send_stop);
+    return wire_last_error;
+}
+
 uint8_t Wire_requestFromStop(uint8_t address, uint8_t quantity,
                              uint8_t send_stop) STC_WIRE_REENTRANT
 {
@@ -415,6 +540,11 @@ uint8_t Wire_requestFromStop(uint8_t address, uint8_t quantity,
     wire_ensure_initialized();
     wire_rx_index = 0u;
     wire_rx_length = 0u;
+    wire_last_error = WIRE_STATUS_SUCCESS;
+    if (address > 0x7fu) {
+        wire_last_error = WIRE_STATUS_OTHER_ERROR;
+        return 0;
+    }
     if (quantity == 0u) {
         return 0u;
     }
@@ -422,17 +552,21 @@ uint8_t Wire_requestFromStop(uint8_t address, uint8_t quantity,
         quantity = WIRE_BUFFER_LENGTH;
     }
 
-    if (wire_start_condition() != WIRE_STATUS_SUCCESS) {
+    wire_last_error = wire_start_condition();
+    if (wire_last_error != WIRE_STATUS_SUCCESS) {
         return 0u;
     }
     byte_status = wire_write_byte((uint8_t)(((address & 0x7fu) << 1) | 1u));
     if (byte_status != WIRE_INTERNAL_ACK) {
+        wire_last_error = byte_status == WIRE_INTERNAL_TIMEOUT ?
+            WIRE_STATUS_TIMEOUT : WIRE_STATUS_ADDRESS_NACK;
         (void)wire_stop_condition();
         return 0u;
     }
 
     for (index = 0u; index < quantity; ++index) {
         if (wire_read_byte((index + 1u < quantity) ? 1u : 0u, &value) == 0u) {
+            wire_last_error = WIRE_STATUS_TIMEOUT;
             (void)wire_stop_condition();
             return wire_rx_length;
         }
@@ -440,7 +574,7 @@ uint8_t Wire_requestFromStop(uint8_t address, uint8_t quantity,
     }
 
     if (send_stop != 0u) {
-        (void)wire_stop_condition();
+        wire_last_error = wire_stop_condition();
     } else {
         wire_release_sda();
         wire_bus_held = 1u;
@@ -521,6 +655,9 @@ const STCWireClass Wire = {
     Wire_setWireTimeout,
     Wire_getWireTimeoutFlag,
     Wire_clearWireTimeoutFlag,
-    Wire_requestFromInternal
+    Wire_requestFromInternal,
+    Wire_setPinsChecked,
+    Wire_configurationError,
+    Wire_lastError
 };
 #endif

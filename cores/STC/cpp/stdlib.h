@@ -44,12 +44,8 @@ typedef struct { long long quot; long long rem; } lldiv_t;
 # define RAND_MAX 32767
 #endif
 
-/*
- * SDCC's MCS51 allocator entry points return an __xdata pointer (DPTR), while
- * the C/C++ ABI exposed to Clang uses a three-byte generic pointer.  Keep the
- * standard source spelling, but bind calls to native wrappers which perform
- * the target-specific return conversion before the value reaches C++.
- */
+/* Native allocation adapters keep the C++ boundary explicit. */
+
 void *malloc(size_t size) __asm__("__stcxx_libc_malloc");
 void *calloc(size_t count, size_t size) __asm__("__stcxx_libc_calloc");
 void *realloc(void *memory, size_t size) __asm__("__stcxx_libc_realloc");

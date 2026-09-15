@@ -1,0 +1,3 @@
+BEGIN library-SPI
+CHECKS 11
+PASS library-SPI

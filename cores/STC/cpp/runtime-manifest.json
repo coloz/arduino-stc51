@@ -2,25 +2,9 @@
   "schema_version": 1,
   "runtime_abi_version": 1,
   "identity_scope": "runtime-sub-ABI-only",
-  "complete_build_identity_source": "tests/cpp/abi/abi-manifest.json",
+  "complete_build_identity_source": "tools/cpp-cli/toolchain-lock.json",
   "complete_build_identity_required_before_link": true,
   "profiles": {
-    "mcs51": {
-      "identity": "stc-arduino-cxx-v1-mcs51-le-size2-pdiff4-gptr3-fnptr2-guard1-direct",
-      "identity_symbol": "__stcxx_abi_stc_arduino_cxx_v1_mcs51_le_size2_pdiff4_gptr3_fnptr2_guard1_direct",
-      "endianness": "little",
-      "size_t_bytes": 2,
-      "size_t_alignment_bytes": 1,
-      "ptrdiff_t_bytes": 4,
-      "ptrdiff_t_alignment_bytes": 1,
-      "generic_pointer_bytes": 3,
-      "function_pointer_bytes": 2,
-      "ordinary_function_pointer_bytes": 2,
-      "data_member_pointer_bytes": 2,
-      "member_function_pointer_bytes": 4,
-      "member_pointer_codegen_integer_bits": 16,
-      "member_call_program_address_space": 1
-    },
     "mcs251": {
       "identity": "stc-arduino-cxx-v1-mcs251-be-size4-pdiff4-ptr3-fnptr3-guard1-direct",
       "identity_symbol": "__stcxx_abi_stc_arduino_cxx_v1_mcs251_be_size4_pdiff4_ptr3_fnptr3_guard1_direct",
@@ -62,22 +46,52 @@
   },
   "sdcc_malloc_abi": {
     "source": "device/lib/malloc.c",
-    "raw_sha256": "344c80c4bf8f4bb5fbe03e9e3bbbd63be76328340033c943947a15105bb86fba",
-    "git_blob": "fd17c388683fe100ecd5cedd8a4194194d1c1f32",
+    "raw_sha256": "2649be26b08eeb4be411d52deb21864da91084d30c082a2674376fa9cef7ec7e",
+    "git_blob": "bc6f24625f7ed0959bef5c2fa18b056cbaaf786f",
+    "sources": {
+      "device/lib/malloc.c": {
+        "raw_sha256": "2649be26b08eeb4be411d52deb21864da91084d30c082a2674376fa9cef7ec7e",
+        "git_blob": "bc6f24625f7ed0959bef5c2fa18b056cbaaf786f"
+      },
+      "device/lib/mcs251/heap.h": {
+        "raw_sha256": "95dc3f1ab3cb956c214e0266de9d4c51648a8f40ca9174adf439e7b73767b280",
+        "git_blob": "570a7f5650147f8b101157ee2b4ec02b8a7be274"
+      },
+      "device/lib/_heap_init.c": {
+        "raw_sha256": "bcf1eeb505c089cb310398e0c6932e273df2b37acd913fa3598b10ffafa88c43",
+        "git_blob": "0dd3c49a5fc1cc6171d3c8a2033d554d6b89b83b"
+      }
+    },
     "free_list_symbol": "__sdcc_heap_free",
-    "heap_size_symbols": {"mcs51": "__sdcc_heap_size", "mcs251": "__sdcc_heap_size32"},
-    "heap_size_bytes": {"mcs51": 2, "mcs251": 4},
+    "heap_size_symbols": {
+      "mcs251": "__sdcc_heap_size32"
+    },
+    "heap_size_bytes": {
+      "mcs251": 4
+    },
     "initialized_state_symbol": "__sdcc_heap_initialized",
-    "header_fields": ["next", "next_free"],
+    "header_fields": [
+      "next",
+      "next_free"
+    ],
     "payload_offset": "offsetof(struct header, next_free)",
     "heap_end": "heap_start + heap_size - 1",
-    "target_pointer_bytes": {"mcs51": 2, "mcs251": 3}
+    "target_pointer_bytes": {
+      "mcs251": 3
+    }
   },
   "allocation": {
-    "heap_hooks": ["stcxx_malloc", "stcxx_realloc", "stcxx_free"],
-    "telemetry_hooks": ["stcxx_allocator_read_telemetry"],
+    "heap_hooks": [
+      "stcxx_malloc",
+      "stcxx_realloc",
+      "stcxx_free"
+    ],
+    "telemetry_hooks": [
+      "stcxx_allocator_read_telemetry"
+    ],
     "telemetry_result": "six packed uint16_t fields: arena, initial total, current total, current largest, minimum total, minimum largest",
     "telemetry_sampling": "after every successful stcxx_malloc and stcxx_realloc",
+    "telemetry_code": "stcxx_heap_telemetry.c is selected from the core archive when sampling or queries are referenced; stcxx_heap.c still initializes the heap and takes its initial integrity snapshot before global constructors",
     "telemetry_scope": "allocations routed through the stcxx allocator ABI; direct third-party libc malloc calls are excluded",
     "telemetry_corruption_policy": "fail closed on out-of-heap, reverse, cyclic, truncated, or overflowing SDCC free-list state",
     "telemetry_state": {

@@ -1,0 +1,3 @@
+BEGIN library-LiquidCrystal
+CHECKS 9
+PASS library-LiquidCrystal

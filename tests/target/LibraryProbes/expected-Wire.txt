@@ -1,0 +1,3 @@
+BEGIN library-Wire
+CHECKS 11
+PASS library-Wire

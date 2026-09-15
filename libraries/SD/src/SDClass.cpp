@@ -3,6 +3,7 @@
 #include "SDClass.h"
 
 #include <limits.h>
+#include <cpp/stcxx_allocator.h>
 
 #if defined(STCXX_HOST_TEST) && STCXX_HOST_TEST && \
     (defined(__GNUC__) || defined(__clang__))
@@ -16,10 +17,13 @@ extern "C" uint8_t SD_mkdir(const char *) __attribute__((weak));
 extern "C" uint8_t SD_rmdir(const char *) __attribute__((weak));
 #endif
 
+struct STCSDFileState {
+    uint32_t references;
+};
+
 namespace {
 
-uint16_t currentGeneration;
-uint8_t currentReferences;
+STCSDFileState *currentState;
 bool currentOpen;
 bool currentWritable;
 char currentName[13];
@@ -44,43 +48,24 @@ void copyFileName(const char *name)
     currentName[length] = '\0';
 }
 
-uint16_t nextGeneration()
-{
-    ++currentGeneration;
-    if (currentGeneration == 0u) {
-        ++currentGeneration;
-    }
-    return currentGeneration;
-}
-
-void invalidateCurrentFile()
-{
-    if (currentOpen) {
-        SD_close();
-    }
-    currentOpen = false;
-    currentWritable = false;
-    currentReferences = 0u;
-    (void)nextGeneration();
-    currentName[0] = '\0';
-}
-
 } // namespace
 
 SDClass SD;
 
-File::File() : _generation(0u) {}
+File::File() : _state(0) {}
 
-File::File(uint16_t generation) : _generation(generation) {}
-
-File::File(const File &other) : _generation(other._generation)
+File::File(STCSDFileState *state) : _state(state)
 {
-    retain();
 }
 
-File::File(File &&other) : _generation(other._generation)
+File::File(const File &other) : _state(0)
 {
-    other._generation = 0u;
+    retain(other);
+}
+
+File::File(File &&other) : _state(other._state)
+{
+    other._state = 0;
 }
 
 File::~File()
@@ -92,8 +77,7 @@ File &File::operator=(const File &other)
 {
     if (this != &other) {
         release();
-        _generation = other._generation;
-        retain();
+        retain(other);
     }
     return *this;
 }
@@ -102,39 +86,65 @@ File &File::operator=(File &&other)
 {
     if (this != &other) {
         release();
-        _generation = other._generation;
-        other._generation = 0u;
+        _state = other._state;
+        other._state = 0;
     }
     return *this;
 }
 
+// Reuse this check across the File API instead of duplicating its loads in
+// every caller. It also keeps the CBE boundary at a defined bool return;
+// inlining into name() can introduce a freeze of unproven memory loads.
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((noinline))
+#endif
 bool File::valid() const
 {
-    return _generation != 0u && currentOpen &&
-           _generation == currentGeneration;
+    return _state != 0 && _state == currentState && currentOpen;
 }
 
-void File::retain()
+void File::retain(const File &other)
 {
-    if (valid() && currentReferences != 0xffu) {
-        ++currentReferences;
-    } else {
-        _generation = 0u;
+    // Even a 24-bit address space cannot hold UINT32_MAX distinct File
+    // objects. Keep an explicit guard so overflow can never revive owners.
+    if (other.valid() && other._state->references != UINT32_MAX) {
+        _state = other._state;
+        ++_state->references;
     }
 }
 
 void File::release()
 {
-    if (valid() && currentReferences != 0u) {
-        --currentReferences;
-        if (currentReferences == 0u) {
-            SD_close();
-            currentOpen = false;
-            currentWritable = false;
-            currentName[0] = '\0';
+    if (_state == 0) return;
+    STCSDFileState *state = _state;
+    _state = 0;
+    if (--state->references == 0) {
+        if (state == currentState) {
+            // A destructor releases storage even if writeback fails. Keep
+            // currentOpen so the next reconfiguration retries the backend.
+            (void)closeCurrent();
+            currentState = 0;
         }
+        stcxx_free(state);
     }
-    _generation = 0u;
+}
+
+void File::invalidateHandles()
+{
+    currentState = 0;
+    currentOpen = false;
+    currentWritable = false;
+    currentName[0] = '\0';
+}
+
+bool File::closeCurrent()
+{
+    if (currentOpen) {
+        SD_close();
+        if (SD_error() != SD_ERROR_NONE) return false;
+    }
+    invalidateHandles();
+    return true;
 }
 
 size_t File::write(uint8_t value)
@@ -192,8 +202,12 @@ int File::read(void *buffer, uint16_t length)
     if (!valid() || (buffer == 0 && length != 0u)) {
         return 0;
     }
-    count = SD_readBytes(static_cast<uint8_t *>(buffer), (size_t)length);
-    return count > (size_t)INT_MAX ? INT_MAX : (int)count;
+    // int is 16-bit on the target. Never consume more bytes than the return
+    // value can represent, otherwise a caller loses its position silently.
+    size_t requested = (size_t)length;
+    if (requested > (size_t)INT_MAX) requested = (size_t)INT_MAX;
+    count = SD_readBytes(static_cast<uint8_t *>(buffer), requested);
+    return (int)count;
 }
 
 int File::peek()
@@ -234,6 +248,10 @@ uint32_t File::size() const
 
 void File::close()
 {
+    if (valid() && _state->references == 1 && !closeCurrent()) {
+        setWriteError(SD_error());
+        return;
+    }
     release();
 }
 
@@ -254,19 +272,25 @@ File File::openNextFile(uint8_t)
 
 bool SDClass::begin()
 {
-    invalidateCurrentFile();
+    if (!File::closeCurrent()) return false;
     return SD_beginDefault() != 0u;
 }
 
 bool SDClass::begin(uint8_t select)
 {
-    invalidateCurrentFile();
+    if (!File::closeCurrent()) return false;
     return SD_begin(select) != 0u;
+}
+
+bool SDClass::begin(uint32_t clock, uint8_t select)
+{
+    if (!File::closeCurrent()) return false;
+    return SD_beginClock(clock, select) != 0u;
 }
 
 void SDClass::end()
 {
-    invalidateCurrentFile();
+    if (!File::closeCurrent()) return;
     SD_end();
 }
 
@@ -278,24 +302,30 @@ bool SDClass::setPins(uint8_t mosi, uint8_t miso, uint8_t clock,
     }
 
     /* A successful pin change tears down an active backend in SD_setPins().
-     * Advance the facade generation as well so no File object can continue
+     * Invalidate the facade handles as well so no File object can continue
      * to identify the now-closed global file.  A rejected pin set deliberately
      * leaves both the backend and existing handles untouched. */
-    invalidateCurrentFile();
+    File::invalidateHandles();
     return true;
 }
 
 File SDClass::open(const char *name, uint8_t mode)
 {
-    invalidateCurrentFile();
-    if (name == 0 || SD_open(name, mode) == 0u) {
+    if (name == 0) return File();
+    STCSDFileState *state = static_cast<STCSDFileState *>(
+        stcxx_malloc(sizeof(STCSDFileState)));
+    // Allocate before closing: heap exhaustion must leave the old file usable.
+    if (state == 0) return File();
+    if (!File::closeCurrent() || SD_open(name, mode) == 0u) {
+        stcxx_free(state);
         return File();
     }
     copyFileName(name);
     currentOpen = true;
     currentWritable = ((mode & 0x02u) != 0u);
-    currentReferences = 1u;
-    return File(currentGeneration);
+    state->references = 1;
+    currentState = state;
+    return File(state);
 }
 
 bool SDClass::exists(const char *name)
@@ -316,12 +346,8 @@ bool SDClass::remove(const char *name)
         return false;
     }
 #endif
+    if (!File::closeCurrent()) return false;
     result = SD_remove(name) != 0u;
-    currentOpen = false;
-    currentWritable = false;
-    currentReferences = 0u;
-    (void)nextGeneration();
-    currentName[0] = '\0';
     return result;
 }
 

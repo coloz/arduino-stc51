@@ -5,6 +5,10 @@
 #include <stdint.h>
 
 #include "stcxx_config.h"
+#define STC_SPI_OK 0u
+#define STC_SPI_INVALID 1u
+#define STC_SPI_BUSY 2u
+#define STC_SPI_TIMEOUT 3u
 
 #ifndef LSBFIRST
 # define LSBFIRST 0u
@@ -78,8 +82,8 @@ public:
 
     SPISettings(uint32_t clock, uint8_t bitOrder, uint8_t dataMode)
         : _clock(clock),
-          _bitOrder(bitOrder == LSBFIRST ? LSBFIRST : MSBFIRST),
-          _dataMode((uint8_t)(dataMode & 0x03u))
+          _bitOrder(bitOrder),
+          _dataMode(dataMode)
     {
     }
 
@@ -97,6 +101,9 @@ public:
     void begin();
     void end();
     void setPins(uint8_t mosi, uint8_t miso, uint8_t clock, uint8_t select);
+    uint8_t setPinsChecked(uint8_t mosi, uint8_t miso, uint8_t clock, uint8_t select);
+    uint8_t configurationError();
+    uint8_t beginTransactionChecked(const SPISettings &settings);
 
     void beginTransaction(const SPISettings &settings);
     void beginTransaction(uint32_t clock, uint8_t bitOrder,

@@ -53,6 +53,7 @@ extern "C" {
 uint8_t SD_setPins(uint8_t mosi, uint8_t miso, uint8_t clock,
                    uint8_t select);
 uint8_t SD_begin(uint8_t select);
+uint8_t SD_beginClock(unsigned long clock, uint8_t select);
 uint8_t SD_beginDefault(void);
 void SD_end(void);
 uint8_t SD_cardType(void);
@@ -85,6 +86,8 @@ void SD_testReset(void);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+
+struct STCSDFileState;
 
 class File : public Stream
 {
@@ -119,12 +122,16 @@ public:
     void rewindDirectory() {}
 
 private:
-    explicit File(uint16_t generation);
+    explicit File(STCSDFileState *state);
     bool valid() const;
-    void retain();
+    void retain(const File &other);
     void release();
+    static bool closeCurrent();
+    static void invalidateHandles();
 
-    uint16_t _generation;
+    // Shared storage keeps its address when File is returned by value. Stale
+    // owners keep it allocated, preventing identity reuse across later opens.
+    STCSDFileState *_state;
 
     friend class SDClass;
 };
@@ -134,11 +141,7 @@ class SDClass
 public:
     bool begin();
     bool begin(uint8_t select);
-    bool begin(uint32_t clock, uint8_t select)
-    {
-        (void)clock;
-        return begin(select);
-    }
+    bool begin(uint32_t clock, uint8_t select);
     void end();
     bool setPins(uint8_t mosi, uint8_t miso, uint8_t clock, uint8_t select);
     File open(const char *name, uint8_t mode = FILE_READ);

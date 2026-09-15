@@ -3,15 +3,9 @@
 
 #define STC_ADC_POWER_MASK 0x80u
 
-#if STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_MODERN_BC_ADCCFG
 # define STC_ADC_START_MASK   0x40u
 # define STC_ADC_FLAG_MASK    0x20u
 # define STC_ADC_CHANNEL_MASK 0x0fu
-#else
-# define STC_ADC_START_MASK   0x08u
-# define STC_ADC_FLAG_MASK    0x10u
-# define STC_ADC_CHANNEL_MASK 0x07u
-#endif
 
 #if (F_CPU / 500UL) < 1000UL
 # define STC_ADC_POWER_DELAY_LOOPS 1000U
@@ -59,42 +53,12 @@ static void stc_adc_power_up_delay(void)
     }
 }
 
-#if STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_STC12C2052AD_C5_8BIT
-
-/* The STC12C2052AD has only 2 KiB of code space. Its ADC is a simpler,
- * dedicated 8-bit block, so avoid pulling the generic GPIO dispatcher and
- * multi-layout result decoder into every sketch that calls analogRead(). */
-static uint8_t stc_adc_c2052_channel(uint8_t pin)
-{
-    if ((pin & 0xf8u) != (uint8_t)P1_0) {
-        return NOT_AN_ADC_CHANNEL;
-    }
-    return (uint8_t)(pin & 0x07u);
-}
-
-static void stc_adc_c2052_select_pin(uint8_t channel)
-{
-    uint8_t mask = (uint8_t)(1u << channel);
-    uint8_t enabled = (uint8_t)(IE & STC_IE_EA);
-
-    IE &= (uint8_t)~STC_IE_EA;
-    P1M1 |= mask;              /* M1:M0 = 10, high-impedance input. */
-    P1M0 &= (uint8_t)~mask;
-    P1 |= mask;                /* Release the port latch. */
-    if (enabled != 0u) {
-        IE |= STC_IE_EA;
-    }
-}
-
-#else
 
 static void stc_adc_prepare(void)
 {
-#if STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_MODERN_BC_ADCCFG
     /* Keep reserved bits, select right alignment and the conservative /16 ADC
      * clock. The documented reset ADCTIM value already has SMPDUTY == 10. */
     ADCCFG = (uint8_t)((ADCCFG & 0xc0u) | 0x20u | 0x0fu);
-#endif
 
     if (stc_adc_powered == 0u) {
         ADC_CONTR = STC_ADC_POWER_MASK;
@@ -107,38 +71,12 @@ static void stc_adc_select_pin(uint8_t pin)
 {
     pinMode(pin, INPUT);
 
-#if STC_CORE_ADC_USES_P1ASF
-    {
-        uint8_t mask = digitalPinToBitMask(pin);
-        uint8_t enabled = (uint8_t)(IE & STC_IE_EA);
-        IE &= (uint8_t)~STC_IE_EA;
-        P1ASF |= mask;
-        if (enabled != 0u) {
-            IE |= STC_IE_EA;
-        }
-    }
-#else
     (void)pin;
-#endif
 }
 
 static uint16_t stc_adc_native_result(void)
 {
-#if STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_STC12C2052AD_C5_8BIT
-    return ADC_DATA;
-#elif STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_LEGACY_BC_10BIT_AUXR1
-    if ((STC_ADC_ADJUST & 0x04u) != 0u) {
-        return ((uint16_t)(ADC_RES & 0x03u) << 8) | ADC_RESL;
-    }
-    return ((uint16_t)ADC_RES << 2) | (ADC_RESL & 0x03u);
-#elif STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_LEGACY_BC_10BIT_CLKDIV
-    if ((STC_ADC_ADJUST & 0x20u) != 0u) {
-        return ((uint16_t)(ADC_RES & 0x03u) << 8) | ADC_RESL;
-    }
-    return ((uint16_t)ADC_RES << 2) | (ADC_RESL & 0x03u);
-#else
     return ((uint16_t)ADC_RES << 8) | ADC_RESL;
-#endif
 }
 
 static int stc_adc_scale_result(uint16_t value)
@@ -154,50 +92,10 @@ static int stc_adc_scale_result(uint16_t value)
     return (int)value;
 }
 #endif
-#endif
 
 int analogRead(uint8_t pin)
 {
 #if STC_CORE_HAS_ADC
-# if STC_CORE_ADC_LAYOUT == STC_ADC_LAYOUT_STC12C2052AD_C5_8BIT
-    uint8_t channel = stc_adc_c2052_channel(pin);
-    uint8_t control;
-    uint16_t timeout;
-    uint16_t result;
-
-    if (channel == NOT_AN_ADC_CHANNEL) {
-        return -1;
-    }
-
-    stc_adc_c2052_select_pin(channel);
-    if (stc_adc_powered == 0u) {
-        ADC_CONTR = STC_ADC_POWER_MASK;
-        stc_adc_power_up_delay();
-        stc_adc_powered = 1u;
-    }
-
-    control = (uint8_t)(STC_ADC_POWER_MASK | channel);
-    ADC_CONTR = (uint8_t)(control | STC_ADC_START_MASK);
-    stc_adc_wait_after_control_write();
-
-    timeout = STC_ADC_TIMEOUT_LOOPS;
-    while (((ADC_CONTR & STC_ADC_FLAG_MASK) == 0u) && (timeout != 0u)) {
-        --timeout;
-    }
-    if (timeout == 0u) {
-        ADC_CONTR = control;
-        return -1;
-    }
-
-    result = ADC_DATA;
-    ADC_CONTR = control;
-    if (stc_adc_requested_bits < 8u) {
-        result >>= (8u - stc_adc_requested_bits);
-    } else if (stc_adc_requested_bits > 8u) {
-        result <<= (stc_adc_requested_bits - 8u);
-    }
-    return (int)result;
-# else
     uint8_t channel = (uint8_t)STC_VARIANT_ADC_PIN_TO_CHANNEL(pin);
     uint8_t control;
     uint16_t timeout;
@@ -227,7 +125,6 @@ int analogRead(uint8_t pin)
     result = stc_adc_native_result();
     ADC_CONTR = control; /* Stop and clear the completion flag. */
     return stc_adc_scale_result(result);
-# endif
 #else
     (void)pin;
     return -1;

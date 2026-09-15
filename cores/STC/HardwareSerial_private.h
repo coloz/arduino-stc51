@@ -36,6 +36,10 @@ extern volatile uint8_t stc_uart1_rx_head;
 extern volatile uint8_t stc_uart1_rx_tail;
 extern volatile uint8_t stc_uart1_rx_overflow;
 extern volatile uint8_t stc_uart1_tx_complete;
+# else
+/* Polling lookahead is also reset by Serial_begin/Serial_end. */
+extern uint8_t stc_uart1_peek_valid;
+extern uint8_t stc_uart1_peek_value;
 # endif
 #endif
 

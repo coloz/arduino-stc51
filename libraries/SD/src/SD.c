@@ -33,7 +33,13 @@
 
 #define SD_SECTOR_SIZE 512u
 #define SD_INIT_CLOCK_HZ 100000UL
+#if STC_CORE_BUS_LAYOUT == 1
+#define SD_DATA_CLOCK_HZ 4000000UL
+#else
 #define SD_DATA_CLOCK_HZ 400000UL
+#endif
+static unsigned long sd_data_clock_hz = SD_DATA_CLOCK_HZ;
+static uint8_t sd_transaction_active;
 
 #define SD_READY_ATTEMPT_LIMIT 60000u
 #define SD_READY_TIMEOUT_MS      600UL
@@ -221,9 +227,11 @@ static uint8_t sd_time_expired(unsigned long start, unsigned long timeout)
 
 static void sd_deselect(void)
 {
-    if (sd_state.spi_active != 0u) {
+    if (sd_transaction_active != 0u) {
         digitalWrite(sd_state.cs_pin, HIGH);
         (void)SPI_transfer(0xffu);
+        SPI_endTransaction();
+        sd_transaction_active = 0u;
     }
 }
 
@@ -287,9 +295,13 @@ static uint8_t sd_send_command(uint8_t command, unsigned long argument)
 
     /* Another SPI client may have changed clock, bit order, or mode since the
      * preceding SD operation. Reassert the card transaction on every command. */
-    SPI_beginTransaction((sd_state.card_ready != 0u) ?
-                         SD_DATA_CLOCK_HZ : SD_INIT_CLOCK_HZ,
-                         MSBFIRST, SPI_MODE0);
+    if (SPI_beginTransactionChecked((sd_state.card_ready != 0u) ?
+                         sd_data_clock_hz : SD_INIT_CLOCK_HZ,
+                         MSBFIRST, SPI_MODE0) != STC_SPI_OK) {
+        sd_set_error(SD_ERROR_INVALID_ARGUMENT);
+        return 0xffu;
+    }
+    sd_transaction_active = 1u;
     digitalWrite(sd_state.cs_pin, LOW);
     if (sd_wait_ready() == 0u) {
         sd_set_error(SD_ERROR_CARD_TIMEOUT);
@@ -332,6 +344,7 @@ static uint8_t sd_initialize_card(void)
     for (index = 0u; index < 10u; ++index) {
         (void)SPI_transfer(0xffu);
     }
+    sd_deselect();
 
     attempts = 0u;
     started = millis();
@@ -1891,11 +1904,12 @@ uint8_t SD_setPins(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
     return 1u;
 }
 
-uint8_t SD_begin(uint8_t cs_pin) STC_SD_REENTRANT
+uint8_t SD_beginClock(unsigned long clock_hz, uint8_t cs_pin) STC_SD_REENTRANT
 {
     uint8_t validation;
     uint8_t saved_error;
 
+    if (!clock_hz) { sd_set_error(SD_ERROR_INVALID_ARGUMENT); return 0u; }
     sd_load_default_pins();
     validation = sd_validate_pins(sd_state.mosi_pin, sd_state.miso_pin,
                                   sd_state.sck_pin, cs_pin);
@@ -1916,17 +1930,22 @@ uint8_t SD_begin(uint8_t cs_pin) STC_SD_REENTRANT
     sd_state.card_type = SD_CARD_NONE;
     sd_clear_volume();
 
-    SPI_setPins(sd_state.mosi_pin, sd_state.miso_pin,
-                sd_state.sck_pin, sd_state.cs_pin);
+    if (SPI_setPinsChecked(sd_state.mosi_pin, sd_state.miso_pin,
+                sd_state.sck_pin, sd_state.cs_pin) != STC_SPI_OK) {
+        sd_set_error(SD_ERROR_INVALID_ARGUMENT); return 0u;
+    }
+    sd_data_clock_hz = clock_hz;
     digitalWrite(sd_state.cs_pin, HIGH);
     SPI_begin();
-    SPI_beginTransaction(SD_INIT_CLOCK_HZ, MSBFIRST, SPI_MODE0);
+    if (SPI_beginTransactionChecked(SD_INIT_CLOCK_HZ, MSBFIRST, SPI_MODE0) != STC_SPI_OK) {
+        SPI_end(); sd_set_error(SD_ERROR_INVALID_ARGUMENT); return 0u;
+    }
+    sd_transaction_active = 1u;
     sd_state.spi_active = 1u;
 
     if (sd_initialize_card() == 0u) {
         saved_error = sd_state.last_error;
         sd_deselect();
-        SPI_endTransaction();
         SPI_end();
         sd_state.spi_active = 0u;
         sd_state.card_ready = 0u;
@@ -1936,7 +1955,6 @@ uint8_t SD_begin(uint8_t cs_pin) STC_SD_REENTRANT
         return 0u;
     }
 
-    SPI_beginTransaction(SD_DATA_CLOCK_HZ, MSBFIRST, SPI_MODE0);
     if (sd_mount() == 0u) {
         /* The card remains available to readBlock/writeBlock so a caller can
          * inspect a non-FAT or damaged layout after begin() reports failure. */
@@ -1944,6 +1962,11 @@ uint8_t SD_begin(uint8_t cs_pin) STC_SD_REENTRANT
     }
     sd_set_error(SD_ERROR_NONE);
     return 1u;
+}
+
+uint8_t SD_begin(uint8_t cs_pin) STC_SD_REENTRANT
+{
+    return SD_beginClock(SD_DATA_CLOCK_HZ, cs_pin);
 }
 
 uint8_t SD_beginDefault(void) STC_SD_REENTRANT
@@ -1965,7 +1988,6 @@ void SD_end(void) STC_SD_REENTRANT
 #if !defined(STC_SD_HOST_TEST) || !STC_SD_HOST_TEST
     if (sd_state.spi_active != 0u) {
         sd_deselect();
-        SPI_endTransaction();
         SPI_end();
     }
 #endif

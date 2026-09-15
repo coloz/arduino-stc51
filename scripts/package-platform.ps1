@@ -1,12 +1,18 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '0.0.2',
-    [string]$OutputDirectory
+    [string]$Version = '0.0.3',
+    [string]$OutputDirectory,
+    [ValidateSet('development', 'portable')]
+    [string]$LinuxToolchain = 'development'
 )
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+$PlatformVersion = (Select-String -LiteralPath (Join-Path $RepoRoot 'platform.txt') -Pattern '^version=(.+)$').Matches[0].Groups[1].Value
+if ($Version -ne $PlatformVersion) {
+    throw "Package version $Version does not match platform.txt version $PlatformVersion."
+}
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $RepoRoot 'dist' }
 
 $TempBase = [IO.Path]::GetTempPath()
@@ -72,8 +78,13 @@ try {
         'build-function-split-archive.py',
         'audit-function-split-link-map.py',
         'aslink_map_symbols.py',
+        'native-storage.py',
         'stcxx-cli.sh',
+        'toolchain-paths.sh',
         'toolchain-lock.json',
+        'toolchain-lock.linux-x86_64.json',
+        'toolchain-lock.macos-arm64.json',
+        'verify-macos-frontend.py',
         'README.md'
     )
     foreach ($RuntimeFile in $CppCliRuntimeFiles) {
@@ -96,6 +107,27 @@ try {
         if ($SourceHash -cne $PackagedHash) {
             throw "Packaged cpp-cli runtime differs from source: $RuntimeFile"
         }
+    }
+    # The source checkout retains its development tool pins. Distribution
+    # builds select the maintained portable lock at the normal runtime path,
+    # so compilation and all target verifiers use exactly the same lock.
+    if ($LinuxToolchain -eq 'portable') {
+        $PortableLockPath = Join-Path $CppCliTarget 'toolchain-lock.linux-x86_64.json'
+        $PortableLock = Get-Content -Raw -Encoding UTF8 $PortableLockPath | ConvertFrom-Json
+        if ($PortableLock.host -ne 'linux-x86_64' -or
+            $PortableLock.arduino_frontend.name -ne 'stcxx-frontend' -or
+            -not $PortableLock.linux_frontend.manifest_sha256) {
+            throw 'Portable Linux lock is missing its host, dependency or manifest binding.'
+        }
+        Copy-Item -LiteralPath $PortableLockPath -Destination (Join-Path $CppCliTarget 'toolchain-lock.json') -Force
+        $PackagedPlatformPath = Join-Path $PackageRoot 'platform.txt'
+        $PackagedPlatform = [IO.File]::ReadAllText($PackagedPlatformPath)
+        $OldArchiveProperty = 'compiler.ar.path.windows={runtime.tools.SDCCArchiveTools.path}/bin'
+        $NewArchiveProperty = 'compiler.ar.path.windows={runtime.tools.sdcc-mcs251.path}/bin'
+        if (-not $PackagedPlatform.Contains($OldArchiveProperty)) {
+            throw 'Expected development Windows archive-tool property is missing.'
+        }
+        [IO.File]::WriteAllText($PackagedPlatformPath, $PackagedPlatform.Replace($OldArchiveProperty, $NewArchiveProperty), [Text.UTF8Encoding]::new($false))
     }
     $CppPipelineTarget = New-Item -ItemType Directory -Force -Path (Join-Path $ToolsTarget 'cpp-core-pipeline')
     foreach ($RuntimeFile in @('audit_and_adapt.py', 'README.md')) {
@@ -121,13 +153,15 @@ try {
         'build-example.ps1', 'package-platform.ps1',
         'fetch-stc-sdk.ps1', 'inspect-cpp-toolchain.sh',
         'bootstrap-wsl-cpp-qemu-deps.sh',
-        'build-linux-toolchain.sh', 'linux-toolchain.Dockerfile',
-        'build-macos-toolchain.sh', 'check-mcs251-isr-context.mjs',
+        'build-linux-toolchain.sh', 'finalize-linux-toolchain.py', 'linux-toolchain.Dockerfile',
+        'build-macos-toolchain.sh', 'finalize-macos-toolchain.py', 'check-mcs251-isr-context.mjs',
         'verify-mcs251-image.ps1', 'verify-stc32g144k246-image.ps1',
         'verify-standalone-release.sh'
     )) {
         Copy-Item -Force (Join-Path $RepoRoot "scripts/$ScriptFile") -Destination $ScriptsTarget
     }
+    $ToolchainLicensesTarget = New-Item -ItemType Directory -Force -Path (Join-Path $ToolsTarget 'toolchain-licenses')
+    Copy-Item -LiteralPath (Join-Path $RepoRoot 'tools/toolchain-licenses/boost-LICENSE_1_0.txt') -Destination $ToolchainLicensesTarget
 
     # Keep only auditable SDK metadata in the platform package.  Downloaded
     # vendor archives and extracted sources stay in the ignored local cache.
@@ -137,6 +171,9 @@ try {
     $VariantsTarget = New-Item -ItemType Directory -Force -Path (Join-Path $PackageRoot 'variants')
     Copy-Item -Recurse -Force (Join-Path $RepoRoot 'variants/_common') -Destination $VariantsTarget
     $Devices = (Get-Content -Raw -Encoding UTF8 (Join-Path $RepoRoot 'tools/variants/devices.json') | ConvertFrom-Json).devices
+    if (@($Devices | Where-Object { $_.target -ne 'mcs251' }).Count -ne 0) {
+        throw 'Only MCS251 devices may enter the platform package.'
+    }
     foreach ($Device in $Devices) {
         $Variant = $Device.model -replace '-', '_'
         Copy-Item -Recurse -Force (Join-Path $RepoRoot "variants/$Variant") -Destination $VariantsTarget
@@ -152,6 +189,7 @@ try {
         'tools/cpp-cli/build-function-split-archive.py',
         'tools/cpp-cli/audit-function-split-link-map.py',
         'tools/cpp-cli/aslink_map_symbols.py',
+        'tools/cpp-cli/native-storage.py',
         'tools/cpp-cli/stcxx-cli.sh',
         'tools/cpp-cli/toolchain-lock.json',
         'tools/wrapper/stc-wsl-launch.sh',
@@ -247,6 +285,7 @@ try {
     $Hash = (Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash.ToLowerInvariant()
     [pscustomobject]@{
         version = $Version
+        linuxToolchain = $LinuxToolchain
         archiveFileName = $ArchiveName
         size = $Item.Length
         checksum = "SHA-256:$Hash"

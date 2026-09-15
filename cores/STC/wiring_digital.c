@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "stc_sfr.h"
 #include "wiring_digital_private.h"
+#include "wiring_pwm_private.h"
 
 static uint8_t stc_critical_enter(void)
 {
@@ -361,6 +362,11 @@ static void stc_port_set_mode(uint8_t port, uint8_t mask, uint8_t m1, uint8_t m0
 static void stc_port_set_pullup(uint8_t port, uint8_t mask, uint8_t enabled)
 {
     uint8_t interrupt_state = stc_critical_enter();
+    uint8_t window = P_SW2;
+
+    /* Small STC32CL parts need the same XFR gate as other STC32 parts,
+     * but do not leave it enabled globally during startup. */
+    P_SW2 |= STC_P_SW2_EAXFR;
 
     switch (port) {
     case 0u: STC_APPLY_PULLUP(P0); break;
@@ -394,6 +400,7 @@ static void stc_port_set_pullup(uint8_t port, uint8_t mask, uint8_t enabled)
     default: break;
     }
 
+    P_SW2 = window;
     stc_critical_leave(interrupt_state);
 }
 #undef STC_APPLY_PULLUP
@@ -443,6 +450,7 @@ void digitalWrite(uint8_t pin, uint8_t value) STC_REENTRANT
         return;
     }
 
+    stc_pwm_detach(pin);
     port = (uint8_t)(pin >> 4);
     mask = digitalPinToBitMask(pin);
     if (stc_pin_is_input(port, mask) != 0u) {
@@ -502,6 +510,7 @@ void pinMode(uint8_t pin, uint8_t mode) STC_REENTRANT
         return;
     }
 
+    stc_pwm_detach(pin);
     port = (uint8_t)(pin >> 4);
     mask = digitalPinToBitMask(pin);
 
@@ -537,7 +546,7 @@ void pinMode(uint8_t pin, uint8_t mode) STC_REENTRANT
         stc_port_set_mode(port, mask, 1u, 0u);
         stc_port_latch_write(port, mask, 1u);
 #if STC_CORE_HAS_SEPARATE_PULLUP
-        /* STC32G144 has true pull-up controls; keep the cell high-Z. */
+        /* Targets with separate pull-up controls keep the cell high-Z. */
         stc_port_set_pullup(port, mask, 1u);
 #else
         stc_port_set_mode(port, mask, 0u, 0u);
@@ -553,17 +562,6 @@ void pinMode(uint8_t pin, uint8_t mode) STC_REENTRANT
         stc_port_latch_write(port, mask, 1u);
         stc_set_pin_is_input(port, mask, 0u);
         break;
-    }
-#else
-    /* STC89 ports are quasi-bidirectional and have no PxM0/PxM1 registers. */
-    if ((mode == INPUT) || (mode == INPUT_PULLUP)) {
-        stc_port_latch_write(port, mask, 1u);
-        stc_set_pin_is_input(port, mask, 1u);
-    } else {
-        if (mode == OUTPUT_OPEN_DRAIN) {
-            stc_port_latch_write(port, mask, 1u);
-        }
-        stc_set_pin_is_input(port, mask, 0u);
     }
 #endif
 }

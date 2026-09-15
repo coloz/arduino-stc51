@@ -1,0 +1,213 @@
+{
+  "schema_version": 2,
+  "qualification": "reproducible native-macos frontend candidate; production qualification is tracked separately",
+  "target_triple": "msp430-stc-none-eabi",
+  "data_layout": "E-m:e-p:24:8-i8:8-i16:8-i32:8-i64:8-i128:8-f32:8-f64:8-f128:8-a:8-n8:16:32-S8",
+  "abi_identity_symbol": "__stcxx_abi_stc_arduino_cxx_v1_mcs251_be_size4_pdiff4_ptr3_fnptr3_guard1_direct",
+  "tools": {
+    "clang": {
+      "version": "20.1.8",
+      "source_project_windows": "D:\\Git\\stc51\\stcxx",
+      "source_project_wsl": "/mnt/d/Git/stc51/stcxx",
+      "source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
+      "source_project_patch_file": "arduino/patches/clang-20.1.8-stcsdcc-ir-only.patch",
+      "source_archive_sha256": "b7a1b7b0af7b9c7596af6bd46e36d11321926eaa66a7a7dc957ab0a1375ee4b0",
+      "cmake_archive_sha256": "3319203cfd1172bbac50f06fa68e318af84dcb5d65353310c0586354069d6634",
+      "patch_file": "tools/clang-stc-target/clang-20.1.8-stcsdcc-ir-only.patch",
+      "patch_sha256": "f8fda423712d808dd087d4e789b1e824911cde62d738078bf9325a898d8476c0",
+      "patched_source_normalized_sha256": {
+        "include/clang/Basic/TargetInfo.h": "23ade7d95b1a7497f20b1bcfa8823c33ecb72087c1c0aa05dc52020a96aad289",
+        "lib/AST/ASTContext.cpp": "83e17d363bfebaa63486d107b28c6b6cd531dd4fb307a75db6ae9fac9ae09ee3",
+        "lib/AST/ItaniumCXXABI.cpp": "4af3f218d0e4d3838b65acda2f0f400a659d297e6b2264dc3eed0e892abb59fa",
+        "lib/Basic/Targets/MSP430.cpp": "8650ce2fb14da7f7f6d72e49297ed34a99843834bfc7d3b1cc082ef7c02eb83a",
+        "lib/Basic/Targets/MSP430.h": "c66b7aa1ef9567806ac619c074b25ce6226cb6c69ae340ef864bc09e55906514",
+        "lib/CodeGen/BackendUtil.cpp": "5390b53f2a35534b5c65b0aa3c93c5d294de43922567718636e0930ff4f68c39",
+        "lib/CodeGen/CGCall.cpp": "bc9cec92964a15a0e7140168c045b8b7bca8ff11a858cf989d556f38bdd92893",
+        "lib/CodeGen/CGExprScalar.cpp": "9e3eb4a610e6ff73c10dd45e4145b1d301d685ffc8517a8b6e0d9b39c11b2904",
+        "lib/CodeGen/CGVTables.cpp": "a28dfce56a93f74a7511f1eef7e369d8a7e51245c80831a8b0092c14fa20fa53",
+        "lib/CodeGen/CodeGenModule.cpp": "c7af4286b9acd14f5d81111ae708aa8abbd7b16b7c2131c4fe758b47f86d8d61",
+        "lib/CodeGen/CodeGenModule.h": "b556fcf113c24ce29c7f303f0a19fcfebe93b421bf1e87b21ba8bae0cd6ccbf2",
+        "lib/CodeGen/CodeGenTypeCache.h": "5da5e393f30104f121ac94bb131a70411b65ff99b7519bacb0ee2126d5e20cd1",
+        "lib/CodeGen/ItaniumCXXABI.cpp": "299449910e285455679d28db550a1f058904027b867e814d92869b199da9f3d5",
+        "lib/Driver/ToolChains/Clang.cpp": "2e53d79ee3d3c23ee3f792c5d21fe0dcdf7e41f1214141a7cca0e927241f4f56"
+      },
+      "dual_target_regression": "tools/clang-stc-target/check-stc-cpp-targets.py",
+      "dual_target_regression_sha256": "96591c481d69e29ee1fd0763e6a0306811bd39f5f1ec64b8030d0ce03f02bc9f",
+      "dual_target_probe_sha256": {
+        "mcs51_target_info_probe.cpp": "1399b4266fa46054b1f7bb490e64b63037c506e878eb5825d4ff1cc679eebfb6",
+        "target_info_probe.cpp": "a21c98d3dace9247e4922d65a24d4414eaf697a43ad7021c5eb41d3e4e63c1dd",
+        "stock_msp430_probe.cpp": "c8f3c0d3d2ba62bbd1f15896c0da52bb14e802f0fcc3a615ff69356bf51d3cc8",
+        "stock_relative_vtable_probe.cpp": "7d2a46a447d298324f37207457d676e326e23f82c3f902d4ca0748f556fb31ae"
+      },
+      "sha256": "204a41c057ea397ce16398c6fa1ae3289c3c28d7e42f1b24b24d03298eeeec98",
+      "shared_library_sha256": "e79c92884e0296c0062e21641aecde34abf85bec4af7fc6d5b1e021ae5c1c9f5"
+    },
+    "llvm_shared_library": {
+      "soname": "libLLVM.dylib",
+      "sha256": "29cdb6a16d64a1d829050e152d0ab6e1672101ef1c5bd8d8852fd435a214df24"
+    },
+    "llvm_link": {
+      "sha256": "713b3aa77433d3f80026662265cf2a55caf4feb51893346d3bca135f6b963999"
+    },
+    "opt": {
+      "sha256": "fbf9e04cf609a8b8cf65751aee8f17fb05a9024810b80b74f1ecba330ff3d90f"
+    },
+    "llvm_dis": {
+      "sha256": "4d47a5fca400953c299697cf09294109059fe6a1f29290bbea33dcc448d417f7"
+    },
+    "llvm_cbe": {
+      "repository": "https://github.com/JuliaHubOSS/llvm-cbe.git",
+      "commit": "83f1bea66c7415c701925470a2f7596b37153197",
+      "source_project_windows": "D:\\Git\\stc51\\stcxx",
+      "source_project_wsl": "/mnt/d/Git/stc51/stcxx",
+      "source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
+      "source_project_patch_file": "arduino/patches/llvm-cbe-83f1bea-stc-sdcc.patch",
+      "patch_file": "tools/llvm-cbe-stc/llvm-cbe-83f1bea-stc-sdcc.patch",
+      "patch_sha256": "eb9687ce401a3f95c53c424f8af7c1c1a4ceca76be734812148ef18e6948fdf7",
+      "sha256": "0e21cfcd49596efa0dc3a8fe7ea050f63d0237db940a320d2fef6dcd95cf531b",
+      "sret_policy": "explicit caller-owned result pointer for both STC IR targets"
+    },
+    "sdcc": {
+      "version_prefix": "SDCC : mcs51/mcs251 TD- 4.6.0",
+      "source_project_windows": "D:\\Git\\stc51\\stcxx",
+      "source_project_wsl": "/mnt/d/Git/stc51/stcxx",
+      "source_project_branch": "arduino-cpp-core",
+      "source_project_commit": "f16b00a71e3da804b52b796b332ff5696db4280a",
+      "source_project_state": "worktree-source-candidate; exact compiler sources are bound by patch_sha256",
+      "previous_qualified_source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
+      "source_project_patch_file": "arduino/patches/sdcc-mcs251-arduino-cpp.patch",
+      "malloc_abi_source_file": "device/lib/malloc.c",
+      "malloc_abi_source_sha256": "2649be26b08eeb4be411d52deb21864da91084d30c082a2674376fa9cef7ec7e",
+      "malloc_abi_source_git_blob": "bc6f24625f7ed0959bef5c2fa18b056cbaaf786f",
+      "malloc_abi_sources": {
+        "device/lib/malloc.c": {
+          "raw_sha256": "2649be26b08eeb4be411d52deb21864da91084d30c082a2674376fa9cef7ec7e",
+          "git_blob": "bc6f24625f7ed0959bef5c2fa18b056cbaaf786f"
+        },
+        "device/lib/mcs251/heap.h": {
+          "raw_sha256": "95dc3f1ab3cb956c214e0266de9d4c51648a8f40ca9174adf439e7b73767b280",
+          "git_blob": "570a7f5650147f8b101157ee2b4ec02b8a7be274"
+        },
+        "device/lib/_heap_init.c": {
+          "raw_sha256": "bcf1eeb505c089cb310398e0c6932e273df2b37acd913fa3598b10ffafa88c43",
+          "git_blob": "0dd3c49a5fc1cc6171d3c8a2033d554d6b89b83b"
+        }
+      },
+      "upstream_base_commit": "b09075b6a93e6afe10645181e3aeff041ea37f87",
+      "standalone_bridge_adapter_sha256": "faf8c44e22c09037d29f9332941c6dcf8d8a4236148fd94020ca0264c5665ad5",
+      "standalone_bridge_regression_sha256": "8d4ab2140b002754a56b7cbec2d32b3bb610fe1aa92cd9ac08baeea46e8b417d",
+      "patch_file": "tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch",
+      "patch_sha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
+      "sha256": "88f31cb36fdfb2f4c8bccf7c64dd5ff1d8c700ad47734d86b7166a1f5cd754f1",
+      "elf_sha256": "88f31cb36fdfb2f4c8bccf7c64dd5ff1d8c700ad47734d86b7166a1f5cd754f1",
+      "native_package_archive_sha256": "9c8c5bafa339e4cd72c513be673f15e3fdf36d51acbb89f029864035a38d97cf",
+      "native_package_manifest_sha256": "2d381473a5313af69bb8d434ed0fea8938862d6cd5d0fa2d7326409d5efbc6f1"
+    },
+    "sdar": {
+      "sha256": "9c801d1b8249db85955828f89f6cabd6413c88d87b2a7d18bf5dff322fd2fd9f"
+    },
+    "sdas251": {
+      "sha256": "ba6bbc7938116e8c42b83588bcd11e04aac23660209edb7e7ba0cc73fbf11d5f"
+    },
+    "sdld": {
+      "sha256": "52c7a057749fb5af495695e57b917238b038acd703bea03cb35d0bd899d9b383"
+    },
+    "sdldmcs251": {
+      "sha256": "caa9c458b60fc30ef333517ec6d908f3178fe4d4bf4d384c362fde4a5d7cf0a0"
+    },
+    "sdcpp": {
+      "sha256": "7b98e0881782372cb880234bad929f4a977bea128192177703a25ecb0f094d90"
+    },
+    "sdcc_inputs": {
+      "libsdcc_sha256": "d8387b753220462e019a62b8f4c70f786ab59b3cfac45e2c1a9935832de47ac5",
+      "mcs251_sha256": "43fb5aa8cf703f3ad93aa1993906244c5309709afd355d6d28912ce9d1b41d22",
+      "stddef_sha256": "5ef86cd924d140f80152f0e5463c605e43855b0d23e5692ccda93469470d4a9d",
+      "stdint_sha256": "7275e563d168934bb86333bd3e4a072946da43480c3f711c19e1ea2f1169a435"
+    }
+  },
+  "pipeline_helpers": {
+    "toolchain_paths": {
+      "path": "tools/cpp-cli/toolchain-paths.sh",
+      "sha256": "a3386b8f23e6095455d0631a150ae8d43715310dc0d9e10681b3ef327c61258b"
+    },
+    "cpp_archive_selector": {
+      "path": "tools/cpp-cli/select-cpp-archive-sidecars.py",
+      "sha256": "feb632f85673d4ee85290a3154948e4e5e4078679dbbbcf300f4e68d191468bc"
+    },
+    "aslink_map_symbols": {
+      "path": "tools/cpp-cli/aslink_map_symbols.py",
+      "sha256": "69780e91fdb742cbc441bab710fe6219627550a91600c319750b2ba5dd46534d"
+    },
+    "cbe_audit_adapter": {
+      "path": "tools/cpp-core-pipeline/audit_and_adapt.py",
+      "sha256": "b58b74005c6d897b6867c66eea3cd96d8e416cf487d15662f637acfa1a0e6b9f"
+    },
+    "arduino_cli_adapter": {
+      "path": "tools/cpp-cli/adapt.py",
+      "sha256": "4bc77ccf048ce1439252f1ea4a6f94bac16837dc02a0f8cdd42420214c860c7d"
+    },
+    "member_function_aligner": {
+      "path": "tools/cpp-cli/align-member-functions.py",
+      "sha256": "8d0dae028092b40f663d9a8548c7e4d50cf505feecfefa19f3f49e8f6818d364"
+    },
+    "arduino_cli_driver": {
+      "path": "tools/cpp-cli/stcxx-cli.sh",
+      "sha256": "7a52739c0916e130a978fb99e5a1b5a4afd10f76a3c4835e483487b75799aacb"
+    },
+    "native_storage": {
+      "path": "tools/cpp-cli/native-storage.py",
+      "sha256": "34e8d78a0536807dbfd27f1421615a01a281c732d87f862f646c4077e8c491f0"
+    },
+    "readonly_const_slicer": {
+      "path": "tools/cpp-cli/slice-readonly-const-rel.py",
+      "sha256": "fc97099cc9adfa13ee2b2021285c15db894d4c9000afb40c25ed6d9d5df36098"
+    },
+    "function_tu_splitter": {
+      "path": "tools/cpp-cli/split-c-function-tu.py",
+      "sha256": "553320944159411c4e99579ba30772d630420ea631f47247341e582d89cf875f"
+    },
+    "function_link_map_auditor": {
+      "path": "tools/cpp-cli/audit-function-split-link-map.py",
+      "sha256": "9d6c5e8fc3c8c6be1b0abaf29e1c830062f0a143d7cd06c3b64ef7b8dbd7bf0a"
+    },
+    "function_archive_builder": {
+      "path": "tools/cpp-cli/build-function-split-archive.py",
+      "sha256": "c8d9ddf93fb7308e99535719f738b98f07c87a8f97d676874aca8fdfa60fd29f"
+    },
+    "macos_frontend_verifier": {
+      "path": "tools/cpp-cli/verify-macos-frontend.py",
+      "sha256": "8384994b64efd404f0d96dc74197fd439d5ee4c7063cb04245450b209908826a"
+    }
+  },
+  "targets": {
+    "mcs251": {
+      "target_triple": "msp430-stc-none-eabi",
+      "data_layout": "E-m:e-p:24:8-i8:8-i16:8-i32:8-i64:8-i128:8-f32:8-f64:8-f128:8-a:8-n8:16:32-S8",
+      "abi_identity_symbol": "__stcxx_abi_stc_arduino_cxx_v1_mcs251_be_size4_pdiff4_ptr3_fnptr3_guard1_direct",
+      "ordinary_function_pointer_bytes": 3,
+      "function_reference_storage_bytes": 3,
+      "data_member_pointer_bytes": 3,
+      "member_function_pointer_bytes": 6,
+      "member_pointer_codegen_integer_bits": 24,
+      "member_call_program_address_space": 0,
+      "sdcc_inputs": {
+        "libsdcc_sha256": "d8387b753220462e019a62b8f4c70f786ab59b3cfac45e2c1a9935832de47ac5",
+        "target_runtime_sha256": "43fb5aa8cf703f3ad93aa1993906244c5309709afd355d6d28912ce9d1b41d22"
+      }
+    }
+  },
+  "host": "darwin-arm64",
+  "macos_frontend": {
+    "manifest_sha256": "4527fd235168cbf9daf44eca0c63e85d429e7038761d81eca9d0dc6199bf44f3",
+    "archive_sha256": "f0850765b5edf5f667a87a8910c9581510aa30febb1e297cfc036a38acf3e77a",
+    "source_lock_sha256": "cf2356a74157d5f5d957438116faae06edf321df894b71375c10e725cc807c0d",
+    "minimum_macos": "15.0",
+    "tested_macos": "15.7.1",
+    "signature": "ad-hoc; no Developer ID or notarization"
+  },
+  "arduino_frontend": {
+    "packager": "arduino-stc51",
+    "name": "stcxx-frontend",
+    "version": "20.1.8-stc.1"
+  }
+}

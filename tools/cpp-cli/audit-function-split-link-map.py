@@ -29,6 +29,35 @@ def archive_member_alias(source_name: str, source_sha256: str) -> str:
     return "fs-" + hashlib.sha256(identity).hexdigest()[:24] + ".rel"
 
 
+def verify_direct_objects(audit: dict, map_lines: list[str], link_args: list[str]) -> dict:
+    bindings = audit.get('bindings')
+    if not isinstance(bindings, list) or not bindings:
+        fail('direct function audit has no bindings')
+    outputs, inputs = set(), set()
+    loaded = []
+    for item in bindings:
+        original = str(Path(item['input_rel']).resolve())
+        output = str(Path(item['output_rel']).resolve())
+        if original in inputs or output in outputs:
+            fail('duplicate direct function binding')
+        inputs.add(original); outputs.add(output)
+        for path, key in ((original, 'input_rel_sha256'), (output, 'output_rel_sha256')):
+            if not Path(path).is_file() or digest(Path(path)) != item[key]:
+                fail('direct function REL hash mismatch: ' + path)
+        if item.get('transformed') != (original != output):
+            fail('direct function transformation flag differs')
+        if link_args.count(output) != 1:
+            fail('direct function REL is not linked exactly once: ' + output)
+        matches = [i for i, line in enumerate(map_lines) if line.strip() == output]
+        if len(matches) != 1 or matches[0] + 1 >= len(map_lines) or not re.fullmatch(
+                r'\s*\[\s*[^\[\]]*\]\s*', map_lines[matches[0] + 1]):
+            fail('direct function REL is absent or duplicated in the final map: ' + output)
+        if original != output and (original in link_args or any(line.strip() == original for line in map_lines)):
+            fail('replaced direct function REL entered final link: ' + original)
+        loaded.append({'path': output, 'sha256': item['output_rel_sha256']})
+    return {'outcome': 'PASS', 'loaded_direct_object_count': len(loaded), 'loaded_direct_objects': loaded}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--audit-list", type=Path, required=True)
@@ -60,6 +89,12 @@ def main() -> None:
         audit = json.loads(audit_path.read_text(encoding="utf-8"))
         if audit.get("schema_version") != 1 or audit.get("outcome") != "PASS":
             fail(f"unsupported or failed archive audit: {audit_path}")
+        if audit.get('linkage') == 'direct-rels':
+            audit['final_link'] = {**verify_direct_objects(audit, map_lines, link_args),
+                'map': str(map_path), 'map_sha256': digest(map_path),
+                'link_arguments': str(link_arguments), 'link_arguments_sha256': digest(link_arguments)}
+            audit_path.write_text(json.dumps(audit, indent=2) + '\n', encoding='utf-8', newline='\n')
+            continue
         archive = Path(audit["output_archive"]).resolve()
         if not archive.is_file() or digest(archive) != audit["output_archive_sha256"]:
             fail(f"temporary archive hash mismatch: {archive}")

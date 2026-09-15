@@ -20,6 +20,13 @@ void TwoWire::setPins(uint8_t data, uint8_t clock)
     Wire_setPins(data, clock);
 }
 
+uint8_t TwoWire::setPinsChecked(uint8_t data, uint8_t clock)
+{
+    return Wire_setPinsChecked(data, clock);
+}
+uint8_t TwoWire::configurationError() { return Wire_configurationError(); }
+uint8_t TwoWire::lastError() { return Wire_lastError(); }
+
 void TwoWire::setClock(uint32_t clock)
 {
     Wire_setClock((unsigned long)clock);

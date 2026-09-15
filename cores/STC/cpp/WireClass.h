@@ -42,6 +42,9 @@ public:
     void begin();
     void end();
     void setPins(uint8_t data, uint8_t clock);
+    uint8_t setPinsChecked(uint8_t data, uint8_t clock);
+    uint8_t configurationError();
+    uint8_t lastError();
     void setClock(uint32_t clock);
     void setWireTimeout(uint32_t timeout = 25000UL,
                         bool resetWithTimeout = false);

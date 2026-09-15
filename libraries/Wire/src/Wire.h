@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Arduino-style software I2C master with C and C++ profile routing.
+ * Arduino-style I2C master with hardware selection and software fallback.
  *
  * The Wire object is a const table of function pointers so a C sketch can use
  * Wire.begin(), Wire.write(), and similar syntax.  The opt-in C++ profile
@@ -51,15 +51,15 @@ extern "C" {
 #endif
 
 #ifndef WIRE_DEFAULT_SDA_PIN
-# define WIRE_DEFAULT_SDA_PIN P3_2
+# define WIRE_DEFAULT_SDA_PIN PIN_WIRE_SDA
 #endif
 
 #ifndef WIRE_DEFAULT_SCL_PIN
-# define WIRE_DEFAULT_SCL_PIN P3_3
+# define WIRE_DEFAULT_SCL_PIN PIN_WIRE_SCL
 #endif
 
 #ifndef WIRE_DEFAULT_STRETCH_TIMEOUT_US
-# define WIRE_DEFAULT_STRETCH_TIMEOUT_US 0UL
+# define WIRE_DEFAULT_STRETCH_TIMEOUT_US 25000UL
 #endif
 
 #define WIRE_STATUS_SUCCESS        0u
@@ -74,6 +74,9 @@ void Wire_begin(void) STC_WIRE_REENTRANT;
 void Wire_end(void) STC_WIRE_REENTRANT;
 #endif
 void Wire_setPins(uint8_t sda_pin, uint8_t scl_pin) STC_WIRE_REENTRANT;
+uint8_t Wire_setPinsChecked(uint8_t sda_pin, uint8_t scl_pin) STC_WIRE_REENTRANT;
+uint8_t Wire_configurationError(void) STC_WIRE_REENTRANT;
+uint8_t Wire_lastError(void) STC_WIRE_REENTRANT;
 void Wire_setClock(unsigned long clock_hz) STC_WIRE_REENTRANT;
 void Wire_setClockStretchTimeout(unsigned long timeout_us) STC_WIRE_REENTRANT;
 void Wire_setWireTimeout(uint32_t timeout_us, uint8_t reset_with_timeout)
@@ -118,6 +121,9 @@ typedef struct {
                                    uint32_t internal_address,
                                    uint8_t internal_address_size,
                                    uint8_t send_stop) STC_WIRE_REENTRANT;
+    uint8_t (*setPinsChecked)(uint8_t sda_pin, uint8_t scl_pin) STC_WIRE_REENTRANT;
+    uint8_t (*configurationError)(void) STC_WIRE_REENTRANT;
+    uint8_t (*lastError)(void) STC_WIRE_REENTRANT;
 } STCWireClass;
 
 extern const STCWireClass Wire;

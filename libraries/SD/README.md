@@ -1,8 +1,10 @@
 # SD library for the STC plain-C and experimental C++ cores
 
 This clean-room MIT implementation supports SD version 1, SD version 2 and
-SDHC cards in SPI mode. It requests 100 kHz for card initialization and then a
-400 kHz target from the software SPI layer. It provides bounded `CMD17`/`CMD24`
+SDHC cards in SPI mode. It requests 100 kHz for card initialization, then
+4 MHz on bus-layout-1 devices or 400 kHz on other devices by default.
+`begin(clock, cs)` selects a nonzero data-clock request; SPI chooses the
+supported hardware divider or software fallback. It provides bounded `CMD17`/`CMD24`
 single-sector I/O. Every card-response, data-token and busy wait has both a byte-attempt
 limit and a `millis()` deadline; chip select is released on every exit path.
 
@@ -34,11 +36,28 @@ surface includes `String` overloads for `open`/`exists`; `remove` performs a
 real root-file deletion, while `mkdir` and `rmdir` fail with
 `SD_ERROR_UNSUPPORTED`. `isDirectory()` is always false, `openNextFile()`
 returns an invalid handle, and `rewindDirectory()` is a no-op: their presence
-does not imply directory support. `begin(clock, cs)` accepts but currently
-ignores `clock` before using the same fixed software-SPI policy as `begin(cs)`.
+does not imply directory support.
 A successful `setPins()` closes the active backend and invalidates every
 outstanding `File` facade; a rejected pin configuration leaves the mounted
 backend and its handles unchanged.
+
+Copies of a `File` share the single open backend. Closing the last live copy
+flushes it; opening another file invalidates all existing handles. Live
+handles share a small heap-allocated state, retained until the last owner
+releases it, so repeated opens cannot revive an old handle through a wrapping
+generation counter. `open()` returns an invalid File if this allocation fails
+and leaves the existing file usable. Releasing stale File objects also releases
+their state; applications should not retain unbounded stale handles. All calls remain foreground
+operations; this is not a thread-safe or interrupt-safe filesystem API.
+
+If the last handle's explicit `close()` fails to flush, the handle stays valid
+and `getWriteError()` records the failure. Correct the I/O problem, call
+`clearWriteError()`, and retry `flush()`/`close()`. A failed close also prevents
+`SD.open()`/`begin()`/`end()`/`remove()` from discarding the existing handle.
+A destructor cannot preserve its own handle, but pending backend state is
+retained for the next open or reconfiguration to retry. This is recovery from
+a transient I/O failure, not a guarantee against power loss. `File.read(buffer,
+length)` returns at most `INT_MAX` bytes per call (32767 on MCS251).
 
 Root-directory scans have a hard 4096-sector ceiling in addition to the FAT
 cluster-count bound, so a corrupt cyclic directory chain cannot cause an

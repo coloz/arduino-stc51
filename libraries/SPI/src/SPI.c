@@ -46,6 +46,11 @@ static uint8_t spi_global_interrupt_users;
 static uint8_t spi_transaction_interrupt_mask;
 static uint8_t spi_saved_interrupt_state;
 static uint8_t spi_transaction_active;
+static uint8_t spi_config_error;
+uint8_t SPI_configurationError(void) STC_SPI_REENTRANT { return spi_config_error; }
+static uint8_t spi_same_pad(uint8_t a, uint8_t b) {
+    return a == b || STC_VARIANT_PHYSICAL_ALIAS(a) == b;
+}
 
 static uint8_t spi_interrupt_mask_for_number(uint8_t interrupt_number)
 {
@@ -73,6 +78,8 @@ static void spi_unlock_registration(uint8_t saved_ea)
     SPI_INTERRUPT_STATE_WRITE(
         (state & (uint8_t)~SPI_INTERRUPT_EA_MASK) | saved_ea);
 }
+
+#include "SPIHardware.h"
 
 static void spi_begin_interrupt_guard(void)
 {
@@ -131,6 +138,9 @@ static void spi_set_clock(unsigned long clock_hz)
     if (clock_hz == 0UL) {
         clock_hz = SPI_DEFAULT_CLOCK_HZ;
     }
+#ifdef STC_SPI_HARDWARE
+    spi_clock_hz = clock_hz;
+#endif
     if (clock_hz >= 500000UL) {
         half_period = 1UL;
     } else {
@@ -158,10 +168,16 @@ static void spi_configure_pins(void)
     digitalWrite(spi_mosi_pin, LOW);
     pinMode(spi_mosi_pin, OUTPUT);
     pinMode(spi_miso_pin, INPUT);
+#ifdef STC_SPI_HARDWARE
+    spi_hardware_configure();
+#endif
 }
 
 static void spi_release_pins(void)
 {
+#ifdef STC_SPI_HARDWARE
+    spi_hardware_disable();
+#endif
     digitalWrite(spi_ss_pin, HIGH);
     pinMode(spi_mosi_pin, INPUT);
     pinMode(spi_miso_pin, INPUT);
@@ -171,6 +187,11 @@ static void spi_release_pins(void)
 
 void SPI_begin(void) STC_SPI_REENTRANT
 {
+    if (!digitalPinIsValid(spi_mosi_pin) || !digitalPinIsValid(spi_miso_pin) ||
+        !digitalPinIsValid(spi_sck_pin) || !digitalPinIsValid(spi_ss_pin)) {
+        spi_config_error = STC_SPI_INVALID;
+        return;
+    }
     if (spi_initialized != 0u) {
         if (spi_initialized != 0xffu) {
             ++spi_initialized;
@@ -189,8 +210,20 @@ void SPI_begin(void) STC_SPI_REENTRANT
 void SPI_setPins(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
                  uint8_t ss_pin) STC_SPI_REENTRANT
 {
-    uint8_t restart = spi_initialized;
+    (void)SPI_setPinsChecked(mosi_pin, miso_pin, sck_pin, ss_pin);
+}
 
+uint8_t SPI_setPinsChecked(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
+                           uint8_t ss_pin) STC_SPI_REENTRANT
+{
+    uint8_t restart = spi_initialized;
+    if (spi_transaction_active) return spi_config_error = STC_SPI_BUSY;
+    if (!digitalPinIsValid(mosi_pin) || !digitalPinIsValid(miso_pin) ||
+        !digitalPinIsValid(sck_pin) || !digitalPinIsValid(ss_pin) ||
+        spi_same_pad(mosi_pin, miso_pin) || spi_same_pad(mosi_pin, sck_pin) ||
+        spi_same_pad(mosi_pin, ss_pin) || spi_same_pad(miso_pin, sck_pin) ||
+        spi_same_pad(miso_pin, ss_pin) || spi_same_pad(sck_pin, ss_pin))
+        return spi_config_error = STC_SPI_INVALID;
     if (restart != 0u) {
         spi_end_interrupt_guard();
         spi_release_pins();
@@ -202,25 +235,44 @@ void SPI_setPins(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
     if (restart != 0u) {
         spi_configure_pins();
     }
+    return spi_config_error = STC_SPI_OK;
 }
 
 void SPI_beginTransaction(unsigned long clock_hz, uint8_t bit_order,
                           uint8_t data_mode) STC_SPI_REENTRANT
 {
-    if (spi_transaction_active == 0u) {
-        spi_begin_interrupt_guard();
-    }
+    (void)SPI_beginTransactionChecked(clock_hz, bit_order, data_mode);
+}
+
+uint8_t SPI_beginTransactionChecked(unsigned long clock_hz, uint8_t bit_order,
+                                     uint8_t data_mode) STC_SPI_REENTRANT
+{
+    if (spi_transaction_active) return spi_config_error = STC_SPI_BUSY;
+    if (!clock_hz || bit_order > MSBFIRST || data_mode > SPI_MODE3)
+        return spi_config_error = STC_SPI_INVALID;
     SPI_setSettings(clock_hz, bit_order, data_mode);
+    if (spi_config_error != STC_SPI_OK) return spi_config_error;
+    spi_begin_interrupt_guard();
+    return spi_config_error;
 }
 
 void SPI_setSettings(unsigned long clock_hz, uint8_t bit_order,
                      uint8_t data_mode) STC_SPI_REENTRANT
 {
+    if (!clock_hz || bit_order > MSBFIRST || data_mode > SPI_MODE3) {
+        spi_config_error = STC_SPI_INVALID;
+        return;
+    }
     spi_ensure_initialized();
+    if (!spi_initialized) return;
     spi_set_clock(clock_hz);
     spi_bit_order = (bit_order == LSBFIRST) ? LSBFIRST : MSBFIRST;
     spi_data_mode = (uint8_t)(data_mode & 0x03u);
     digitalWrite(spi_sck_pin, spi_idle_level());
+#ifdef STC_SPI_HARDWARE
+    spi_hardware_configure();
+#endif
+    spi_config_error = STC_SPI_OK;
 }
 
 void SPI_usingInterrupt(uint8_t interrupt_number) STC_SPI_REENTRANT
@@ -258,6 +310,10 @@ uint8_t SPI_transfer(uint8_t value) STC_SPI_REENTRANT
     uint8_t phase;
 
     spi_ensure_initialized();
+    if (spi_config_error != STC_SPI_OK) return 0xffu;
+#ifdef STC_SPI_HARDWARE
+    if (spi_hardware) return spi_hardware_transfer(value);
+#endif
     idle = spi_idle_level();
     active = spi_active_level();
     phase = (uint8_t)(spi_data_mode & 0x01u);
@@ -340,6 +396,9 @@ const STCSPIClass SPI = {
     SPI_end,
     SPI_usingInterrupt,
     SPI_notUsingInterrupt,
-    SPI_setSettings
+    SPI_setSettings,
+    SPI_configurationError,
+    SPI_setPinsChecked,
+    SPI_beginTransactionChecked
 };
 #endif

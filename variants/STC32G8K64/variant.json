@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-09-05",
+  "as_of": "2026-09-13",
   "model": "STC32G8K64",
   "family": "STC32G",
   "selection": "rising",
@@ -45,6 +45,10 @@
     "separate_pullup": false
   },
   "peripherals": {
+    "pwm_layout": 1,
+    "memory_timing_layout": 1,
+    "bus_layout": 1,
+    "wire_layout": 1,
     "uart1": true,
     "uart1_buffered_rx": true,
     "timer0_clock_divider": null,

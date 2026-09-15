@@ -30,8 +30,8 @@ char *strcat(char *destination, const char *source);
 char *strncat(char *destination, const char *source, size_t size);
 int strcmp(const char *left, const char *right);
 int strncmp(const char *left, const char *right, size_t size);
-/* SDCC MCS51 implements these two entry points with a char search argument.
- * Route the standard int API through a native ABI-normalising boundary. */
+/* Search adapters normalize int arguments to unsigned char. */
+
 char *strchr(const char *text, int value) __asm__("__stcxx_libc_strchr");
 char *strrchr(const char *text, int value) __asm__("__stcxx_libc_strrchr");
 char *strstr(const char *text, const char *needle);

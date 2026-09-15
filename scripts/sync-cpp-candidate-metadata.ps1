@@ -70,14 +70,11 @@ Test-PublishedManifest $outRoot $manifest $expectedPublishedLock
 foreach ($name in @('sdld', 'sdldmcs251')) {
     if ((Hash (Join-Path $outRoot "bin/$name")) -ne $compilerLock.sdcc."reference_${name}_sha256") { throw "Published $name does not match compiler lock" }
 }
-$paths = @('tools/cpp-cli/toolchain-lock.json', 'tools/cpp-core-pipeline/toolchain-lock.json',
-           'tools/cpp-core-pipeline/source-manifest.json', 'cores/STC/cpp/core-manifest.json',
+$paths = @('tools/cpp-cli/toolchain-lock.json', 'cores/STC/cpp/core-manifest.json',
            'cores/STC/cpp/runtime-manifest.json', 'docs/cpp-runtime-contract.md',
            'docs/toolchain-and-sdk.md', 'tools/toolchain-patches/README.md')
 $driverBindingCounts = @{
     'tools/cpp-cli/toolchain-lock.json' = 1
-    'tools/cpp-core-pipeline/toolchain-lock.json' = 1
-    'tools/cpp-core-pipeline/source-manifest.json' = 2
     'cores/STC/cpp/core-manifest.json' = 2
 }
 $driverHash = Hash (Join-Path $sdkRoot 'tools/cpp-cli/stcxx-cli.sh')
@@ -94,22 +91,37 @@ if ($compilerLock.sdcc.patched_source_blobs -and
     throw 'Malloc source disagrees with the compiler source lock'
 }
 Add-HashReplacement $replacements $sdkLock.tools.sdcc.malloc_abi_source_sha256 (Hash $mallocSource)
+# The MCS251 allocator ABI also lives in its private header and initializer.
+# Verify each source against the compiler lock before refreshing its metadata.
+$mallocAbiBlobReplacements = @{}
+foreach ($entry in $sdkLock.tools.sdcc.malloc_abi_sources.PSObject.Properties) {
+    $abiSource = Join-Path $compilerRoot $entry.Name
+    $abiBlob = & git -C $compilerRoot -c core.safecrlf=false hash-object -- $entry.Name
+    if ($LASTEXITCODE -ne 0 -or $abiBlob -cnotmatch '^[0-9a-f]{40}$' -or
+        $compilerLock.sdcc.patched_source_blobs.($entry.Name) -ne $abiBlob) {
+        throw "Allocator ABI source disagrees with compiler lock: $($entry.Name)"
+    }
+    Add-HashReplacement $replacements $entry.Value.raw_sha256 (Hash $abiSource)
+    if ($entry.Value.git_blob -cnotmatch '^[0-9a-f]{40}$') { throw 'Invalid allocator source Git blob' }
+    $mallocAbiBlobReplacements[$entry.Value.git_blob] = $abiBlob
+}
 Add-HashReplacement $replacements $sdkLock.tools.llvm_cbe.patch_sha256 $compilerLock.llvm_cbe.patch_sha256
 Add-HashReplacement $replacements $sdkLock.tools.llvm_cbe.sha256 $compilerLock.llvm_cbe.reference_binary_sha256
 if ($compilerLock.bridge.regression_sha256) {
     Add-HashReplacement $replacements $sdkLock.tools.sdcc.standalone_bridge_regression_sha256 $compilerLock.bridge.regression_sha256
 }
+Add-HashReplacement $replacements $sdkLock.tools.sdcc.standalone_bridge_adapter_sha256 $compilerLock.bridge.shared_adapter_sha256
 Add-HashReplacement $replacements $sdkLock.tools.sdcc.patch_sha256 $compilerLock.sdcc.patch_sha256
 Add-HashReplacement $replacements $sdkLock.tools.sdcc.sha256 $compilerLock.sdcc.reference_wrapper_sha256
 Add-HashReplacement $replacements $sdkLock.tools.sdcc.elf_sha256 $compilerLock.sdcc.reference_elf_sha256
 Add-HashReplacement $replacements $oldPublishedLock $CompilerLockSha256
 Add-HashReplacement $replacements $sdkLock.tools.sdcc.published_out_manifest_sha256 $nextManifestHash
-foreach ($name in @('sdar', 'sdas251', 'sdas8051', 'sdld', 'sdldmcs251', 'sdcpp')) {
+foreach ($name in @('sdar', 'sdas251', 'sdld', 'sdldmcs251', 'sdcpp')) {
     Add-HashReplacement $replacements $sdkLock.tools.$name.sha256 (Hash (Join-Path $outRoot "bin/$name"))
 }
-foreach ($target in @('mcs51', 'mcs251')) {
-    $model = if ($target -eq 'mcs51') { 'large-stack-auto' } else { 'mcs251-large-stack-auto' }
-    $runtimeName = if ($target -eq 'mcs51') { 'mcs51.lib' } else { 'mcs251.lib' }
+foreach ($target in @('mcs251')) {
+    $model = 'mcs251-large-stack-auto'
+    $runtimeName = 'mcs251.lib'
     $inputs = $sdkLock.targets.$target.sdcc_inputs
     Add-HashReplacement $replacements $inputs.libsdcc_sha256 (Hash (Join-Path $outRoot "share/sdcc/lib/$model/libsdcc.lib"))
     Add-HashReplacement $replacements $inputs.target_runtime_sha256 (Hash (Join-Path $outRoot "share/sdcc/lib/$model/$runtimeName"))
@@ -156,7 +168,18 @@ foreach ($relative in $paths) {
     if ($driverBindingCounts.ContainsKey($relative)) {
         $content = Update-CliDriverBindings $content $driverHash $driverBindingCounts[$relative]
     }
+    if ($relative -in @('tools/cpp-cli/toolchain-lock.json', 'cores/STC/cpp/core-manifest.json')) {
+        # These are active manifests. Earlier entries may predate even the
+        # old CLI lock, so replacing only that old digest misses their binding.
+        $content = [regex]::Replace($content, '("published_out_lock_sha256"\s*:\s*")[0-9a-f]{64}(")', ('${1}' + $CompilerLockSha256 + '${2}'))
+        $content = [regex]::Replace($content, '("published_out_manifest_sha256"\s*:\s*")[0-9a-f]{64}(")', ('${1}' + $nextManifestHash + '${2}'))
+    }
     $content = $content.Replace($sdkLock.tools.sdcc.malloc_abi_source_git_blob, $mallocBlob)
+    $content = [regex]::Replace($content, '(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])', [Text.RegularExpressions.MatchEvaluator]{
+        param($match)
+        if ($mallocAbiBlobReplacements.ContainsKey($match.Value)) { return $mallocAbiBlobReplacements[$match.Value] }
+        return $match.Value
+    })
     $content = $content.Replace('D:\\Git\\sdcc-c251-arduino', $compilerRoot.Replace('\','\\'))
     $content = $content.Replace('D:\Git\sdcc-c251-arduino', $compilerRoot)
     $content = $content.Replace('D:\\Git\\stc51\\sdcc-c251-arduino', $compilerRoot.Replace('\','\\'))

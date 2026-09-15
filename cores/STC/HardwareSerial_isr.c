@@ -49,5 +49,9 @@ void stc_uart1_isr(void) __interrupt (4)
     }
     STC_ISR_CONTEXT_LEAVE();
 }
+# else
+/* Shared even when no buffered UART interrupt is compiled. */
+uint8_t stc_uart1_peek_valid;
+uint8_t stc_uart1_peek_value;
 # endif
 #endif

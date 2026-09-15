@@ -1,0 +1,3 @@
+BEGIN library-SoftwareSerial
+CHECKS 12
+PASS library-SoftwareSerial

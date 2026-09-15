@@ -96,6 +96,7 @@ uint8_t SD_setPins(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
 
 /* begin() retains the configured MOSI/MISO/SCK pins and selects cs_pin. */
 uint8_t SD_begin(uint8_t cs_pin) STC_SD_REENTRANT;
+uint8_t SD_beginClock(unsigned long clock_hz, uint8_t cs_pin) STC_SD_REENTRANT;
 
 /* Uses the current pin tuple, which initially contains the SPI defaults. */
 uint8_t SD_beginDefault(void) STC_SD_REENTRANT;

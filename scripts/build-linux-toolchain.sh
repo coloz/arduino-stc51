@@ -27,7 +27,7 @@ if [ "$(uname -s)" != "Linux" ] || [ "$(uname -m)" != "x86_64" ]; then
     exit 2
 fi
 
-for dependency in git gcc g++ make bison flex file grep tar sha256sum readelf ldd timeout; do
+for dependency in git gcc g++ make bison flex file grep tar sha256sum readelf ldd timeout python3 dpkg-query install; do
     if ! command -v "$dependency" >/dev/null 2>&1; then
         echo "Missing build dependency: $dependency" >&2
         exit 2
@@ -46,17 +46,26 @@ fi
 TAG=v4.6.0-mcs251-20260804
 COMMIT=b09075b6a93e6afe10645181e3aeff041ea37f87
 SOURCE_REPOSITORY=${SDCC_SOURCE_REPOSITORY:-https://github.com/gevico/sdcc-c251.git}
-PACKAGE_REVISION=3
+PACKAGE_REVISION=8
 PATCH_PATH="$REPOSITORY_ROOT/tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch"
-PATCH_SHA256=fcb1342a77a412dbb8b0c8c6e8e4df5e1b59744790e63e40c32dd812c9472e12
-PATCHED_GEN_BLOB=c77304895fc568bfcf095d2b4668671e18971ad4
+PATCH_SHA256=310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d
+PATCHED_GEN_BLOB=d115d7f822ba71308dcdc11570302d0321d7996a
 ARCHIVE_NAME="sdcc-mcs251-linux-$ARCH-$COMMIT-r$PACKAGE_REVISION.tar.bz2"
+METADATA_SCRIPT="$SCRIPT_DIRECTORY/finalize-linux-toolchain.py"
 WORK_DIRECTORY="/tmp/arduino-stc51-toolchain-build-$ARCH"
 SOURCE_DATE_EPOCH=1788134400
 LC_ALL=C
 TZ=UTC
 export SOURCE_DATE_EPOCH LC_ALL TZ
 
+if [ ! -f "$METADATA_SCRIPT" ]; then
+    echo "Missing package metadata helper: $METADATA_SCRIPT" >&2
+    exit 2
+fi
+if [ -e "$OUTPUT_DIRECTORY/$ARCHIVE_NAME" ] || [ -L "$OUTPUT_DIRECTORY/$ARCHIVE_NAME" ]; then
+    echo "Refusing to overwrite an existing archive: $OUTPUT_DIRECTORY/$ARCHIVE_NAME" >&2
+    exit 2
+fi
 if [ ! -f "$PATCH_PATH" ]; then
     echo "Missing locked source patch: $PATCH_PATH" >&2
     exit 2
@@ -83,6 +92,9 @@ fi
 umask 077
 mkdir "$WORK_DIRECTORY"
 trap cleanup EXIT HUP INT TERM
+# Keep the workspace private, but give installed files and directories normal
+# distribution permissions independent of the caller's umask.
+umask 022
 
 CLONE_ATTEMPT=1
 while ! timeout 180 git -c http.version=HTTP/1.1 -c http.lowSpeedLimit=1024 \
@@ -167,9 +179,11 @@ make -j1
 make DESTDIR="$WORK_DIRECTORY/stage" install
 
 PACKAGE_ROOT="$WORK_DIRECTORY/stage/sdcc-mcs251"
-cp "$WORK_DIRECTORY/source/README.md" "$WORK_DIRECTORY/source/COPYING" "$PACKAGE_ROOT/"
-cp "$WORK_DIRECTORY/source/sdas/COPYING3" "$PACKAGE_ROOT/"
-cp "$PATCH_PATH" "$PACKAGE_ROOT/"
+install -m 0644 "$WORK_DIRECTORY/source/README.md" "$WORK_DIRECTORY/source/COPYING" "$PACKAGE_ROOT/"
+install -m 0644 "$WORK_DIRECTORY/source/sdas/COPYING3" "$PACKAGE_ROOT/"
+# A source bundle on a Windows mount may expose executable permission bits.
+# These source notices and the patch are data, regardless of their input mode.
+install -m 0644 "$PATCH_PATH" "$PACKAGE_ROOT/"
 
 # These installed host-development artifacts are not used by SDCC at runtime.
 # They contain build-directory strings or archive metadata, so exclude them
@@ -177,7 +191,7 @@ cp "$PATCH_PATH" "$PACKAGE_ROOT/"
 find "$PACKAGE_ROOT/lib" -maxdepth 1 -type f \( -name '*.a' -o -name '*.la' \) -delete
 rm -rf "$PACKAGE_ROOT/lib/src"
 
-if ! "$PACKAGE_ROOT/bin/sdcc" --version | grep -q 'mcs51/mcs251'; then
+if ! "$PACKAGE_ROOT/bin/sdcc" --version | grep -q 'mcs251'; then
     echo "Packaged compiler does not expose both target ports." >&2
     exit 4
 fi
@@ -221,6 +235,11 @@ if [ -n "$MAX_GLIBCXX" ] && [ "$(printf '%s\n' "$MAX_GLIBCXX" 3.4.28 | sort -V |
     exit 4
 fi
 echo "compatibility=GLIBC_${MAX_GLIBC:-none},GLIBCXX_${MAX_GLIBCXX:-none}"
+
+python3 "$METADATA_SCRIPT" --source "$WORK_DIRECTORY/source" \
+    --build "$WORK_DIRECTORY/build" --package "$PACKAGE_ROOT" \
+    --builder "$SCRIPT_DIRECTORY/build-linux-toolchain.sh" --patch "$PATCH_PATH" --commit "$COMMIT" --tag "$TAG" \
+    --epoch "$SOURCE_DATE_EPOCH"
 
 mkdir -p "$OUTPUT_DIRECTORY"
 tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner --format=gnu \

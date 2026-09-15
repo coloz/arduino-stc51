@@ -26,8 +26,8 @@
 #ifndef STCXX_TARGET_ABI
 # define STCXX_TARGET_ABI 0
 #endif
-#ifndef STCXX_TARGET_MCS51
-# define STCXX_TARGET_MCS51 0
+#if defined(STCXX_TARGET_MCS51) && STCXX_TARGET_MCS51
+# error "MCS51 C++ support has been removed"
 #endif
 #ifndef STCXX_TARGET_MCS251
 # define STCXX_TARGET_MCS251 0
@@ -45,7 +45,6 @@
 #if ((STCXX_ENFORCE_NO_EXCEPTIONS_RTTI != 0) && \
      (STCXX_ENFORCE_NO_EXCEPTIONS_RTTI != 1)) || \
     ((STCXX_TARGET_ABI != 0) && (STCXX_TARGET_ABI != 1)) || \
-    ((STCXX_TARGET_MCS51 != 0) && (STCXX_TARGET_MCS51 != 1)) || \
     ((STCXX_TARGET_MCS251 != 0) && (STCXX_TARGET_MCS251 != 1)) || \
     ((STCXX_TARGET_ENDIAN_LITTLE != 0) && \
      (STCXX_TARGET_ENDIAN_LITTLE != 1)) || \
@@ -97,9 +96,7 @@ static_assert(sizeof(ptrdiff_t) == 4u,
               "stc-arduino-cxx-v1 requires 32-bit ptrdiff_t");
 static_assert(alignof(ptrdiff_t) == 1u,
               "stc-arduino-cxx-v1 requires byte-aligned ptrdiff_t");
-# if STCXX_TARGET_MCS251 && STCXX_TARGET_MCS51
-#  error "Select exactly one STC C++ target ABI"
-# elif STCXX_TARGET_MCS251
+# if STCXX_TARGET_MCS251
 #  if !STCXX_TARGET_ENDIAN_BIG || STCXX_TARGET_ENDIAN_LITTLE
 #   error "MCS251 stc-arduino-cxx-v1 requires explicit big-endian TargetInfo"
 #  endif
@@ -109,18 +106,8 @@ static_assert(alignof(size_t) == 1u,
               "MCS251 stc-arduino-cxx-v1 requires byte-aligned size_t");
 static_assert(sizeof(void (*)(void)) == 3u,
               "MCS251 stc-arduino-cxx-v1 requires 24-bit function pointers");
-# elif STCXX_TARGET_MCS51
-#  if !STCXX_TARGET_ENDIAN_LITTLE || STCXX_TARGET_ENDIAN_BIG
-#   error "MCS51 stc-arduino-cxx-v1 requires explicit little-endian TargetInfo"
-#  endif
-static_assert(sizeof(size_t) == 2u,
-              "MCS51 stc-arduino-cxx-v1 requires 16-bit size_t");
-static_assert(alignof(size_t) == 1u,
-              "MCS51 stc-arduino-cxx-v1 requires byte-aligned size_t");
-static_assert(sizeof(void (*)(void)) == 2u,
-              "MCS51 stc-arduino-cxx-v1 requires 16-bit function pointers");
 # else
-#  error "STCXX_TARGET_ABI requires STCXX_TARGET_MCS51 or STCXX_TARGET_MCS251"
+#  error "STCXX_TARGET_ABI requires STCXX_TARGET_MCS251"
 # endif
 #endif
 

@@ -15,9 +15,13 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 platform_root="$(cd "${script_dir}/../.." && pwd)"
 cpp_include_root="${platform_root}/cores/STC/cpp"
 lock_file="${script_dir}/toolchain-lock.json"
+if [[ "$(uname -s)" == Darwin ]]; then
+  lock_file="${script_dir}/toolchain-lock.macos-arm64.json"
+fi
 adapter="${script_dir}/adapt.py"
 member_function_aligner="${script_dir}/align-member-functions.py"
 root_collector="${script_dir}/collect-c-abi-roots.py"
+native_storage="${script_dir}/native-storage.py"
 archive_selector="${script_dir}/select-cpp-archive-sidecars.py"
 readonly_const_slicer="${script_dir}/slice-readonly-const-rel.py"
 function_tu_splitter="${script_dir}/split-c-function-tu.py"
@@ -32,7 +36,10 @@ to_linux_path() {
   # Use the same absolute conversion as the launcher for drive-letter, UNC,
   # POSIX and relative paths.  This keeps the argument-file-derived ready
   # marker identity stable even when Arduino supplies a relative TEMP path.
-  wslpath -a "${value}"
+  case "${value}" in
+    [A-Za-z]:/*|//*) wslpath -a "${value}" ;;
+    *) realpath -m -- "${value}" ;;
+  esac
 }
 
 source_path="$(to_linux_path "${source_win}")"
@@ -99,14 +106,6 @@ print(value)
 PY
 }
 
-clang="${STCXX_CLANG:-${HOME}/.cache/arduino-stc51/clang-build-20.1.8/bin/clang}"
-llvm_link="${STCXX_LLVM_LINK:-/usr/bin/llvm-link-20}"
-opt="${STCXX_OPT:-/usr/bin/opt-20}"
-llvm_dis="${STCXX_LLVM_DIS:-/usr/bin/llvm-dis-20}"
-llvm_cbe="${STCXX_LLVM_CBE:-/var/tmp/arduino-stc51-cpp-bridge/llvm-cbe-local/build/tools/llvm-cbe/llvm-cbe}"
-toolchain_root="${STCXX_TOOLCHAIN_ROOT:-/mnt/d/Git/stc51/stcxx}"
-sdcc="${STCXX_SDCC:-${toolchain_root}/out/bin/sdcc}"
-
 verify_tool() {
   local path="$1"
   local expected="$2"
@@ -136,17 +135,34 @@ verify_file_hash() {
 }
 
 verify_frontend_tools() {
+  if [[ "$(uname -s)" == Darwin ]] || [[ "$(json_value host)" == linux-x86_64 ]]; then
+    verify_file_hash "${script_dir}/verify-macos-frontend.py" \
+      "$(json_value pipeline_helpers.macos_frontend_verifier.sha256)" macos-frontend-verifier
+    "${python}" "${script_dir}/verify-macos-frontend.py" --lock "${lock_file}" \
+      --root "${STCXX_CPP_TOOLS_ROOT:?missing pinned frontend package}" \
+      --tool clang "${clang}" --tool llvm-link "${llvm_link}" --tool opt "${opt}" \
+      --tool llvm-dis "${llvm_dis}" --tool llvm-cbe "${llvm_cbe}" >/dev/null
+  fi
   verify_tool "${clang}" "$(json_value tools.clang.sha256)" clang
   local clang_cpp_library
-  clang_cpp_library="$(ldd "${clang}" | awk '/libclang-cpp\.so\.20\.1/ {print $3; exit}')"
-  [[ -n "${clang_cpp_library}" ]] || {
-    printf 'cannot resolve Clang shared-library implementation for %s\n' "${clang}" >&2
-    exit 2
-  }
+  clang_cpp_library="$(stcxx_resolve_library "${clang}" libclang-cpp.so.20.1)"
   verify_file_hash "${clang_cpp_library}" \
     "$(json_value tools.clang.shared_library_sha256)" libclang-cpp
   verify_tool "${llvm_dis}" "$(json_value tools.llvm_dis.sha256)" llvm-dis
   verify_tool "${llvm_cbe}" "$(json_value tools.llvm_cbe.sha256)" llvm-cbe
+  verify_tool "${llvm_link}" "$(json_value tools.llvm_link.sha256)" llvm-link
+  verify_tool "${opt}" "$(json_value tools.opt.sha256)" opt
+  local frontend llvm_library llvm_library_hash
+  local -A verified_llvm_libraries=()
+  llvm_library_hash="$(json_value tools.llvm_shared_library.sha256)"
+  for frontend in "${clang}" "${llvm_link}" "${opt}" "${llvm_dis}" "${llvm_cbe}"; do
+    llvm_library="$(stcxx_resolve_library "${frontend}" libLLVM.so.20.1)"
+    llvm_library="$(realpath -e -- "${llvm_library}")"
+    if [[ -z "${verified_llvm_libraries[${llvm_library}]:-}" ]]; then
+      verify_file_hash "${llvm_library}" "${llvm_library_hash}" libLLVM
+      verified_llvm_libraries["${llvm_library}"]=1
+    fi
+  done
   verify_file_hash "${archive_selector}" \
     "$(json_value pipeline_helpers.cpp_archive_selector.sha256)" cpp-archive-selector
   verify_file_hash "${aslink_map_symbols}" \
@@ -155,33 +171,35 @@ verify_frontend_tools() {
     "$(json_value pipeline_helpers.cbe_audit_adapter.sha256)" cbe-audit-adapter
   verify_file_hash "${adapter}" \
     "$(json_value pipeline_helpers.arduino_cli_adapter.sha256)" arduino-cli-adapter
+  verify_file_hash "${native_storage}" \
+    "$(json_value pipeline_helpers.native_storage.sha256)" native-storage
   verify_file_hash "${member_function_aligner}" \
     "$(json_value pipeline_helpers.member_function_aligner.sha256)" \
     member-function-aligner
+  verify_file_hash "${readonly_const_slicer}" \
+    "$(json_value pipeline_helpers.readonly_const_slicer.sha256)" readonly-const-slicer
+  verify_file_hash "${function_tu_splitter}" \
+    "$(json_value pipeline_helpers.function_tu_splitter.sha256)" function-tu-splitter
+  verify_file_hash "${function_archive_builder}" \
+    "$(json_value pipeline_helpers.function_archive_builder.sha256)" function-archive-builder
+  verify_file_hash "${function_link_map_auditor}" \
+    "$(json_value pipeline_helpers.function_link_map_auditor.sha256)" function-link-map-auditor
   local version
-  version="$(${clang} --version | head -n 1)"
+  version="$("${clang}" --version | head -n 1)"
   [[ "${version}" == *"clang version $(json_value tools.clang.version)"* ]] || {
     printf 'unexpected Clang version: %s\n' "${version}" >&2
     exit 2
   }
 }
 
-sdcc_build_root="$(dirname "$(dirname "${sdcc}")")"
-if [[ -x "${sdcc_build_root}/libexec/sdcc" && -d "${sdcc_build_root}/share/sdcc" ]]; then
-  # Relocatable fixed output published by D:\\Git\\stc51\\stcxx.
-  sdcc_elf="${sdcc_build_root}/libexec/sdcc"
-  sdcc_include_root="${sdcc_build_root}/share/sdcc/include"
-  sdcc_runtime_root="${sdcc_build_root}/share/sdcc/lib"
-else
-  # Developer override for a raw out-of-tree SDCC build.
-  sdcc_elf="${sdcc_build_root}/src/sdcc"
-  sdcc_prefix="$(dirname "${sdcc_build_root}")"
-  sdcc_include_root="${sdcc_prefix}/source/device/include"
-  sdcc_runtime_root="${sdcc_build_root}/device/lib/build"
-fi
-sdcc_mcs51_include="${sdcc_include_root}/mcs51"
+toolchain_paths="${script_dir}/toolchain-paths.sh"
+verify_file_hash "${toolchain_paths}" \
+  "$(json_value pipeline_helpers.toolchain_paths.sha256)" toolchain-paths
+source "${toolchain_paths}"
+stcxx_resolve_tools "$(json_value tools.sdcc.source_project_wsl)" "${platform_root}" "${lock_file}"
+sdcc_shared_include="${sdcc_include_root}/mcs51"
+sdcc_canonical_include="$(to_linux_path "${sdcc_include_root}")"
 sdas251="${sdcc_build_root}/bin/sdas251"
-sdas8051="${sdcc_build_root}/bin/sdas8051"
 sdld="${sdcc_build_root}/bin/sdld"
 sdldmcs251="${sdcc_build_root}/bin/sdldmcs251"
 sdcpp="${sdcc_build_root}/bin/sdcpp"
@@ -189,11 +207,7 @@ sdcpp="${sdcc_build_root}/bin/sdcpp"
 verify_sdcc() {
   verify_tool "${sdcc}" "$(json_value tools.sdcc.sha256)" patched-sdcc-driver
   verify_tool "${sdcc_elf}" "$(json_value tools.sdcc.elf_sha256)" patched-sdcc-elf
-  if [[ "${sdcc_target}" == "mcs251" ]]; then
-    verify_tool "${sdas251}" "$(json_value tools.sdas251.sha256)" patched-sdas251
-  else
-    verify_tool "${sdas8051}" "$(json_value tools.sdas8051.sha256)" patched-sdas8051
-  fi
+  verify_tool "${sdas251}" "$(json_value tools.sdas251.sha256)" patched-sdas251
   verify_tool "${sdld}" "$(json_value tools.sdld.sha256)" patched-sdld
   verify_tool "${sdldmcs251}" "$(json_value tools.sdldmcs251.sha256)" patched-sdldmcs251
   verify_tool "${sdcpp}" "$(json_value tools.sdcpp.sha256)" patched-sdcpp
@@ -207,7 +221,7 @@ verify_sdcc() {
     }
   fi
   local version
-  version="$(${sdcc} --version | head -n 1)"
+  version="$("${sdcc}" --version | head -n 1)"
   [[ "${version}" == "$(json_value tools.sdcc.version_prefix)"* ]] || {
     printf 'unexpected patched SDCC version: %s\n' "${version}" >&2
     exit 2
@@ -242,12 +256,12 @@ sdcc_section_args=()
 dependency_file=""
 expect_dependency_file=0
 cpp_enabled=0
+cpp_optimization=0
+cpp_optimization_count=0
 clock_hz=""
 clock_definition_count=0
 target_ai8051u_34k64=0
-target_stc16f40k128=0
 target_stc32g144k246=0
-declared_target_mcs51=0
 declared_target_mcs251=0
 mcs251_iram_size=""
 mcs251_stack_loc=""
@@ -261,6 +275,15 @@ for argument in "${original_args[@]}"; do
     continue
   fi
   case "${argument}" in
+    -DSTCXX_CPP_OPT|-DSTCXX_CPP_OPT=*)
+      cpp_optimization_count=$((cpp_optimization_count + 1))
+      cpp_optimization="${argument#*=}"
+      if [[ ${cpp_optimization_count} -ne 1 ]] ||
+         [[ ! "${cpp_optimization}" =~ ^[012sz]$ ]]; then
+        printf 'STCXX_CPP_OPT must occur once with value 0, 1, 2, s or z\n' >&2
+        exit 2
+      fi
+      ;;
     -DSTCXX_CPP_CORE=1)
       cpp_enabled=1
       clang_user_args+=("${argument}")
@@ -271,10 +294,9 @@ for argument in "${original_args[@]}"; do
       clang_user_args+=("${argument}")
       sdcc_user_args+=("${argument}")
       ;;
-    -DSTCXX_TARGET_MCS51=1)
-      declared_target_mcs51=1
-      clang_user_args+=("${argument}")
-      sdcc_user_args+=("${argument}")
+    -DSTCXX_TARGET_MCS51=1|-DSTC_EXECUTION_MODE_MCS51|-DSTC_EXECUTION_MODE_MCS51=*)
+      printf 'MCS51 support has been removed; select an MCS251 board\n' >&2
+      exit 2
       ;;
     -DSTCXX_MCS251_IRAM_SIZE=*)
       mcs251_iram_size="${argument#*=}"
@@ -300,9 +322,8 @@ for argument in "${original_args[@]}"; do
       sdcc_user_args+=("${argument}")
       ;;
     -DSTC16F40K128)
-      target_stc16f40k128=1
-      clang_user_args+=("${argument}")
-      sdcc_user_args+=("${argument}")
+      printf 'STC16F40K128 support has been removed\n' >&2
+      exit 2
       ;;
     -DSTC32G144K246)
       target_stc32g144k246=1
@@ -313,7 +334,6 @@ for argument in "${original_args[@]}"; do
       clock_definition_count=$((clock_definition_count + 1))
       case "${argument#-DF_CPU=}" in
         12000000L|12000000UL|12000000) clock_hz=12000000 ;;
-        30000000L|30000000UL|30000000) clock_hz=30000000 ;;
         40000000L|40000000UL|40000000) clock_hz=40000000 ;;
         48000000L|48000000UL|48000000) clock_hz=48000000 ;;
         *) clock_hz="" ;;
@@ -326,8 +346,8 @@ for argument in "${original_args[@]}"; do
       sdcc_user_args+=("${argument}")
       ;;
     -mmcs51)
-      sdcc_target="mcs51"
-      sdcc_user_args+=("${argument}")
+      printf "MCS51 support has been removed; use -mmcs251\n" >&2
+      exit 2
       ;;
     -Ddouble=float)
       # A keyword macro is forbidden by the versioned target C++ ABI.
@@ -341,7 +361,9 @@ for argument in "${original_args[@]}"; do
       # Arduino appends the SDCC C include directories to every recipe. They
       # define C-only wchar_t/bool/size_t types and must never shadow the
       # custom Clang target resource headers.
-      if [[ "${normalized}" != *"/tools/sdcc-mcs251/"* ]]; then
+      if [[ "${normalized}" != *"/tools/sdcc-mcs251/"* &&
+            "${normalized}" != "-I${sdcc_canonical_include}" &&
+            "${normalized}" != "-I${sdcc_canonical_include}/"* ]]; then
         clang_user_args+=("${normalized}")
       fi
       sdcc_user_args+=("${normalized}")
@@ -381,41 +403,19 @@ done
 
 [[ ${cpp_enabled} -eq 1 ]] || { printf 'STCXX_CPP_CORE=1 is missing\n' >&2; exit 2; }
 [[ ${clock_definition_count} -eq 1 &&
-   ("${sdcc_target}" == "mcs51" || "${sdcc_target}" == "mcs251") &&
+   "${sdcc_target}" == "mcs251" &&
    ("${clock_hz}" == "12000000" ||
-    ("${clock_hz}" == "30000000" && ${target_stc16f40k128} -eq 1 &&
-     "${sdcc_target}" == "mcs251") ||
     ("${clock_hz}" == "40000000" && ${target_ai8051u_34k64} -eq 1 &&
      "${sdcc_target}" == "mcs251") ||
     ("${clock_hz}" == "48000000" && ${target_stc32g144k246} -eq 1 &&
      "${sdcc_target}" == "mcs251")) ]] || {
-  printf 'the Arduino CLI C++ route requires one F_CPU: 12 MHz for MCS51/MCS251, 30 MHz only for STC16F40K128 MCS251, 40 MHz only for AI8051U_34K64 MCS251, or 48 MHz only for STC32G144K246 MCS251\n' >&2
+  printf 'the Arduino CLI C++ route requires one F_CPU: 12 MHz for MCS251, 40 MHz only for AI8051U_34K64 MCS251, or 48 MHz only for STC32G144K246 MCS251\n' >&2
   exit 2
 }
 
 if [[ ${target_stc32g144k246} -eq 1 &&
-      ("${sdcc_target}" != "mcs251" || ${target_ai8051u_34k64} -ne 0 ||
-       ${target_stc16f40k128} -ne 0) ]]; then
-  printf 'STC32G144K246 requires its own MCS251 target identity\n' >&2
-  exit 2
-fi
-
-if [[ ${target_stc16f40k128} -eq 1 &&
       ("${sdcc_target}" != "mcs251" || ${target_ai8051u_34k64} -ne 0) ]]; then
-  printf 'STC16F40K128 requires its own MCS251 target identity\n' >&2
-  exit 2
-fi
-
-if [[ ("${sdcc_target}" == "mcs51" && ${declared_target_mcs251} -eq 1) ||
-      ("${sdcc_target}" == "mcs251" && ${declared_target_mcs51} -eq 1) ]]; then
-  printf 'STCXX target macro conflicts with SDCC target %s\n' "${sdcc_target}" >&2
-  exit 2
-fi
-
-if [[ "${sdcc_target}" == "mcs51" &&
-      (-n "${mcs251_iram_size}" || -n "${mcs251_stack_loc}" ||
-       -n "${mcs251_stack_size}") ]]; then
-  printf 'MCS51 C++ profile must not carry MCS251 extended-stack identity\n' >&2
+  printf 'STC32G144K246 requires its own MCS251 target identity\n' >&2
   exit 2
 fi
 
@@ -429,47 +429,28 @@ if [[ "${sdcc_target}" != "mcs251" &&
   exit 2
 fi
 
-if [[ "${sdcc_target}" == "mcs51" ]]; then
-  sdcc_target_option=-mmcs51
-  sdcc_runtime_subdir=large-stack-auto
-  sdcc_runtime_archive=mcs51.lib
-  target_cpp_args=(
-    -DSTCXX_TARGET_ABI=1 -DSTCXX_TARGET_MCS51=1
-    -DSTCXX_TARGET_MCS251=0 -DSTCXX_TARGET_ENDIAN_LITTLE=1
-    -DSTCXX_TARGET_ENDIAN_BIG=0
-  )
-  target_stack_link_args=()
-  bridge_assembler="${sdas8051}"
-else
-  sdcc_target_option=-mmcs251
-  sdcc_runtime_subdir=mcs251-large-stack-auto
-  sdcc_runtime_archive=mcs251.lib
-  target_cpp_args=(
-    -DSTCXX_TARGET_ABI=1 -DSTCXX_TARGET_MCS51=0
-    -DSTCXX_TARGET_MCS251=1 -DSTCXX_TARGET_ENDIAN_LITTLE=0
-    -DSTCXX_TARGET_ENDIAN_BIG=1
-  )
-  target_stack_link_args=()
-  bridge_assembler="${sdas251}"
-  if [[ "${mode}" == "link" ]]; then
-    for value in "${mcs251_iram_size}" "${mcs251_stack_loc}" "${mcs251_stack_size}"; do
-      [[ "${value}" =~ ^0x[0-9A-Fa-f]+$ ]] || {
-        printf 'MCS251 C++ extended-stack layout is missing or malformed\n' >&2
-        exit 2
-      }
-    done
-    if [[ ${target_stc16f40k128} -eq 1 ]] &&
-       (( mcs251_iram_size != 0x2000 || mcs251_stack_loc != 0x100 ||
-          mcs251_stack_size != 0x1f00 )); then
-      printf 'STC16F40K128 requires 8 KiB IRAM with the stack at 0x100..0x1fff\n' >&2
+sdcc_target_option=-mmcs251
+sdcc_runtime_subdir=mcs251-large-stack-auto
+sdcc_runtime_archive=mcs251.lib
+target_cpp_args=(
+  -DSTCXX_TARGET_ABI=1
+  -DSTCXX_TARGET_MCS251=1 -DSTCXX_TARGET_ENDIAN_LITTLE=0
+  -DSTCXX_TARGET_ENDIAN_BIG=1
+)
+target_stack_link_args=()
+bridge_assembler="${sdas251}"
+if [[ "${mode}" == "link" ]]; then
+  for value in "${mcs251_iram_size}" "${mcs251_stack_loc}" "${mcs251_stack_size}"; do
+    [[ "${value}" =~ ^0x[0-9A-Fa-f]+$ ]] || {
+      printf 'MCS251 C++ extended-stack layout is missing or malformed\n' >&2
       exit 2
-    fi
-    target_stack_link_args=(
-      --iram-size "${mcs251_iram_size}"
-      --stack-loc "${mcs251_stack_loc}"
-      --stack-size "${mcs251_stack_size}"
-    )
-  fi
+    }
+  done
+  target_stack_link_args=(
+    --iram-size "${mcs251_iram_size}"
+    --stack-loc "${mcs251_stack_loc}"
+    --stack-size "${mcs251_stack_size}"
+  )
 fi
 sdcc_runtime_lib="${sdcc_runtime_root}/${sdcc_runtime_subdir}"
 clang_user_args+=("${target_cpp_args[@]}")
@@ -488,10 +469,11 @@ prepare_clang() {
       "${cpp_include_root}" >&2
     exit 2
   }
-  resource_dir="$(${clang} --print-resource-dir)"
+  resource_dir="$("${clang}" --print-resource-dir)"
   test -d "${resource_dir}/include"
   clang_base=(
-    "${clang}" "--target=${target_triple}" -x c++ -std=gnu++11 -O0
+    "${clang}" "--target=${target_triple}" -x c++ -std=gnu++11 "-O${cpp_optimization}"
+    -fno-vectorize -fno-slp-vectorize
     -ffreestanding -fno-builtin -funsigned-char -fno-exceptions -fno-rtti
     -fno-threadsafe-statics -fno-use-cxa-atexit -fno-c++-static-destructors
     -fno-unwind-tables -fno-asynchronous-unwind-tables
@@ -602,13 +584,13 @@ PY
     rm -f "${placeholder}"
 
     "${python}" - "${source_path}" "${object_path}" "${bitcode}" \
-      "${llvm_ir}" "${module_c}" "${target_triple}" "${data_layout}" <<'PY'
+      "${llvm_ir}" "${module_c}" "${target_triple}" "${data_layout}" "${cpp_optimization}" <<'PY'
 import hashlib
 import json
 import sys
 from pathlib import Path
 
-source, object_path, bitcode, llvm_ir, module_c, triple, layout = sys.argv[1:]
+source, object_path, bitcode, llvm_ir, module_c, triple, layout, optimization = sys.argv[1:]
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 metadata = {
@@ -625,6 +607,8 @@ metadata = {
     "data_layout": layout,
     "alias_count": 0,
     "module_llvm_cbe": "pass",
+    "clang_optimization": "-O" + optimization,
+    "clang_vectorization": "disabled-loop-and-slp",
 }
 Path(object_path + ".stcxx.json").write_text(
     json.dumps(metadata, indent=2) + "\n", encoding="utf-8", newline="\n"
@@ -634,6 +618,7 @@ PY
 
   compile-c)
     verify_sdcc
+    prepare_clang
     mark_pipeline_ready
     mkdir -p "$(dirname "${object_path}")"
     object_rel="${object_path%.o}.rel"
@@ -655,7 +640,7 @@ PY
     )
     cp -f "${object_rel}" "${object_path}"
     "${python}" - "${object_rel}.stcxx-c.json" "${source_path}" "${object_rel}" \
-      "${clang}" "${sdcc}" "${target_triple}" "${#filtered_sdcc_args[@]}" \
+      "${clang}" "${sdcc}" "${target_triple}" "${cpp_include_root}" "${resource_dir}" "${#filtered_sdcc_args[@]}" \
       "${filtered_sdcc_args[@]}" "${clang_user_args[@]}" <<'PY'
 import hashlib
 import json
@@ -663,11 +648,15 @@ import re
 import sys
 from pathlib import Path
 
-metadata_path, source, rel, clang, sdcc, triple, sdcc_count, *arguments = sys.argv[1:]
+metadata_path, source, rel, clang, sdcc, triple, cpp_headers, resource_dir, sdcc_count, *arguments = sys.argv[1:]
 sdcc_count = int(sdcc_count)
 sdcc_arguments = arguments[:sdcc_count]
 clang_arguments = [
     f"--target={triple}", "-std=gnu11", "-ffreestanding", "-funsigned-char",
+    "-nostdinc", "-I" + cpp_headers, "-isystem" + str(Path(resource_dir) / "include"),
+    # AST extraction uses only source ranges and function references. Native
+    # SDCC recompiles the retained source with its original storage/ABI flags.
+    "-D__code=", "-D__reentrant=",
 ] + arguments[sdcc_count:]
 
 def digest(path):
@@ -1114,14 +1103,28 @@ PY
     # globalopt is deliberately excluded: it can fold dynamic constructors
     # into LLVM static initializers that are not equivalent after CBE/SDCC.
     # The generated bridge must retain and invoke every global ctor explicitly.
-    "${opt}" -passes=internalize,globaldce \
+    # TU optimization may replace unused arguments with poison while the
+    # callee still has public linkage. After whole-program internalization,
+    # LLVM can remove those arguments without changing any escaping ABI.
+    "${opt}" -passes=internalize,deadargelim,globaldce \
       "-internalize-public-api-list=${c_abi_preserve}" \
       "${work}/linked.bc" -o "${work}/optimized.bc"
     "${llvm_dis}" "${work}/optimized.bc" -o "${work}/optimized.ll"
+    storage_args=("${python}" "${native_storage}" --ir "${work}/optimized.ll"
+      --output "${work}/native-storage.json" --sdar "${sdar}"
+      --cpp-members "${cpp_archive_members_file}")
+    for native_rel in "${native_direct_rels[@]}"; do
+      storage_args+=(--direct-rel "${native_rel}")
+    done
+    for archive in "${archives[@]}"; do
+      storage_args+=(--archive "${archive}")
+    done
+    "${storage_args[@]}"
     "${llvm_cbe}" "${work}/optimized.bc" -o "${work}/raw.c"
     "${python}" "${adapter}" \
       --ir "${work}/optimized.ll" \
       --raw-c "${work}/raw.c" \
+      --native-storage "${work}/native-storage.json" \
       --c-abi-preserve "${c_abi_preserve_file}" \
       --output-c "${work}/adapted.c" \
       --audit-json "${work}/audit.json" \
@@ -1154,11 +1157,14 @@ PY
       "${member_function_alignment_prior_audit}" "${bridge_prior_even_asm}" \
       "${bridge_prior_even_rel}" "${bridge_prior_even_lst}" \
       "${bridge_prior_even_rst}"
-    "${sdcc}" "${sdcc_target_option}" --model-large --stack-auto --std-sdcc11 \
+    if ! "${sdcc}" "${sdcc_target_option}" --model-large --stack-auto --std-sdcc11 \
       --opt-code-size --nogcse --less-pedantic \
       "${sdcc_section_args[@]}" \
-      "-I${sdcc_include_root}" "-I${sdcc_mcs51_include}" \
-      -S "${work}/adapted.c" -o "${bridge_raw_asm}" 2>&1 | tee "${bridge_log}"
+      "-I${sdcc_include_root}" "-I${sdcc_shared_include}" \
+      -S "${work}/adapted.c" -o "${bridge_raw_asm}" 2>&1 | tee "${bridge_log}" >&2; then
+      rm -f -- "${output_hex}"
+      exit 1
+    fi
     test -s "${bridge_raw_asm}"
     "${python}" "${member_function_aligner}" align \
       --input-assembly "${bridge_raw_asm}" \
@@ -1227,7 +1233,7 @@ expected_member_pointer_casts = int(
 )
 expected_integer_to_pointer_casts = int(
     ir_audit["ir"]["pointer_integer_conversions"].get(
-        "integer_to_pointer_count", 0
+        "member_integer_to_pointer_count", 0
     )
 )
 expected_program_member_casts = int(
@@ -1235,120 +1241,11 @@ expected_program_member_casts = int(
         "virtual_member_generic_to_program_casts", 0
     )
 )
-if target_profile != "mcs51" and (
-        expected_program_member_casts or expected_member_pointer_casts):
-    raise SystemExit(
-        "non-MCS51 target contains MCS51 program-pointer audit counts"
-    )
-program_pointer_records = ir_audit.get("llvm_cbe", {}).get(
-    "mcs51_program_pointer_casts", []
-)
-if not isinstance(program_pointer_records, list):
-    raise SystemExit("CBE program-pointer normalization records are malformed")
-if len(program_pointer_records) != expected_program_member_casts:
-    raise SystemExit(
-        "CBE program-pointer normalization records differ from audited LLVM IR: "
-        f"expected {expected_program_member_casts}, "
-        f"found {len(program_pointer_records)}"
-    )
-unqualified_program_pointer_cast = re.compile(
-    r"\(\(llvm_cbe_program_pointer\)_[0-9]+\)"
-)
-if unqualified_program_pointer_cast.search(adapted_c):
-    raise SystemExit(
-        "unqualified MCS51 generic-to-program cast survived CBE normalization"
-    )
-qualified_program_pointer_cast = re.compile(
-    r"\(\(llvm_cbe_program_pointer\)\(uintptr_t\)(?P<source>_[0-9]+)\)"
-)
-qualified_assignment = re.compile(
-    r"\s*(?P<destination>_[0-9]+)\s*=\s*"
-    r"\(\(llvm_cbe_program_pointer\)\(uintptr_t\)"
-    r"(?P<source>_[0-9]+)\);\s*"
-)
-qualified_direct_call = re.compile(
-    r"\s*(?:(?P<destination>_[0-9]+)\s*=\s*)?"
-    r"\(\((?P<function_type>l_fptr_[0-9]+)\*\)"
-    r"\(\(\(llvm_cbe_program_pointer\)\(uintptr_t\)"
-    r"(?P<source>_[0-9]+)\)\)\)\([^;\n]*\);\s*"
-)
-qualified_assignments = []
-qualified_direct_calls = []
-for source_line, line in enumerate(adapted_lines, 1):
-    candidates = list(qualified_program_pointer_cast.finditer(line))
-    if not candidates:
-        continue
-    if len(candidates) != 1:
-        raise SystemExit(
-            "multiple normalized MCS51 program-pointer casts on one CBE line"
-        )
-    match = qualified_assignment.fullmatch(line)
-    if match is not None:
-        qualified_assignments.append({
-            "source_line": source_line,
-            "source_temporary": match.group("source"),
-            "destination_temporary": match.group("destination"),
-        })
-        continue
-    match = qualified_direct_call.fullmatch(line)
-    if match is None:
-        raise SystemExit(
-            "unsupported normalized MCS51 program-pointer cast shape"
-        )
-    qualified_direct_calls.append({
-        "source_line": source_line,
-        "source_temporary": match.group("source"),
-        "destination_temporary": match.group("destination"),
-        "function_type": match.group("function_type"),
-    })
-
-expected_direct_casts = (
-    expected_program_member_casts - expected_member_pointer_casts
-)
-if (
-    expected_direct_casts < 0
-    or len(qualified_direct_calls) != expected_direct_casts
-    or len(qualified_assignments)
-    != expected_member_pointer_casts
-    + (expected_integer_to_pointer_casts if target_profile == "mcs51" else 0)
-):
-    raise SystemExit(
-        "normalized CBE program-pointer shapes differ from audited LLVM IR"
-    )
+if target_profile != "mcs251" or expected_program_member_casts or expected_member_pointer_casts:
+    raise SystemExit("MCS251 must not carry cross-address-space program-pointer conversions")
+if "llvm_cbe_program_pointer" in adapted_c:
+    raise SystemExit("unexpected cross-address-space program-pointer type in MCS251 CBE output")
 program_member_cast_source_lines = []
-seen_program_member_lines = set()
-for record in program_pointer_records:
-    if not isinstance(record, dict) or set(record) != {
-        "kind", "source_temporary", "destination_temporary", "function_type"
-    }:
-        raise SystemExit("CBE program-pointer normalization record differs")
-    kind = record["kind"]
-    if kind == "member-pointer-virtual-branch":
-        if record["function_type"] is not None:
-            raise SystemExit("member-pointer normalization recorded a function type")
-        matches = [
-            item for item in qualified_assignments
-            if item["source_temporary"] == record["source_temporary"]
-            and item["destination_temporary"]
-            == record["destination_temporary"]
-        ]
-    elif kind == "direct-virtual-dispatch":
-        if not isinstance(record["function_type"], str):
-            raise SystemExit("direct virtual normalization omitted its function type")
-        matches = [
-            item for item in qualified_direct_calls
-            if item["source_temporary"] == record["source_temporary"]
-            and item["destination_temporary"]
-            == record["destination_temporary"]
-            and item["function_type"] == record["function_type"]
-        ]
-    else:
-        raise SystemExit("unknown CBE program-pointer normalization kind")
-    if len(matches) != 1 or matches[0]["source_line"] in seen_program_member_lines:
-        raise SystemExit("CBE program-pointer normalization record is not unique")
-    seen_program_member_lines.add(matches[0]["source_line"])
-    program_member_cast_source_lines.append(matches[0]["source_line"])
-program_member_cast_source_lines.sort()
 wrong_source = []
 for warning in warnings:
     # Source-relative structural checks are valid only for this generated C
@@ -1403,8 +1300,9 @@ def verified_unused_cbe_temporary(warning):
     warning_index = warning["source_line"] - 1
     if warning_index < 0 or warning_index >= len(adapted_lines):
         return False
-    if not re.fullmatch(r"\s*return\b.*;\s*", adapted_lines[warning_index]):
-        return False
+    # Optimized tail calls can place this diagnostic on the final call or
+    # closing brace. The complete function below still proves the named
+    # declaration/parameter has exactly one occurrence and no use.
 
     header_index = None
     symbol_pattern = re.compile(
@@ -1459,7 +1357,7 @@ def verified_read_only_pgm_warning(warning):
     357 is accepted.
     """
     source_line = warning_source_line(warning)
-    if source_line is None or target_profile not in {"mcs51", "mcs251"}:
+    if source_line is None or target_profile != "mcs251":
         return False
 
     f_str_symbol = (
@@ -1652,11 +1550,73 @@ def verified_read_only_pgm_warning(warning):
     ]
 
 
+def verified_constant_array_gep_warning(warning):
+    # LLVM opaque ptr carries no pointee const qualifier. CBE materializes a
+    # constant aggregate element address in void*, then reads scalar fields.
+    # Limit this exception to that complete spelling and a read-only local use
+    # chain; stores, escapes, mutable globals and new pointer forms still fail.
+    line = warning_source_line(warning)
+    if line is None:
+        return False
+    match = re.fullmatch(
+        r"\s*(?P<temporary>_[0-9]+) = \(\(&\(&(?P<symbol>[A-Za-z_][A-Za-z_0-9]*)\)"
+        r"->array\[[^;\n]+\]\)\);\s*", line)
+    if not match:
+        return False
+    symbol, temporary = match.group("symbol", "temporary")
+    declaration = re.compile(
+        rf"^static const struct l_array_[A-Za-z_0-9]+ {re.escape(symbol)} = \{{.*\}};$",
+        re.MULTILINE)
+    if len(declaration.findall(adapted_c)) != 1:
+        return False
+    warning_index = warning["source_line"] - 1
+    start = next((i for i in range(warning_index - 1, -1, -1)
+                  if adapted_lines[i].startswith("static ") and adapted_lines[i].endswith(" {")), None)
+    end = next((i for i in range(warning_index + 1, len(adapted_lines))
+                if adapted_lines[i] == "}"), None)
+    if start is None or end is None:
+        return False
+    uses = [(i, text.strip()) for i, text in enumerate(adapted_lines[start + 1:end], start + 1)
+            if re.search(rf"\b{re.escape(temporary)}\b", text)]
+    declarations = [(i, text) for i, text in uses if text == f"void* {temporary};"]
+    if len(declarations) != 1 or declarations[0][0] >= warning_index:
+        return False
+    reads = 0
+    for index, text in uses:
+        if index == warning_index or (index, text) in declarations:
+            continue
+        if index <= warning_index or not re.fullmatch(
+            r"_[0-9]+ = \*\((?:u?int(?:8|16|32|64)_t|float|double)\*\)"
+            r"[^;\n]+;", text):
+            return False
+        expression = text.split("=", 1)[1]
+        if any(token in expression for token in ("=", "++", "--", '"', "'")):
+            return False
+        if re.search(r"\b_[0-9]+\s*\(", expression):
+            return False
+        # Address arithmetic may call only the already-audited scalar CBE
+        # helpers. An arbitrary call hidden inside the load is still an escape.
+        for identifier in re.findall(r"[A-Za-z_][A-Za-z_0-9]*", expression):
+            if not re.fullmatch(
+                r"_[0-9]+|u?int(?:8|16|32|64)_t|float|double|signed|unsigned|"
+                r"_BitInt|struct|array|field[0-9]+|l_(?:array|struct)_[A-Za-z_0-9]+|"
+                r"llvm_(?:add|sub|mul|lshr|ashr|shl|udiv|urem|sdiv|srem)_[ui](?:8|16|24|32|64)",
+                identifier):
+                return False
+        reads += 1
+    return reads > 0
+
+
 def is_verified_cbe_warning(warning):
     code = warning["code"]
     message = warning["message"]
     if message in allowed.get(code, set()):
         return True
+
+    # Optimization can erase uses while retaining an internal callback's ABI.
+    # Accept only a generated name proved unused in its complete function.
+    if code == 85:
+        return verified_unused_cbe_temporary(warning)
 
     source_line = warning_source_line(warning)
 
@@ -1679,12 +1639,11 @@ def is_verified_cbe_warning(warning):
         return bool(
             (target_profile == "mcs251" and vtable_assignment)
             or constant_phi
+            or verified_constant_array_gep_warning(warning)
         )
 
     # LLVM-CBE represents ordinary indirect calls through a named l_fptr_N
     # typedef.  Bind warning 244 to that complete legacy one-line expression.
-    # MCS51 generic-to-program conversions are normalized through uintptr_t
-    # and must no longer emit or receive an exception for warning 244.
     if code == 244 and message == "pointer types incompatible":
         if source_line is None:
             return False
@@ -1696,34 +1655,6 @@ def is_verified_cbe_warning(warning):
         )
         return bool(indirect_call)
 
-    # MCS51 vtables intentionally store the 16-bit program function address
-    # in SDCC's 24-bit tagged generic-pointer slot.  The initializer is a
-    # compile-time constant and SDCC emits warning 151 for that exact, native
-    # representation.  Bind acceptance to both the selected ABI and CBE's
-    # complete constant-vtable source line.
-    if code == 151 and target_profile == "mcs51":
-        if source_line is None:
-            return False
-        return bool(
-            re.fullmatch(r"using generic pointer \S+ to initialize \S+", message)
-            and re.search(r"\b_ZTV[A-Za-z0-9_]+\b\s*=", source_line)
-            and re.search(
-                r"\(\(void\*\)(?:_ZN[A-Za-z0-9_]+|__cxa_pure_virtual)\)",
-                source_line,
-            )
-        )
-
-    if (code == 357 and
-            message == "pointer to object in read-only code space should be pointer to const"):
-        return ((warning["source_file"] == "-" and
-                 warning["source_line"] == 0) or
-                verified_read_only_pgm_warning(warning))
-
-    # Warning 85 is accepted only when the named CBE temporary occurs exactly
-    # once in the named generated function and is structurally the reported
-    # unused declaration/parameter.
-    if code == 85:
-        return verified_unused_cbe_temporary(warning)
 
     return False
 
@@ -1879,14 +1810,17 @@ PY
     declare -A readonly_slices=()
     while IFS= read -r candidate_rel; do
       mapfile -t const_sizes < <(
-        awk '$1 == "A" && $2 == "CONST" { print $4 }' "${candidate_rel}"
+        awk '$1 == "A" && ($2 == "CONST" || $2 ~ /^CONST_D_/) { print $4 }' "${candidate_rel}"
       )
-      [[ ${#const_sizes[@]} -eq 1 ]] || continue
-      [[ "${const_sizes[0]}" =~ ^[0-9A-F]+$ ]] || {
-        printf 'invalid CONST size in %s: %s\n' "${candidate_rel}" "${const_sizes[0]}" >&2
-        exit 2
-      }
-      const_size=$((16#${const_sizes[0]}))
+      [[ ${#const_sizes[@]} -gt 0 ]] || continue
+      const_size=0
+      for const_hex in "${const_sizes[@]}"; do
+        [[ "${const_hex}" =~ ^[0-9A-F]+$ ]] || {
+          printf 'invalid CONST size in %s: %s\n' "${candidate_rel}" "${const_hex}" >&2
+          exit 2
+        }
+        const_size=$((const_size + 16#${const_hex}))
+      done
       [[ ${const_size} -gt ${code_size_values[0]} ]] || continue
       candidate_hash="$(sha256sum "${candidate_rel}" | awk '{print $1}')"
       slice_stem="$(basename "${candidate_rel}").${candidate_hash:0:16}"
@@ -2021,6 +1955,60 @@ PY
       }
       link_args=("${grouped_link_args[@]}")
     done
+    # Ordinary native libraries may fit individually while the complete sketch
+    # exceeds Flash. Trim their proven function closures at every capacity.
+    # Keep each resulting object directly linked, including unreferenced or
+    # unsupported objects, so this optimization cannot drop data/startup code.
+    declare -A direct_trim_metadata=()
+    for original_rel in "${!actual_rel_by_original[@]}"; do
+      [[ "${original_rel}" =~ /libraries/[^/]+/ ]] || continue
+      actual_rel="${actual_rel_by_original[${original_rel}]}"
+      for argument in "${link_args[@]}"; do
+        [[ "${argument}" == "${actual_rel}" ]] || continue
+        direct_trim_metadata["${actual_rel}"]="${original_rel}.stcxx-c.json"
+      done
+    done
+    if [[ ${#direct_trim_metadata[@]} -gt 0 ]]; then
+      direct_trim_work="${function_split_work}/direct"
+      mkdir -p "${direct_trim_work}"
+      direct_trim_list="${direct_trim_work}/replacements.txt"
+      direct_trim_audit="${direct_trim_work}/audit.json"
+      direct_trim_args=("${python}" "${function_archive_builder}"
+        --code-limit "${code_size_values[0]}" --xram-limit "${xram_size_values[0]}"
+        --splitter "${function_tu_splitter}" --sdar "${sdar}"
+        --work-dir "${direct_trim_work}" --output-rel-list "${direct_trim_list}"
+        --audit "${direct_trim_audit}")
+      for argument in "${link_args[@]}"; do
+        if [[ -n "${direct_trim_metadata[${argument}]:-}" ]]; then
+          direct_trim_args+=(--member "${direct_trim_metadata[${argument}]}" "${argument}")
+        elif [[ "${argument}" == *.rel && -f "${argument}" ]]; then
+          direct_trim_args+=(--root-rel "${argument}")
+        elif [[ "${argument}" == *.lib && -f "${argument}" ]]; then
+          direct_trim_args+=(--root-archive "${argument}")
+        fi
+      done
+      "${direct_trim_args[@]}"
+      mapfile -t direct_trim_pairs <"${direct_trim_list}"
+      [[ ${#direct_trim_pairs[@]} -eq $((${#direct_trim_metadata[@]} * 2)) ]] || {
+        printf 'direct function replacement list has an invalid length\n' >&2; exit 2;
+      }
+      declare -A direct_trim_replacements=()
+      for ((index=0; index<${#direct_trim_pairs[@]}; index+=2)); do
+        original_rel="${direct_trim_pairs[index]}"
+        actual_rel="${direct_trim_pairs[index+1]}"
+        [[ -n "${direct_trim_metadata[${original_rel}]:-}" && -f "${actual_rel}" &&
+           -z "${direct_trim_replacements[${original_rel}]:-}" ]] || {
+          printf 'invalid or duplicate direct function replacement\n' >&2; exit 2;
+        }
+        direct_trim_replacements["${original_rel}"]="${actual_rel}"
+      done
+      trimmed_link_args=()
+      for argument in "${link_args[@]}"; do
+        trimmed_link_args+=("${direct_trim_replacements[${argument}]:-${argument}}")
+      done
+      link_args=("${trimmed_link_args[@]}")
+      printf '%s\n' "${direct_trim_audit}" >>"${function_split_audit_list}"
+    fi
     # A successful driver invocation must create this build's output, never
     # inherit a stale HEX from an earlier failed/misdirected link.
     link_log="${work}/sdcc-link.log"
@@ -2030,7 +2018,7 @@ PY
     run_sdcc_link() {
       rm -f -- "${output_hex}" "${output_hex%.hex}.mem" "${map_file}" \
         "${bridge_rst}"
-      "${sdcc}" "${link_args[@]}" 2>&1 | tee "${link_log}"
+      "${sdcc}" "${link_args[@]}" 2>&1 | tee "${link_log}" >&2
       test -s "${output_hex}"
       test -s "${map_file}"
       test -s "${bridge_rst}"
@@ -2078,6 +2066,8 @@ PY
       --audit-list "${function_split_audit_list}" \
       --map "${map_file}" \
       --link-arguments "${link_args_file}"
+    "${python}" "${native_storage}" --ir "${work}/optimized.ll" \
+      --verify "${work}/native-storage.json" --map "${map_file}"
 
     heap_link_audit="${work}/heap-link-audit.json"
     "${python}" - "${heap_link_audit}" "${link_log}" "${link_args_file}" \
@@ -2161,15 +2151,6 @@ if target_profile == "mcs251":
         raise SystemExit(
             "final MCS251 link arguments do not contain one exact extended-stack tuple"
         )
-elif target_profile == "mcs51":
-    expected_stack_arguments = []
-    if (any((mcs251_iram_size, mcs251_stack_loc, mcs251_stack_size))
-            or any(flag in arguments for flag in (
-                "--iram-size", "--stack-loc", "--stack-size"
-            ))):
-        raise SystemExit(
-            "final MCS51 link arguments unexpectedly contain MCS251 extended-stack options"
-        )
 else:
     raise SystemExit(f"unexpected STCXX link target profile: {target_profile}")
 heap_rel = str(heap_rel_path)
@@ -2180,8 +2161,8 @@ if arguments.index(heap_rel) >= arguments.index(core_lib):
     raise SystemExit("STCXX heap object is not linked before core.lib")
 
 heap_payload = heap_rel_path.read_text(encoding="ascii")
-heap_size_symbol = "___sdcc_heap_size32" if target_profile == "mcs251" else "___sdcc_heap_size"
-opposite_heap_size_symbol = "___sdcc_heap_size" if target_profile == "mcs251" else "___sdcc_heap_size32"
+heap_size_symbol = "___sdcc_heap_size32"
+opposite_heap_size_symbol = "___sdcc_heap_size"
 heap_xseg = re.findall(
     r"^A XSEG size ([0-9A-Fa-f]+) flags ", heap_payload, re.MULTILINE
 )
@@ -2785,6 +2766,9 @@ result = {
             "audit_count": len(function_split_audits),
             "selected_archive_member_count": sum(
                 item["audit"]["selected_member_count"] for item in function_split_audits
+            ),
+            "selected_direct_object_count": sum(
+                item["audit"].get("selected_direct_object_count", 0) for item in function_split_audits
             ),
             "discarded_input_member_count": sum(
                 item["audit"]["discarded_input_member_count"] for item in function_split_audits

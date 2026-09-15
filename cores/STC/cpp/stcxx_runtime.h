@@ -20,8 +20,8 @@ extern "C" {
 #ifndef STCXX_RUNTIME_HOST_TEST
 # define STCXX_RUNTIME_HOST_TEST 0
 #endif
-#ifndef STCXX_TARGET_MCS51
-# define STCXX_TARGET_MCS51 0
+#if defined(STCXX_TARGET_MCS51) && STCXX_TARGET_MCS51
+# error "MCS51 C++ support has been removed"
 #endif
 #ifndef STCXX_TARGET_MCS251
 # define STCXX_TARGET_MCS251 0
@@ -34,7 +34,6 @@ extern "C" {
 #endif
 
 #if ((STCXX_RUNTIME_HOST_TEST != 0) && (STCXX_RUNTIME_HOST_TEST != 1)) || \
-    ((STCXX_TARGET_MCS51 != 0) && (STCXX_TARGET_MCS51 != 1)) || \
     ((STCXX_TARGET_MCS251 != 0) && (STCXX_TARGET_MCS251 != 1)) || \
     ((STCXX_TARGET_ENDIAN_LITTLE != 0) && \
      (STCXX_TARGET_ENDIAN_LITTLE != 1)) || \
@@ -85,16 +84,8 @@ typedef void (*stcxx_oom_hook_t)(size_t requested_size);
     "stc-arduino-cxx-v1-mcs251-be-size4-pdiff4-ptr3-fnptr3-guard1-direct"
 # define STCXX_ABI_IDENTITY_SYMBOL \
     __stcxx_abi_stc_arduino_cxx_v1_mcs251_be_size4_pdiff4_ptr3_fnptr3_guard1_direct
-#elif STCXX_TARGET_MCS51
-# if !STCXX_TARGET_ENDIAN_LITTLE || STCXX_TARGET_ENDIAN_BIG
-#  error "MCS51 runtime identity requires STCXX_TARGET_ENDIAN_LITTLE"
-# endif
-# define STCXX_ABI_IDENTITY_TEXT \
-    "stc-arduino-cxx-v1-mcs51-le-size2-pdiff4-gptr3-fnptr2-guard1-direct"
-# define STCXX_ABI_IDENTITY_SYMBOL \
-    __stcxx_abi_stc_arduino_cxx_v1_mcs51_le_size2_pdiff4_gptr3_fnptr2_guard1_direct
 #else
-# error "Select STCXX_TARGET_MCS51 or STCXX_TARGET_MCS251 for the C++ runtime"
+# error "Select STCXX_TARGET_MCS251 for the C++ runtime"
 #endif
 
 void STCXX_ABI_IDENTITY_SYMBOL(void);

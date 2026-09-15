@@ -1,87 +1,41 @@
-# Arduino C++ 构建桥接层
+# Arduino MCS251 C++ driver
 
-> Lifecycle update (2026-09-08): the active platform now has **21 models / 24 execution profiles**
-> (13 MCS51 + 11 MCS251), including STC16F40K128. STC8A8K64S4A12 and STC32F12K54 were removed.
-> The 22-model / 25-profile / 31-workload set and removed-device details below are
-> historical toolchain/qualification records, not the current support list or new PASS evidence.
-> See the [lifecycle review](../../docs/variant-lifecycle.md).
+`stcxx-cli.sh` 提供预处理、C/C++ 编译和最终链接入口，仅接受 MCS251。Clang/LLVM-CBE/SDCC 和运行时适配器由 toolchain-lock.json 校验。保留原生 C ABI 根、归档 sidecar 选择、只读数据存储、函数指针对齐、警告结构和堆/栈布局检查；已移除另一 CPU 架构的专用适配。Windows 路径与 POSIX 路径均可传入。详见 [工具链说明](../../docs/toolchain-and-sdk.md)。
 
-本目录是 Arduino 构建配方使用的运行时工具，连接 Clang、LLVM-CBE 和 SDCC。当前实验性 C++ 配置覆盖 21 个物理型号、24 个执行配置（13 个 MCS51、11 个 MCS251）。STC16F40K128 的 MCS251 模式支持 30 MHz，AI8051U-34K64 的 MCS251 模式另支持 40 MHz，STC32G144K246 的 MCS251 模式支持 48 MHz；其余 C++ 配置仍限 12 MHz。编译和链接支持不代表全部配置已完成运行时或实板验证。
+Linux 编译和链接使用 Arduino 选中的 SDCC；显式 `STCXX_SDCC` 或
+`STCXX_TOOLCHAIN_ROOT` 可选择开发候选。目录解析先跟随符号链接，再识别
+`bin/include/lib` 分发包、`out/share/sdcc` 输出及原始构建目录。
+Windows 的 C++ 入口仍使用 WSL 内受锁定的 Linux 工具。
 
-普通 C 配方仍是默认入口。启用 C++ 时使用相应板卡的 `cppcore=enabled,clock=12m`，例如：
+源码目录的 `toolchain-lock.json` 保留开发工具版本。维护者使用
+`scripts/package-platform.ps1 -LinuxToolchain portable` 打包时，将维护的
+`toolchain-lock.linux-x86_64.json` 复制为包内标准 `toolchain-lock.json`；因此
+编译入口和目标验证读取同一份分发锁。默认 `development` 打包不替换开发锁。
+Linux 候选索引生成器会拒绝仍选择开发锁的 SDK。可分发 Linux 前端与 Mac
+一样校验完整文件清单，包含资源头文件和私有库，并拒绝加载器环境覆盖。
+共用校验器暂保留历史文件名 `verify-macos-frontend.py`。
 
-```text
-arduino-stc51:mcs51:stc32g144k246:cppcore=enabled,clock=12m
-```
+维护者运行 `scripts/check-cpp-targets.py --installed-frontend ...` 可以验证
+安装后的自动查找流程；该模式不注入 `STCXX_CPP_TOOLS_ROOT`。显式
+`--frontend PATH` 仍用于开发回归。
 
-实际系统时钟为 40 MHz 的 AI8051U-34K64 使用：
+`STCXX_CPP_TOOLS_ROOT` 可指定前端目录，其 `bin` 下应包含 `clang`、`llvm-link`、
+`opt`、`llvm-dis` 和 `llvm-cbe`；各工具原有的 `STCXX_*` 环境变量可分别覆盖。
+工具锁含 `arduino_frontend` 时，未显式指定根目录会从 Arduino 的
+`packages/<packager>/tools/<name>/<version>` 中选择锁定的准确版本；缺少该版本
+会报错。未含该绑定的开发锁保留原有开发路径。目录覆盖不会跳过摘要校验，缺失文件不会
+回退到其他主机工具。Clang 的 `libclang-cpp` 及五个工具各自实际解析到的
+`libLLVM.so.20.1` 也必须匹配锁文件；`scripts/inspect-cpp-toolchain.sh` 使用相同的
+路径解析并输出这些实现的摘要。
 
-```text
-arduino-stc51:mcs51:ai8051u_34k64:cppcore=enabled,execution=mcs251,clock=40m
-```
+ARM64 Mac 使用 `toolchain-lock.macos-arm64.json` 和原生工具，不再进入 WSL。
+按候选索引安装时自动选择该锁声明的前端依赖。开发目录可设置
+`STCXX_CPP_TOOLS_ROOT` 为对应的完整 Mac 前端包；五个工具必须来自
+同一包。编译前校验全部文件，包含 Clang、LLVM、zstd 动态库及资源头文件。
+不能用其他宿主包、包外单个工具或 `DYLD_*`/`LD_*` 环境覆盖替代受锁定的包。
 
-逐飞 STC16F40K128 核心板使用与 ISP 设置一致的 30 MHz 内部 IRC：
-
-```text
-arduino-stc51:mcs51:stc16f40k128:cppcore=enabled,clock=30m
-```
-
-STC16F40K128 的内部 RAM 为 8 KiB，扩展 RAM 为 32 KiB。C++ 硬件栈固定在内部 RAM 的 `0x100..0x1fff`，普通全局对象使用从 `0x10000` 开始的扩展 RAM。当前配置采用 `0xff0000..0xffefff` 的连续 60 KiB 代码区，保留复位及中断向量所在区域。类、模板、全局构造和普通平坦指针可用于最小验证；`setjmp/longjmp` 与 `pdata` 指针转换中的设备寄存器地址尚未适配 STC16，不在该配置的支持范围内。
-
-驱动要求恰好一个 `F_CPU` 定义，并同时检查 30/40 MHz 所需的芯片宏与 MCS251 后端。该配置不修改硬件时钟或执行模式。工具锁保留原有编译器和适配器校验；适配器嵌套审计中的 `12MHZ` 资格标签描述历史 ABI 验证基线，本次实际编译时钟记录在 build-manifest 的 `target.build_f_cpu_hz` 和顶层资格标签中。
-
-板卡选择、Arduino CLI 用法及 stcxx 工具链项目入口见[平台 README](../../README.md)。
-
-## 构建过程
-
-```text
-每个 C++ 翻译单元 → Clang bitcode + SDCC 占位目标文件
-                 → Arduino 库发现与归档
-                 → 按实际链接输入选择 bitcode
-                 → LLVM 链接与审计 → LLVM-CBE → C 适配 → SDCC → HEX
-```
-
-每个 C++ 文件独立编译。最终链接时，驱动按实际目标文件和归档成员选择 bitcode，校验关联文件的内容哈希，再完成机器代码生成。C 翻译单元也使用对应的补丁版 SDCC 和 `--stack-auto`。
-
-Core 缓存无法单独保存 LLVM 关联文件，因此本配置禁用 Arduino 的 Core 专用缓存。增量构建目录仍可使用，但旧的或内容不匹配的关联文件会导致构建失败。
-
-## 保留的运行时组件
-
-| 文件 | 用途 |
-| --- | --- |
-| [stcxx-cli.sh](stcxx-cli.sh) | Arduino 编译、链接入口，检查工具身份并生成构建清单 |
-| [adapt.py](adapt.py) | 审计目标 IR，生成构造函数桥接代码，适配 LLVM-CBE 输出 |
-| [collect-c-abi-roots.py](collect-c-abi-roots.py)、[select-cpp-archive-sidecars.py](select-cpp-archive-sidecars.py) | 按 C ABI 引用及构造函数依赖选择归档中的 C++ 模块 |
-| [align-member-functions.py](align-member-functions.py) | 保留成员函数指针要求的函数对齐，并核对最终地址 |
-| [slice-readonly-const-rel.py](slice-readonly-const-rel.py) | 在已证明对象结构和引用范围时裁剪大型只读常量区 |
-| [split-c-function-tu.py](split-c-function-tu.py)、[build-function-split-archive.py](build-function-split-archive.py) | 按函数拆分 C 翻译单元并构建归档 |
-| [audit-function-split-link-map.py](audit-function-split-link-map.py)、[aslink_map_symbols.py](aslink_map_symbols.py) | 检查最终链接映射、符号和内存布局 |
-| [toolchain-lock.json](toolchain-lock.json) | 锁定当前配方要求的工具、运行库、ABI 和适配器身份 |
-
-`adapt.py` 还会动态加载 [cpp-core-pipeline/audit_and_adapt.py](../cpp-core-pipeline/audit_and_adapt.py)。这个共享适配器和上表的链接审计程序均属于实际构建依赖，应随平台保留。
-
-适配器只接受已实现的 IR/C 形态。内部 C 标识符超过 ASxxxx 的安全长度时，按预处理 token 生成带 SHA-256 的短名称；公开 ABI 名称保持原样，不能安全转换的输入会被拒绝。构建清单记录所选模块、适配过程、链接产物及其哈希。
-
-## 准备工具环境
-
-当前 Windows Arduino 配方通过 WSL 调用 Linux 工具。完整 Clang、LLVM-CBE 和 SDCC 的源码准备、构建与安装由 **stcxx** 项目维护；按[平台 README](../../README.md)中的项目入口阅读其构建说明。本目录不提供独立工具链安装器，普通 Boards Manager 安装也不会自动准备这些大型实验工具。
-
-在 WSL 环境中，可用以下变量选择已准备好的工具：
-
-| 变量 | 含义 |
-| --- | --- |
-| `STCXX_CLANG` | 补丁版 Clang |
-| `STCXX_LLVM_LINK`、`STCXX_OPT`、`STCXX_LLVM_DIS` | LLVM 20 工具 |
-| `STCXX_LLVM_CBE` | 与锁文件匹配的 LLVM-CBE |
-| `STCXX_TOOLCHAIN_ROOT` | stcxx 项目目录；默认从其 `out/bin/sdcc` 取 SDCC |
-| `STCXX_SDCC` | 显式覆盖 SDCC 路径 |
-
-Windows 环境变量 `STCXX_WSL_DISTRO` 选择 WSL 发行版，默认 `Ubuntu`。目录可以调整，但指定路径不会跳过工具和运行库的哈希检查；重新构建的二进制不保证自动匹配现有锁文件。
-
-建议构建和工具目录不含空格。当前 Windows SDCC/sdcpp 包自身的 include 路径处理存在空格限制。
-
-## 清理与验证边界
-
-独立测试、原型目录、测试固件和留存的验证产物已移除；上面的运行时组件仍随平台提供。锁文件中的测试路径、测试哈希及旧测量身份作为历史元数据保存，不能当作当前可运行的测试入口或当前工具的通过证据。
-
-生成 HEX、输出 `STCXX_ARDUINO_CLI_LINK=PASS` 或生成哈希清单，只表示本次构建通过了驱动实现的编译与链接检查。完整 ABI、第三方库兼容性、外设运行和实板行为仍需分别验证；本次文件清理不改变任何发布资格结论。
+Mac C++ 入口需要 Bash 4.4+、GNU coreutils 和 Python 3。默认从
+`/opt/homebrew/opt/bash/bin/bash`、`/opt/homebrew/opt/coreutils/libexec/gnubin`
+及 `/opt/homebrew/bin` 查找；可通过 `STCXX_BASH`、`STCXX_COREUTILS_BIN` 指定
+前两者。缺少依赖会直接报告原因。当前前端最低部署版本为 macOS 15，实际测试
+系统为 macOS 15.7.1 ARM64。宿主要求见[宿主范围](../../docs/release-host-scope.md)。

@@ -31,11 +31,23 @@ void SPIClass::setPins(uint8_t mosi, uint8_t miso, uint8_t clock,
 
 void SPIClass::beginTransaction(const SPISettings &settings)
 {
+    (void)beginTransactionChecked(settings);
+}
+
+uint8_t SPIClass::configurationError() { return SPI_configurationError(); }
+uint8_t SPIClass::setPinsChecked(uint8_t mosi, uint8_t miso, uint8_t clock, uint8_t select)
+{
+    return SPI_setPinsChecked(mosi, miso, clock, select);
+}
+uint8_t SPIClass::beginTransactionChecked(const SPISettings &settings)
+{
+    uint8_t status = SPI_beginTransactionChecked((unsigned long)settings._clock,
+                                                 settings._bitOrder, settings._dataMode);
+    if (status != 0u) return status;
     currentClock = settings._clock;
     currentBitOrder = settings._bitOrder;
     currentDataMode = settings._dataMode;
-    SPI_beginTransaction((unsigned long)currentClock, currentBitOrder,
-                         currentDataMode);
+    return status;
 }
 
 void SPIClass::beginTransaction(uint32_t clock, uint8_t bitOrder,
@@ -87,16 +99,16 @@ void SPIClass::transfer(void *buffer, size_t length)
 
 void SPIClass::setBitOrder(uint8_t bitOrder)
 {
-    currentBitOrder = (bitOrder == LSBFIRST) ? LSBFIRST : MSBFIRST;
-    SPI_setSettings((unsigned long)currentClock, currentBitOrder,
+    SPI_setSettings((unsigned long)currentClock, bitOrder,
                     currentDataMode);
+    if (SPI_configurationError() == 0u) currentBitOrder = bitOrder;
 }
 
 void SPIClass::setDataMode(uint8_t dataMode)
 {
-    currentDataMode = (uint8_t)(dataMode & 0x03u);
     SPI_setSettings((unsigned long)currentClock, currentBitOrder,
-                    currentDataMode);
+                    dataMode);
+    if (SPI_configurationError() == 0u) currentDataMode = dataMode;
 }
 
 void SPIClass::setClockDivider(uint8_t clockDivider)

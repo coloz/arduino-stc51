@@ -2,6 +2,8 @@
 
 #include "Stream.h"
 
+#include <limits.h>
+
 #include "stcxx_libc.h"
 
 #include "stc_c_hal.h"
@@ -146,7 +148,7 @@ int Stream::findMulti(MultiTarget *targets, int targetCount)
 long Stream::parseInt(LookaheadMode lookahead, char ignore)
 {
     bool negative = false;
-    long value = 0L;
+    unsigned long value = 0UL;
     int current = peekNextDigit(lookahead, false);
     if (current < 0) {
         return 0L;
@@ -158,14 +160,21 @@ long Stream::parseInt(LookaheadMode lookahead, char ignore)
             negative = true;
             (void)read();
         } else if (current >= '0' && current <= '9') {
-            value = value * 10L + (long)(current - '0');
+            value = value * 10UL + (unsigned long)(current - '0');
             (void)read();
         } else {
             break;
         }
         current = timedPeek();
     } while ((current >= '0' && current <= '9') || current == ignore);
-    return negative ? -value : value;
+    // Accumulate modulo the word width: LONG_MIN's positive magnitude does
+    // not fit in a signed long. Convert back without signed overflow or an
+    // out-of-range unsigned-to-signed cast, including for overlong input.
+    if (negative) {
+        value = 0UL - value;
+    }
+    return value <= (unsigned long)LONG_MAX ? (long)value
+                                           : -1L - (long)(~value);
 }
 
 float Stream::parseFloat(LookaheadMode lookahead, char ignore)

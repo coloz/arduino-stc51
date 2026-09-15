@@ -1,0 +1,3 @@
+BEGIN production-smoke
+CHECKS 12
+PASS production-smoke

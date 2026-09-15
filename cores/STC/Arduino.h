@@ -156,7 +156,7 @@ typedef unsigned int word;
      (((uint8_t)(pin) == (uint8_t)P3_3) ? 1u : NOT_AN_INTERRUPT))
 #endif
 #ifndef digitalPinHasPWM
-# define digitalPinHasPWM(pin) (false)
+# define digitalPinHasPWM(pin) (analogWriteSupported((uint8_t)(pin)) != 0u)
 #endif
 
 #ifdef __cplusplus
@@ -181,9 +181,28 @@ int analogRead(uint8_t pin);
 void analogReference(uint8_t mode);
 void analogReadResolution(uint8_t bits);
 void analogWrite(uint8_t pin, int value) STC_REENTRANT;
+#define STC_PWM_OK 0u
+#define STC_PWM_INVALID 1u
+#define STC_PWM_UNSUPPORTED 2u
+#define STC_PWM_BUSY 3u
+uint8_t analogWriteSupported(uint8_t pin) STC_REENTRANT;
+/* Checked requests never substitute a digital threshold for PWM. */
+uint8_t analogWriteChecked(uint8_t pin, int value) STC_REENTRANT;
+uint8_t analogWriteConfigurationError(void);
 
 void attachInterrupt(uint8_t interrupt_number, void (*callback)(void),
                      int mode) STC_REENTRANT;
+#define STC_INTERRUPT_OK 0u
+#define STC_INTERRUPT_INVALID 1u
+#define STC_INTERRUPT_UNSUPPORTED_MODE 2u
+/* RISING on dual-edge INT0/1 is filtered by the pin level in the ISR.
+ * Pulses must remain high until the ISR samples them. Use CHANGE/FALLING
+ * for direct hardware edge selection.
+ */
+uint8_t interruptModeSupported(uint8_t interrupt_number, int mode) STC_REENTRANT;
+uint8_t attachInterruptChecked(uint8_t interrupt_number, void (*callback)(void),
+                               int mode) STC_REENTRANT;
+uint8_t interruptConfigurationError(void);
 void detachInterrupt(uint8_t interrupt_number);
 
 uint8_t shiftIn(uint8_t data_pin, uint8_t clock_pin,
@@ -242,7 +261,7 @@ inline word makeWord(byte high, byte low)
 /*
  * Plain C remains the default compatibility profile.  An explicit
  * cppcore=enabled board selection routes genuine C++ translation units
- * through the locked MCS51/MCS251 frontend and runtime.  In that profile
+ * through the locked MCS251 frontend and runtime.  In that profile
  * Serial is the real HardwareSerial C++ object; the legacy C facade remains
  * selected everywhere else.
  */

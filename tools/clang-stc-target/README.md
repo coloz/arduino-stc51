@@ -1,6 +1,6 @@
 # Clang 20.1.8 STC IR 前端补丁
 
-本目录保留实验性 MCS51 / MCS251 Clang 前端的补丁、CMake 兼容辅助文件和来源锁。补丁使 Clang 输出 STC 配置的 LLVM IR / bitcode；最终机器代码由 LLVM-CBE、Arduino 适配器和 SDCC 生成。
+当前 Arduino 平台只使用 MCS251 前端。本目录保留已锁定编译器的完整来源补丁、CMake 兼容文件和来源锁；其中旧双目标实现属于现有二进制的来源身份，不代表继续移植或开放 MCS51 Arduino 配置。补丁使 Clang 输出 STC 配置的 LLVM IR / bitcode；最终机器代码由 LLVM-CBE、Arduino 适配器和 SDCC 生成。
 
 完整工具链的源码准备与构建由 **stcxx** 项目维护，入口见[平台 README](../../README.md)。Arduino 集成方式见 [cpp-cli README](../cpp-cli/README.md)。
 

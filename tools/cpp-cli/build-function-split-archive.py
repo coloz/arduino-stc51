@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build an archive closure with fail-closed splits for oversized C function TUs."""
+"""Audit C function closures, preserving direct objects or archive extraction."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import json
 import re
 import subprocess
 import sys
+import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -105,6 +106,8 @@ class Member:
     requested_roots: set[str] = field(default_factory=set)
     compiled: list[Path] = field(default_factory=list)
     split_audit: Path | None = None
+    trim_classification: str | None = None
+    external_functions: set[str] = field(default_factory=set)
 
 
 def verify_metadata(meta_path: Path, actual_rel: Path, code_limit: int, xram_limit: int) -> Member:
@@ -163,7 +166,7 @@ def compile_candidate(member: Member, roots: set[str], work: Path, splitter: Pat
     command = [
         sys.executable, str(splitter), "--clang", str(clang), "--source", str(source),
         "--output-dir", str(source_dir), "--audit", str(audit),
-        "--expected-source-sha256", metadata["source_sha256"],
+        "--expected-source-sha256", metadata["source_sha256"], "--merge-roots",
     ]
     for root in sorted(roots):
         command.extend(["--root", root[1:] if root.startswith("_") else root])
@@ -194,6 +197,137 @@ def compile_candidate(member: Member, roots: set[str], work: Path, splitter: Pat
     member.split_audit = audit
 
 
+def can_trim_member(member: Member, splitter: Path) -> bool:
+    """Optional pure-function TU trimming inside an already oversized library.
+
+    Keep ordinary objects when their source shape cannot be proven. Metadata
+    hashes have already been verified; generated function closures are compiled
+    and symbol-audited again before use. Single-TU emission preserves private
+    callback identity and static local state shared by multiple public entries.
+    """
+    if default_function_code_bytes(member.original['areas']) == 0:
+        member.trim_classification = 'no-function-code'; return False
+    if any(size for name,size in member.original['areas'].items()
+           if name in ('HOME','GSINIT','GSFINAL') or name.startswith('GSINIT')):
+        member.trim_classification = 'startup-code-kept'; return False
+    spec=importlib.util.spec_from_file_location('stc_function_splitter',splitter)
+    module=importlib.util.module_from_spec(spec); sys.modules[spec.name]=module; spec.loader.exec_module(module)
+    meta=member.metadata; source=Path(meta['source'])
+    result=subprocess.run([meta['clang'],'-x','c','-fsyntax-only','-fno-color-diagnostics',
+                           '-Xclang','-ast-dump=json',*meta['clang_arguments'],str(source)],capture_output=True)
+    if result.returncode:
+        member.trim_classification = 'AST-unavailable-original-kept'; return False
+    try:
+        ast = json.loads(result.stdout)
+        # Attributes can retain entries independently of ordinary call edges
+        # (interrupt vectors, constructors, used/section declarations, aliases).
+        # Their semantics are outside this optional optimization's proof.
+        functions=module.parse_translation_unit(ast,source,source.read_bytes(),
+                                                 shared_file_state=True)
+        names = {function.name for function in functions}
+        if any(node.get('kind', '').endswith('Attr')
+               for declaration in ast.get('inner', [])
+               if declaration.get('kind') == 'FunctionDecl' and declaration.get('name') in names
+               for node in module.walk(declaration)):
+            member.trim_classification = 'attributes-original-kept'; return False
+    except (SystemExit, ValueError) as error:
+        member.trim_classification = 'original-kept: '+str(error); return False
+    member.external_functions = {'_' + f.name for f in functions if not f.is_static}
+    member.trim_classification = 'functions-shared-single-TU'
+    return len(member.external_functions) > 1
+
+
+def trim_direct_members(members: list[Member], arguments, work: Path,
+                        splitter: Path, sdar: Path) -> None:
+    """Replace functions inside direct objects; never discard a whole object.
+
+    Use the original references of every input, including every archive member.
+    This intentionally overestimates roots so independent trims cannot remove
+    an entry still needed by another object. Keep unsupported/unreferenced TUs
+    whole, and link every resulting REL directly so startup/data is retained.
+    """
+    references: set[str] = set()
+    inputs: dict[Path, str] = {}
+    root_inputs = []
+    for member in members:
+        references.update(member.actual['references'])
+        for path in (member.meta_path, member.actual_rel,
+                     Path(member.metadata['source']), Path(member.metadata['original_rel'])):
+            inputs[path] = digest_path(path)
+    for value in arguments.root_rel:
+        path = Path(value).resolve()
+        references.update(parse_rel(path)['references'])
+        inputs[path] = digest_path(path)
+        root_inputs.append({'kind': 'direct-rel', 'path': str(path), 'sha256': inputs[path]})
+    for value in arguments.root_archive:
+        path = Path(value).resolve()
+        references.update(archive_symbols(sdar, path)[1])
+        inputs[path] = digest_path(path)
+        root_inputs.append({'kind': 'conservative-all-archive-members', 'path': str(path), 'sha256': inputs[path]})
+    bindings = []
+    trimmed_count = 0
+    for member in members:
+        original = member.actual_rel
+        output = original
+        evidence = {'input_rel': str(original), 'input_rel_sha256': inputs[original],
+                    'metadata': str(member.meta_path), 'metadata_sha256': inputs[member.meta_path],
+                    'original_areas': member.actual['areas']}
+        if digest_path(original) != member.metadata['original_rel_sha256']:
+            member.trim_classification = 'previously-transformed-original-kept'
+        elif can_trim_member(member, splitter):
+            roots = references & member.external_functions
+            if roots:
+                compile_candidate(member, roots, work, splitter)
+                if len(member.compiled) != 1:
+                    fail('direct object trimming must preserve a single translation unit')
+                generated = member.compiled[0]
+                parsed = parse_rel(generated)
+                required = member.original['definitions'] & references
+                non_functions = member.original['definitions'] - member.external_functions
+                if not (required | non_functions) <= parsed['definitions']:
+                    fail('direct object trimming removed required functions or non-function definitions')
+                if parsed['definitions'] - member.original['definitions']:
+                    fail('direct object trimming introduced unexpected public definitions')
+                removed = member.original['definitions'] - parsed['definitions']
+                # Native-only header branches can call helpers absent from the
+                # Clang AST. Removing such a helper turns a local definition
+                # into an external reference. Keep the original object unless
+                # the native compiler confirms no new reference was created.
+                new_references = parsed['references'] - member.original['references']
+                if new_references:
+                    member.trim_classification = 'new-native-references-original-kept'
+                if (not new_references and removed and
+                        default_function_code_bytes(parsed['areas']) < default_function_code_bytes(member.original['areas'])):
+                    output = generated
+                    trimmed_count += 1
+                evidence.update(requested_roots=sorted(roots), removed_definitions=sorted(removed),
+                                new_native_references=sorted(new_references),
+                                split_audit=str(member.split_audit), split_audit_sha256=digest_path(member.split_audit),
+                                split=json.loads(member.split_audit.read_text()), generated_areas=parsed['areas'])
+            else:
+                member.trim_classification = 'no-referenced-function-original-kept'
+        evidence.update(classification=member.trim_classification, output_rel=str(output),
+                        output_rel_sha256=digest_path(output), transformed=output != original)
+        bindings.append(evidence)
+    for path, expected in inputs.items():
+        if digest_path(path) != expected:
+            fail(f'direct function trim input changed: {path}')
+    replacements = arguments.output_rel_list.resolve()
+    replacements.write_text(''.join(item['input_rel'] + '\n' + item['output_rel'] + '\n' for item in bindings),
+                            encoding='utf-8', newline='\n')
+    audit = {'schema_version': 1, 'outcome': 'PASS', 'linkage': 'direct-rels',
+             'policy': 'conservative-original-reference-closure-retaining-every-direct-object',
+             'tools': {'orchestrator': {'path': str(Path(__file__).resolve()), 'sha256': digest_path(Path(__file__))},
+                       'splitter': {'path': str(splitter), 'sha256': digest_path(splitter)},
+                       'sdar': {'path': str(sdar), 'sha256': digest_path(sdar)}},
+             'root_inputs': root_inputs, 'bindings': bindings,
+             'selected_member_count': 0, 'selected_direct_object_count': len(bindings),
+             'discarded_input_member_count': 0, 'selected_split_candidate_count': trimmed_count,
+             'discarded_split_candidate_count': 0, 'replacement_list': str(replacements),
+             'replacement_list_sha256': digest_path(replacements)}
+    arguments.audit.resolve().write_text(json.dumps(audit, indent=2) + '\n', encoding='utf-8', newline='\n')
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--member", action="append", nargs=2, required=True, metavar=("META", "ACTUAL_REL"))
@@ -204,7 +338,9 @@ def main() -> None:
     parser.add_argument("--splitter", type=Path, required=True)
     parser.add_argument("--sdar", type=Path, required=True)
     parser.add_argument("--work-dir", type=Path, required=True)
-    parser.add_argument("--output-archive", type=Path, required=True)
+    parser.add_argument("--output-archive", type=Path)
+    parser.add_argument("--output-rel-list", type=Path,
+                        help="Trim direct objects and write input/output REL pairs, preserving every input")
     parser.add_argument("--audit", type=Path, required=True)
     arguments = parser.parse_args()
     if arguments.code_limit <= 0 or arguments.xram_limit <= 0:
@@ -212,7 +348,8 @@ def main() -> None:
     splitter = arguments.splitter.resolve()
     sdar = arguments.sdar.resolve()
     work = arguments.work_dir.resolve()
-    output_archive = arguments.output_archive.resolve()
+    if bool(arguments.output_archive) == bool(arguments.output_rel_list):
+        fail('provide exactly one output archive or direct REL list')
     for tool in (splitter, sdar):
         if not tool.is_file():
             fail(f"missing function archive tool: {tool}")
@@ -222,11 +359,15 @@ def main() -> None:
         verify_metadata(Path(meta).resolve(), Path(actual).resolve(), arguments.code_limit, arguments.xram_limit)
         for meta, actual in arguments.member
     ]
-    if not any(member.candidate for member in members):
-        fail("function archive group has no oversized CSEG/XSEG candidate")
     original_rel_paths = [Path(member.metadata["original_rel"]).resolve() for member in members]
     if len(original_rel_paths) != len(set(original_rel_paths)):
         fail("duplicate original REL in function archive group")
+    if arguments.output_rel_list:
+        trim_direct_members(members, arguments, work, splitter, sdar)
+        return
+    output_archive = arguments.output_archive.resolve()
+    if not any(member.candidate for member in members):
+        fail("function archive group has no oversized CSEG/XSEG candidate")
 
     base_definitions: set[str] = set()
     base_references: set[str] = set()
@@ -255,6 +396,8 @@ def main() -> None:
             hits = member.original["definitions"] & unresolved
             if not hits:
                 continue
+            if not member.candidate and member.trim_classification is None and not member.selected:
+                member.candidate = can_trim_member(member, splitter)
             if member.candidate:
                 requested = member.requested_roots | hits
                 if requested != member.requested_roots:
@@ -344,6 +487,7 @@ def main() -> None:
             "actual_rel": str(member.actual_rel),
             "actual_rel_sha256": digest_path(member.actual_rel),
             "candidate": member.candidate,
+            "trim_classification": member.trim_classification,
             "selected": member.selected,
             "original_areas": member.original["areas"],
             "requested_roots": sorted(member.requested_roots),

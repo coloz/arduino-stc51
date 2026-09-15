@@ -1,0 +1,3 @@
+BEGIN unsafe-native-callback
+83
+PASS unsafe-native-callback

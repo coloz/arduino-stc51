@@ -2,7 +2,7 @@
 # See docs/toolchain-and-sdk.md for compiler provenance and support boundaries.
 
 name=arduino-stc51
-version=0.0.2
+version=0.0.3
 
 compiler.warning_flags=--less-pedantic
 compiler.warning_flags.none=--less-pedantic
@@ -13,7 +13,7 @@ compiler.warning_flags.all=--less-pedantic -Wp-Wall -V
 compiler.path={runtime.tools.sdcc-mcs251.path}/bin
 compiler.shell.cmd=sh
 compiler.shell.cmd.macosx=/bin/sh
-compiler.shell.cmd.windows={runtime.tools.MCS51Tools.path}/win/busybox.exe
+compiler.shell.cmd.windows={runtime.tools.STCHostTools.path}/win/busybox.exe
 compiler.shell.args=
 compiler.shell.args.windows=ash
 compiler.wrapper.path={runtime.platform.path}/tools/wrapper
@@ -28,15 +28,14 @@ compiler.c.elf.flags=--code-size {upload.maximum_size} --xram-size {upload.maxim
 
 # Plain-C remains the default. Every explicit cppcore=enabled/12 MHz profile
 # routes genuine .cpp translation units through the locked WSL
-# Clang/LLVM-CBE bridge, selecting the independent MCS51 or MCS251 ABI from
-# the board execution profile.
+# Clang/LLVM-CBE bridge, using the MCS251 ABI for every supported board.
 compiler.cpp.cmd=sdcc
 compiler.cpp.wrapper=sdcc.sh
 compiler.cpp.flags={compiler.c.flags}
 
 compiler.S.flags=-c -g -x assembler-with-cpp
 compiler.ar.path={runtime.tools.sdcc-mcs251.path}/bin
-compiler.ar.path.windows={runtime.tools.MCS51ArchiveTools.path}/bin
+compiler.ar.path.windows={runtime.tools.SDCCArchiveTools.path}/bin
 compiler.ar.cmd=sdar
 compiler.ar.wrapper=sdar.sh
 compiler.ar.flags=rcs
@@ -60,9 +59,9 @@ recipe.cpp.o.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wra
 
 recipe.S.o.pattern="{compiler.path}/{compiler.c.cmd}" {compiler.S.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.S.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
 
-# The MCS251 release's sdar is missing runtime DLLs. A separately pinned,
-# working SDCC archive helper creates core.a; compilation and linking still use
-# patched SDCC 4.6.0 with the board-selected MCS51 or MCS251 backend.
+# The development manifest retains an older Windows compiler that needs a
+# separate archive helper. Portable SDK packaging selects the current SDCC
+# candidate's own sdar; its Windows runtime imports are verified when staged.
 recipe.ar.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-archive.sh" "{compiler.ar.path}/{compiler.ar.cmd}" "{archive_file_path}" "{object_file}" {compiler.ar.flags} {compiler.ar.extra_flags}
 
 recipe.c.combine.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-link.sh" "{compiler.path}/{compiler.c.elf.cmd}" {build.target} {compiler.c.elf.flags} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.cpp_link_flags} {build.cpp_target_link_flags} {compiler.c.elf.extra_flags} {object_files} "{build.path}/{archive_file}" --out-fmt-ihx -o "{build.path}/{build.project_name}.hex"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit Arduino C++ IR and adapt LLVM-CBE output for SDCC MCS51/MCS251."""
+"""Audit Arduino C++ IR and adapt LLVM-CBE output for SDCC MCS251."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import hashlib
 import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 
 
@@ -562,77 +563,97 @@ def parse_constructors(
     return constructors
 
 
-def audit_mcs51_program_address_space(ir: str) -> dict[str, object]:
-    """Accept only Clang's exact MCS51 program/function address space.
 
-    Address space 1 is a 16-bit code/function pointer.  Default address space
-    zero remains SDCC's 24-bit tagged generic data pointer.  Accepted
-    conversions are the constant expression used for a generic-pointer vtable
-    slot and the exact reverse conversion made by the audited Itanium virtual
-    member-call path.
+
+def audit_vtable_offset_constants(ir: str) -> list[dict[str, object]]:
+    """Recognize pointer-sized signed offsets in local Itanium vtables.
+
+    These are data, not reconstructed callable addresses. MCS251 uses
+    24-bit pointer slots for both program and data pointers.
+    Keep arbitrary integer-to-pointer casts outside this exception.
     """
-
-    spaces = sorted({int(value) for value in re.findall(
-        r"\baddrspace\s*\(\s*([0-9]+)\s*\)", ir
-    )})
-    require(
-        1 in spaces and all(value in (0, 1) for value in spaces),
-        f"unsupported LLVM address spaces: {spaces!r}",
-    )
-
-    functions = []
-    missing_program_space = []
+    records = []
     for line in ir.splitlines():
-        if not line.startswith("define "):
+        match = re.fullmatch(
+            r'@(?P<symbol>_ZT[VC][A-Za-z0-9_.$]+)\s*=\s*'
+            r'(?:internal|private)\s+(?:unnamed_addr\s+)?constant\s+'
+            r'\{(?:\s*\[[0-9]+ x ptr\]\s*,?)+\}\s+\{.*\}, align 1', line)
+        if match is None:
             continue
-        match = re.search(r'@(?:"([^"]+)"|([A-Za-z0-9_.$-]+))\(', line)
-        require(match is not None, "cannot parse LLVM function definition")
-        name = match.group(1) or match.group(2)
-        functions.append(name)
-        if re.search(r"\)\s+[^\{]*\baddrspace\(1\)", line) is None:
-            missing_program_space.append(name)
-    require(
-        not missing_program_space,
-        "MCS51 function definition escaped program address space 1: "
-        + ", ".join(missing_program_space),
-    )
+        for cast in re.finditer(r'\bptr inttoptr \(i24 (-?[0-9]+) to ptr\)', line):
+            value = int(cast.group(1))
+            require(-(1 << 23) <= value < (1 << 23),
+                    'vtable offset is outside signed generic-pointer width')
+            records.append({'symbol': match.group('symbol'), 'value': value,
+                            'integer_bits': 24})
+    return records
 
-    cast_pattern = re.compile(
-        r'ptr\s+addrspacecast\s*\(\s*ptr\s+addrspace\(1\)\s+'
-        r'@(?:"([^"]+)"|([A-Za-z0-9_.$-]+))\s+to\s+ptr\s*\)'
-    )
-    casts = [quoted or plain for quoted, plain in cast_pattern.findall(ir)]
-    member_call_cast_pattern = re.compile(
-        r"^\s*(%[-A-Za-z$._0-9]+)\s*=\s*addrspacecast\s+"
-        r"ptr\s+(%[-A-Za-z$._0-9]+)\s+to\s+ptr\s+addrspace\(1\)\s*$",
-        re.MULTILINE,
-    )
-    member_call_casts = member_call_cast_pattern.findall(ir)
-    cast_count = len(re.findall(r"\baddrspacecast\b", ir))
-    require(
-        len(casts) + len(member_call_casts) == cast_count,
-        "MCS51 permits only local program-function vtable constants and "
-        "audited virtual-member-call address-space casts",
-    )
-    missing_cast_targets = sorted(set(casts) - set(functions))
-    require(
-        not missing_cast_targets,
-        "MCS51 address-space cast references a non-local program function: "
-        + ", ".join(missing_cast_targets),
-    )
-    return {
-        "program_address_space": 1,
-        "observed_explicit_address_spaces": spaces,
-        "program_pointer_bits": 16,
-        "generic_pointer_bits": 24,
-        "defined_program_functions": len(functions),
-        "vtable_program_to_generic_casts": len(casts),
-        "vtable_cast_targets": sorted(casts),
-        "virtual_member_generic_to_program_casts": len(member_call_casts),
-        "virtual_member_program_values": sorted(
-            result for result, _source in member_call_casts
-        ),
-    }
+
+def audit_optimized_member_call(body: str, result: str, source: str,
+                                bits: int, target: str) -> bool:
+    """Recognize linked SSA operands of the optimized Itanium call forms.
+
+    O2 splits (vptr + (member - 1)) into two byte GEPs, or removes the
+    virtual branch after assuming the low bit is zero. In both forms the
+    adjustment must come from the same member-pointer pair and the resulting
+    pointer must be the actual call target, with the adjusted object as this.
+    """
+    ssa = r'%[-A-Za-z$._0-9]+'
+    integer = 'i'+str(bits)
+    pair = rf'\{{ {integer}, {integer} \}}'
+    def definition(value, instruction):
+        return re.search(rf'^\s*{re.escape(value)} = {instruction}(?:, ![^\n]*)?$', body, re.M)
+    member = definition(source, rf'extractvalue {pair} (?P<pair>{ssa}), 0')
+    if member is None:
+        return False
+    adjustment = re.search(rf'^\s*(?P<value>{ssa}) = extractvalue {pair} {re.escape(member["pair"])}, 1$', body, re.M)
+    if adjustment is None:
+        return False
+    offset = adjustment['value']
+    if bits == 16:
+        extended = re.search(rf'^\s*(?P<value>{ssa}) = sext i16 {re.escape(offset)} to i24$', body, re.M)
+        if extended is None:
+            return False
+        offset = extended['value']
+    adjusted = re.search(rf'^\s*(?P<value>{ssa}) = getelementptr inbounds(?: nuw)? i8, ptr {ssa}, i24 {re.escape(offset)}$', body, re.M)
+    if adjusted is None:
+        return False
+    object_pointer = adjusted['value']
+    lowbit = re.search(rf'^\s*(?P<value>{ssa}) = and {integer} {re.escape(source)}, 1$', body, re.M)
+    if lowbit is None:
+        return False
+    zero = re.search(rf'^\s*(?P<value>{ssa}) = icmp eq {integer} {re.escape(lowbit["value"])}, 0$', body, re.M)
+    if zero is None:
+        return False
+    pointer_type = 'ptr'
+    phi = re.search(rf'^\s*(?P<value>{ssa}) = phi {pointer_type} (?P<incoming>[^\n]*\[ {re.escape(result)},[^\n]*)$', body, re.M)
+    def calls(value):
+        return re.search(rf'\bcall\b[^\n]* {re.escape(value)}\(ptr [^,%\n]*{re.escape(object_pointer)}(?:,|\))',body) is not None
+    if re.search(rf'\bcall(?: addrspace\(1\))? void @llvm\.assume\(i1 {re.escape(zero["value"])}\)',body):
+        return calls(result)
+    if phi is None or not calls(phi['value']):
+        return False
+    incoming = re.findall(rf'\[ ({ssa}), ({ssa}) \]',phi['incoming'])
+    others = [v for v,_ in incoming if v != result]
+    if len(incoming)!=2 or len(others)!=1:
+        return False
+    virtual = others[0]
+    load=definition(virtual,rf'load ptr, ptr (?P<slot>{ssa}), align 1')
+    if load is None:
+        return False
+    last=definition(load['slot'],rf'getelementptr i8, ptr (?P<base>{ssa}), i24 -1')
+    if last is None:
+        return False
+    member_index=source
+    if bits==16:
+        widened=re.search(rf'^\s*(?P<value>{ssa}) = sext i16 {re.escape(source)} to i24$',body,re.M)
+        if widened is None:
+            return False
+        member_index=widened['value']
+    first=definition(last['base'],rf'getelementptr i8, ptr (?P<vptr>{ssa}), i24 {re.escape(member_index)}')
+    if first is None or definition(first['vptr'],rf'load ptr, ptr {re.escape(object_pointer)}, align 1') is None:
+        return False
+    return re.search(rf'br i1 {re.escape(zero["value"])}, label {ssa}, label {ssa}',body) is not None
 
 
 def audit_stc_pointer_integer_conversions(
@@ -643,10 +664,10 @@ def audit_stc_pointer_integer_conversions(
     The locked member-pointer representation uses one program-pointer-width
     integer for a data member and a pair for a method.  Clang materializes a
     non-virtual method as ``ptrtoint`` and reconstructs it on invocation with
-    ``inttoptr``.  MCS51 uses AS1/i16; MCS251 uses default-AS/i24.
+    ``inttoptr``.  MCS251 uses default-AS/i24.
 
     C++ pointer subtraction is different: ``ptrdiff_t`` is a signed i32 on
-    both locked profiles.  Accept only the compiler's exact SSA shape: two
+    the locked profile.  Accept only the compiler's exact SSA shape: two
     named default-address-space ``ptrtoint`` instructions whose sole uses are
     the two distinct operands of one unflagged ``sub i32`` in the same
     function.  The subtraction result can then flow normally (return, store,
@@ -654,7 +675,8 @@ def audit_stc_pointer_integer_conversions(
     the former i24 lowering, which truncated/underwrote ``ptrdiff_t`` values.
     """
 
-    member_bits = 16 if target_profile == "mcs51" else 24
+    ir, widened_pointer_pairs = load_canary_adapter().canonicalize_widened_pointer_differences(ir)
+    member_bits = 24
     ptrtoint_count = len(re.findall(r"\bptrtoint\b", ir))
     ptrtoint_lines = [
         line.strip() for line in ir.splitlines() if "ptrtoint" in line
@@ -676,7 +698,7 @@ def audit_stc_pointer_integer_conversions(
     }
 
     member_pointer_type = (
-        r"ptr\s+addrspace\(1\)" if target_profile == "mcs51" else r"ptr"
+        r"ptr"
     )
     member_conversion_pattern = re.compile(
         rf'\bptrtoint\s*\(\s*{member_pointer_type}\s+'
@@ -798,11 +820,12 @@ def audit_stc_pointer_integer_conversions(
     )
 
     inttoptr_count = len(re.findall(r"\binttoptr\b", ir))
+    vtable_offsets = audit_vtable_offset_constants(ir)
     audited_inttoptr = 0
     int_type = f"i{member_bits}"
     pair_type = rf"\{{\s*{int_type},\s*{int_type}\s*\}}"
     callee_pointer_type = (
-        r"ptr\s+addrspace\(1\)" if target_profile == "mcs51" else r"ptr"
+        r"ptr"
     )
     program_addrspace_casts = 0
     for function_name, body in functions:
@@ -821,7 +844,7 @@ def audit_stc_pointer_integer_conversions(
                 body,
                 re.MULTILINE,
             )
-            require(
+            classic = (
                 re.search(
                     rf"^\s*{re.escape(source)}\s*=\s*extractvalue\s+"
                     rf"{pair_type}\s+[^,]+,\s*0\s*$",
@@ -839,53 +862,29 @@ def audit_stc_pointer_integer_conversions(
                     body,
                 )
                 is not None
-                and phi_match is not None,
+                and phi_match is not None
+            )
+            require(
+                classic or audit_optimized_member_call(body, result, source, member_bits, target_profile),
                 "inttoptr is not the compiler's audited Itanium member-call "
                 f"shape in {function_name}",
             )
-            if target_profile == "mcs51":
-                assert phi_match is not None
-                phi_result = phi_match.group(1)
-                incoming_values = re.findall(
-                    r"\[\s*(%[-A-Za-z$._0-9]+)\s*,",
-                    phi_match.group("incoming"),
-                )
-                virtual_values = [
-                    value for value in incoming_values if value != result
-                ]
-                require(
-                    len(virtual_values) == 1
-                    and re.search(
-                        rf"^\s*{re.escape(virtual_values[0])}\s*=\s*"
-                        rf"addrspacecast\s+ptr\s+%[-A-Za-z$._0-9]+\s+to\s+"
-                        rf"ptr\s+addrspace\(1\)\s*$",
-                        body,
-                        re.MULTILINE,
-                    )
-                    is not None
-                    and re.search(
-                        rf"\bcall\b[^\n]*addrspace\(1\)[^\n]*"
-                        rf"{re.escape(phi_result)}\(",
-                        body,
-                    )
-                    is not None,
-                    "MCS51 member call did not remain in program address "
-                    f"space 1 in {function_name}",
-                )
-                program_addrspace_casts += 1
             audited_inttoptr += 1
     require(
-        audited_inttoptr == inttoptr_count,
+        audited_inttoptr + len(vtable_offsets) == inttoptr_count,
         "integer-to-pointer conversion escaped the Itanium member-call audit",
     )
     return {
         "pointer_to_integer_count": ptrtoint_count,
         "member_pointer_to_integer_count": member_conversion_count,
         "integer_to_pointer_count": inttoptr_count,
+        "member_integer_to_pointer_count": audited_inttoptr,
+        "vtable_offset_constants": vtable_offsets,
         "member_pointer_integer_bits": member_bits,
         "member_function_symbols": member_function_symbols,
         "program_address_space_member_calls": program_addrspace_casts,
         "pointer_difference": {
+            "optimized_widened_pairs": widened_pointer_pairs,
             "integer_bits": 32,
             "cast_count": ptrdiff_cast_count,
             "pair_count": len(pointer_difference_pairs),
@@ -916,17 +915,18 @@ def audit_ir(
     observed_triple, observed_layout = shared.read_target(ir)
     require(observed_triple == triple, f"unexpected target triple: {observed_triple}")
     require(observed_layout == layout, f"unexpected data layout: {observed_layout}")
-    program_address_space = 1 if target_profile == "mcs51" else 0
+    native_aggregate_abi = shared.audit_native_aggregate_abi(ir, c_abi_preserve_symbols)
+    program_address_space = 0
+    value_audit_ir, ignored_pointer_arguments = shared.audit_ignored_pointer_arguments(ir)
     forbidden = [
         name for name, pattern in shared.FORBIDDEN_IR_PATTERNS.items()
-        if not (target_profile == "mcs51" and name == "nonzero_address_space")
-        and pattern.search(ir)
+        if pattern.search(value_audit_ir)
     ]
     require(not forbidden, "forbidden LLVM IR category: " + ", ".join(forbidden))
-    opcodes = shared.collect_opcodes(ir)
-    intrinsics = shared.collect_intrinsics(ir)
+    opcodes = shared.collect_opcodes(shared.mask_llvm_data(ir))
+    intrinsics = shared.collect_intrinsics(shared.mask_llvm_data(ir))
     pointer_integer_conversions = audit_stc_pointer_integer_conversions(
-        ir, target_profile
+        shared.mask_llvm_data(ir), target_profile
     )
     required_preserve_symbols = {
         "setup", "loop", "__stcxx_run_global_ctors", abi_symbol,
@@ -996,7 +996,7 @@ def audit_ir(
         guard_name = guard_match.group(1) or guard_match.group(2)
         definition = guard_match.group(3)
         require(
-            re.fullmatch(r"internal\s+global\s+i8\s+(?:0|zeroinitializer)(?:,\s*align\s+1)?", definition)
+            re.fullmatch(r"internal\s+(?:unnamed_addr\s+)?global\s+(?:i8\s+(?:0|zeroinitializer)|i1\s+(?:false|zeroinitializer))(?:,\s*align\s+1)?", definition)
             is not None,
             f"unsupported local-static guard representation: {line}",
         )
@@ -1010,9 +1010,7 @@ def audit_ir(
         + ", ".join(guard_hook_symbols),
     )
     address_space_audit = (
-        audit_mcs51_program_address_space(ir)
-        if target_profile == "mcs51"
-        else {
+        {
             "program_address_space": 0,
             "program_pointer_bits": 24,
             "generic_pointer_bits": 24,
@@ -1065,6 +1063,8 @@ def audit_ir(
     )
     return {
         "target_triple": observed_triple,
+        "native_aggregate_abi": native_aggregate_abi,
+        "ignored_pointer_arguments": ignored_pointer_arguments,
         "data_layout": observed_layout,
         "constructors": constructors,
         "local_static_guard_audit": {
@@ -1072,7 +1072,7 @@ def audit_ir(
             "required_compiler_flag": "-fno-threadsafe-statics",
             "object_count": len(guard_objects),
             "objects": sorted(guard_objects),
-            "object_llvm_type": "i8",
+            "object_llvm_type": "i8-or-optimized-i1",
             "runtime_guard_hook_symbols": guard_hook_symbols,
         },
         "observed_opcodes": opcodes,
@@ -1101,9 +1101,9 @@ def audit_ir(
 
 def remove_duplicate_const_declarations(shared, payload: str):
     """Use the canary rewrite when needed, while accepting an empty rewrite set."""
-    marker_a = "/* Global Variable Declarations */"
-    marker_b = "/* Function Declarations */"
-    marker_c = "/* Global Variable Definitions and Initialization */"
+    marker_a = "\n/* Global Variable Declarations */\n"
+    marker_b = "\n/* Function Declarations */\n"
+    marker_c = "\n/* Global Variable Definitions and Initialization */\n"
     require(payload.count(marker_a) == 1, "global declaration marker mismatch")
     require(payload.count(marker_b) == 1, "function declaration marker mismatch")
     require(payload.count(marker_c) == 1, "global definition marker mismatch")
@@ -1129,7 +1129,8 @@ def normalize_cbe_select_helpers(payload: str) -> tuple[str, list[str]]:
     # the byte-for-byte same type through the named backreference below.
     select_type = (
         r"(?:[A-Za-z_][A-Za-z0-9_]*(?:\s*\*)?"
-        r"|(?:signed|unsigned)\s+_BitInt\([1-9][0-9]*\))"
+        r"|(?:signed|unsigned)\s+_BitInt\([1-9][0-9]*\)"
+        r"|struct\s+[A-Za-z_][A-Za-z0-9_]*)"
     )
     pattern = re.compile(
         rf"^static __forceinline (?P<type>{select_type}) "
@@ -1245,6 +1246,7 @@ def preserve_cbe_const_byte_array_addresses(
     exact base-cast spelling; mutable arrays and unfamiliar expressions remain
     untouched and therefore continue to fail the warning audit.
     """
+    shared = load_canary_adapter()
     definition_pattern = re.compile(
         r"^static const struct l_array_[1-9][0-9]*_uint8_t "
         r"(?P<symbol>[A-Za-z_][A-Za-z0-9_]*)\s*=",
@@ -1260,13 +1262,13 @@ def preserve_cbe_const_byte_array_addresses(
     records: list[dict[str, object]] = []
     for symbol in symbols:
         old = f"((uint8_t*)(&{symbol}))"
-        count = rewritten.count(old)
+        count = shared.mask_c_data(rewritten).count(old)
         if count == 0:
             continue
         new = f"((const uint8_t*)(&{symbol}))"
-        rewritten = rewritten.replace(old, new)
+        rewritten = shared.replace_c_token(rewritten, old, new)
         records.append({"symbol": symbol, "occurrence_count": count})
-        require(old not in rewritten, f"const byte-array cast remains for {symbol}")
+        require(old not in shared.mask_c_data(rewritten), f"const byte-array cast remains for {symbol}")
     return rewritten, records
 
 
@@ -1328,6 +1330,30 @@ def normalize_cbe_unconditional_helper_initializers(
         )
 
     normalized = aggregate_pattern.sub(rewrite_aggregate, payload)
+    for bits in (8, 16, 24, 32, 64):
+        kind = 'unsigned _BitInt(24)' if bits == 24 else f'uint{bits}_t'
+        for operation in ('abs', 'fshl', 'fshr'):
+            if operation == 'abs' and bits == 24:
+                continue
+            name = f'llvm_OC_{operation}_OC_i{bits}'
+            if operation == 'abs':
+                arguments = f'{kind} a, bool b'
+                prefix = '  (void)b;\n'
+                expression = f'(a >> {bits - 1}) ? (0u - a) : a'
+            else:
+                arguments = f'{kind} a, {kind} b, {kind} c'
+                prefix = f'  c = c % {bits};\n'
+                expression = (f'c == 0 ? a : ((a << c) | (b >> ({bits} - c)))'
+                              if operation == 'fshl' else
+                              f'c == 0 ? b : ((a << ({bits} - c)) | (b >> c))')
+            header = f'static __forceinline {kind} {name}({arguments}) {{\n'
+            body = header + f'  {kind} r;\n' + prefix + f'  r = {expression};\n  return r;\n}}'
+            replacement = header + prefix + f'  {kind} r = {expression};\n  return r;\n}}'
+            count = normalized.count(body)
+            require(count <= 1, 'duplicate scalar intrinsic helper ' + name)
+            if count:
+                normalized = normalized.replace(body, replacement)
+                names.append(name)
     pattern = re.compile(
         r"^static __forceinline (?P<type>[A-Za-z_][A-Za-z0-9_]*(?:\s*\*)?) "
         r"(?P<name>llvm_[A-Za-z0-9_]+)\((?P<arguments>[^\n]*)\) \{\n"
@@ -1358,189 +1384,8 @@ def normalize_cbe_unconditional_helper_initializers(
     return normalized, names
 
 
-def normalize_mcs51_vtable_address_point_stores(
-    payload: str,
-) -> tuple[str, list[dict[str, object]]]:
-    """Preserve SDCC's CODE tag when a constructor writes its vptr.
-
-    LLVM-CBE represents both an object's vptr and a vtable address point as
-    generic ``void *`` values.  On MCS51, SDCC normally converts the address
-    of a ``static const`` object to a tagged generic CODE pointer.  That
-    conversion is lost specifically when the value is written indirectly
-    through CBE's ``*(void **)object`` constructor spelling: SDCC emits the
-    link-time address high byte instead of the mandatory 0x80 CODE tag.  An
-    explicit code-space cast restores the same generic-pointer conversion.
-
-    Match the complete current CBE/Itanium address-point expression and bind
-    it to an exact local vtable definition.  Any other vtable store remains
-    visible to the residual audit and fails closed instead of receiving a
-    speculative rewrite.
-    """
-    candidate_pattern = re.compile(
-        r"^[ \t]*\*\(void\*\*\)_[0-9]+\s*="
-        r"(?![ \t]*\(void \*\)\(const void __code \*\))"
-        r"[ \t]*[^;]*"
-        r"&_ZT[VC][A-Za-z0-9_]+[^;]*;[ \t]*$",
-        re.MULTILINE,
-    )
-    store_pattern = re.compile(
-        r"^(?P<indent>[ \t]*)\*\(void\*\*\)(?P<object>_[0-9]+) = "
-        r"(?P<address>\(\(\(&\(&\(&(?P<symbol>_ZTV[A-Za-z0-9_]+)"
-        r"\)->field0\)->array\[\(\(int32_t\)(?P<index>[0-9]+)\)\]"
-        r"\)\)\));$",
-        re.MULTILINE,
-    )
-    definitions = set(re.findall(
-        r"^static const struct [A-Za-z_][A-Za-z0-9_]* "
-        r"(_ZTV[A-Za-z0-9_]+)\s*=",
-        payload,
-        re.MULTILINE,
-    ))
-    records: list[dict[str, object]] = []
-
-    def rewrite(match: re.Match[str]) -> str:
-        symbol = match.group("symbol")
-        require(
-            symbol in definitions,
-            f"MCS51 vtable address-point store has no exact local definition: {symbol}",
-        )
-        records.append({
-            "object_temporary": match.group("object"),
-            "vtable_symbol": symbol,
-            "address_point_index": int(match.group("index")),
-        })
-        return (
-            f"{match.group('indent')}*(void**){match.group('object')} = "
-            f"(void *)(const void __code *){match.group('address')};"
-        )
-
-    candidates_before = candidate_pattern.findall(payload)
-    normalized = store_pattern.sub(rewrite, payload)
-    require(
-        len(records) == len(candidates_before),
-        "unsupported LLVM-CBE MCS51 vtable address-point store shape",
-    )
-    require(
-        candidate_pattern.search(normalized) is None,
-        "unqualified LLVM-CBE MCS51 vtable address-point store survived",
-    )
-    return normalized, records
 
 
-def normalize_mcs51_program_pointer_casts(
-    payload: str,
-    expected_casts: int,
-    expected_member_pointer_casts: int,
-) -> tuple[str, list[dict[str, object]]]:
-    """Lower audited generic-to-program casts without an SDCC type warning.
-
-    Clang's MCS51 IR uses an explicit ``addrspacecast`` when a generic vtable
-    slot is invoked as a 16-bit program function pointer.  LLVM-CBE spells
-    that operation as a direct cast from ``void *`` to a function pointer.
-    SDCC implements the intended conversion but diagnoses warning 244.  Going
-    through ``uintptr_t`` states the ABI operation exactly: retain the 16-bit
-    address and discard the generic-pointer space tag before constructing the
-    program pointer.
-
-    Accept only the two complete CBE shapes produced by the audited IR: a
-    direct virtual dispatch, or the virtual branch of an Itanium member-pointer
-    call.  Both the total and member-pointer subset are bound to independent IR
-    audit counts.  A new CBE spelling therefore fails closed instead of being
-    rewritten speculatively.
-    """
-
-    require(expected_casts >= 0, "negative MCS51 program-pointer cast count")
-    require(
-        0 <= expected_member_pointer_casts <= expected_casts,
-        "invalid MCS51 member-pointer cast subset",
-    )
-    unqualified = re.compile(
-        r"\(\(llvm_cbe_program_pointer\)(?P<source>_[0-9]+)\)"
-    )
-    qualified = re.compile(
-        r"\(\(llvm_cbe_program_pointer\)\(uintptr_t\)(?P<source>_[0-9]+)\)"
-    )
-    assignment = re.compile(
-        r"^(?P<indent>[ \t]*)(?P<destination>_[0-9]+)\s*=\s*"
-        r"\(\(llvm_cbe_program_pointer\)(?P<source>_[0-9]+)\);[ \t]*$"
-    )
-    direct_call = re.compile(
-        r"^(?P<indent>[ \t]*)(?:(?P<destination>_[0-9]+)\s*=\s*)?"
-        r"\(\((?P<function_type>l_fptr_[0-9]+)\*\)"
-        r"\(\(\(llvm_cbe_program_pointer\)(?P<source>_[0-9]+)\)\)\)"
-        r"\((?P<arguments>[^;\n]*)\);[ \t]*$"
-    )
-
-    candidate_count = len(unqualified.findall(payload))
-    require(
-        candidate_count == expected_casts,
-        "LLVM-CBE MCS51 generic-to-program cast count differs from audited IR: "
-        f"expected {expected_casts}, got {candidate_count}",
-    )
-    qualified_before = len(qualified.findall(payload))
-    records: list[dict[str, object]] = []
-    normalized_lines: list[str] = []
-    for line in payload.splitlines(keepends=True):
-        line_payload = line.rstrip("\r\n")
-        endings = line[len(line_payload):]
-        candidates = list(unqualified.finditer(line_payload))
-        if not candidates:
-            normalized_lines.append(line)
-            continue
-        require(
-            len(candidates) == 1,
-            "multiple MCS51 generic-to-program casts on one CBE line",
-        )
-        match = assignment.fullmatch(line_payload)
-        if match is not None:
-            kind = "member-pointer-virtual-branch"
-            function_type = None
-        else:
-            match = direct_call.fullmatch(line_payload)
-            require(
-                match is not None,
-                "unsupported LLVM-CBE MCS51 generic-to-program cast shape",
-            )
-            kind = "direct-virtual-dispatch"
-            function_type = match.group("function_type")
-        source = match.group("source")
-        records.append({
-            "kind": kind,
-            "source_temporary": source,
-            "destination_temporary": match.group("destination"),
-            "function_type": function_type,
-        })
-        rewritten, count = unqualified.subn(
-            f"((llvm_cbe_program_pointer)(uintptr_t){source})",
-            line_payload,
-        )
-        require(count == 1, "MCS51 program-pointer cast rewrite was not unique")
-        normalized_lines.append(rewritten + endings)
-
-    member_pointer_count = sum(
-        record["kind"] == "member-pointer-virtual-branch"
-        for record in records
-    )
-    require(
-        member_pointer_count == expected_member_pointer_casts,
-        "LLVM-CBE MCS51 member-pointer cast subset differs from audited IR: "
-        f"expected {expected_member_pointer_casts}, got {member_pointer_count}",
-    )
-    require(
-        len(records) - member_pointer_count
-        == expected_casts - expected_member_pointer_casts,
-        "LLVM-CBE MCS51 direct virtual-dispatch cast subset differs from audited IR",
-    )
-    normalized = "".join(normalized_lines)
-    require(
-        unqualified.search(normalized) is None,
-        "unqualified LLVM-CBE MCS51 generic-to-program cast survived",
-    )
-    require(
-        len(qualified.findall(normalized)) == qualified_before + expected_casts,
-        "normalized LLVM-CBE MCS51 program-pointer cast count differs",
-    )
-    return normalized, records
 
 
 def adapt_cbe(
@@ -1555,11 +1400,11 @@ def adapt_cbe(
     expected_function_alignment_symbols: list[str],
     protected_c_symbols: list[str],
 ):
-    marker = "/* Global Declarations */"
+    marker = "\n/* Global Declarations */\n"
     require(raw.count(marker) == 1, "LLVM-CBE global declaration marker mismatch")
     raw_prefix, payload = raw.split(marker, 1)
     program_pointer_typedef = "typedef void (*llvm_cbe_program_pointer)(void);"
-    expected_program_typedefs = 1 if target_profile == "mcs51" else 0
+    expected_program_typedefs = 0
     require(
         raw_prefix.count(program_pointer_typedef) == expected_program_typedefs,
         "LLVM-CBE program-pointer typedef does not match the selected target",
@@ -1578,7 +1423,7 @@ def adapt_cbe(
     )
     forbidden = [
         name for name, pattern in shared.FORBIDDEN_CBE_PAYLOAD.items()
-        if pattern.search(payload)
+        if pattern.search(shared.mask_c_data(payload))
     ]
     require(not forbidden, "forbidden LLVM-CBE payload: " + ", ".join(forbidden))
 
@@ -1593,7 +1438,7 @@ def adapt_cbe(
         for match in function_alignment_pattern.finditer(payload)
     ]
     require(
-        payload.count("__FUNCTIONALIGN__(") == len(function_alignment_records),
+        shared.mask_c_data(payload).count("__FUNCTIONALIGN__(") == len(function_alignment_records),
         "unsupported LLVM-CBE function-alignment declaration shape",
     )
     require(
@@ -1620,22 +1465,25 @@ def adapt_cbe(
         declared == expected,
         f"constructor order changed between LLVM and CBE: expected {expected!r}, got {declared!r}",
     )
-    require(payload.count(" __ATTRIBUTE_CTOR__") == len(expected),
+    require(shared.mask_c_data(payload).count(" __ATTRIBUTE_CTOR__") == len(expected),
             "constructor attribute count mismatch")
-    payload = payload.replace(" __ATTRIBUTE_CTOR__", "")
+    payload = shared.replace_c_token(payload, " __ATTRIBUTE_CTOR__", "")
 
-    trap_count = payload.count("__builtin_trap();")
+    trap_count = shared.mask_c_data(payload).count("__builtin_trap();")
     require(
         trap_count == expected_trap_count,
         "LLVM-CBE trap count differs from audited LLVM IR: "
         f"expected {expected_trap_count}, got {trap_count}",
     )
-    payload = payload.replace("__builtin_trap();", "stcxx_runtime_panic(5);")
+    payload = shared.replace_c_token(payload, "__builtin_trap();", "stcxx_runtime_panic(5);")
     payload, select_helpers_initialized = normalize_cbe_select_helpers(payload)
     payload, unconditional_helpers_initialized = (
         normalize_cbe_unconditional_helper_initializers(payload)
     )
     payload, typedefs_before, typedefs_after = shared.normalize_cbe_function_typedefs(payload)
+    payload, fabs_helpers = shared.normalize_cbe_fabs_helpers(payload)
+    mcs251_indirect_calls = []
+    payload, mcs251_indirect_calls = shared.normalize_mcs251_indirect_calls(payload)
     payload, bitint_u24_negation_helpers_repaired = (
         normalize_cbe_bitint_u24_negation(payload)
     )
@@ -1650,10 +1498,13 @@ def adapt_cbe(
         u24_negation_helpers_repaired <= 1,
         "duplicate malformed llvm-cbe i24 negation helpers across spellings",
     )
+    payload, integer_negation_helpers_repaired = shared.normalize_cbe_integer_negation(payload)
     payload, u32_power_of_two_division_rewrites = (
         shared.normalize_cbe_u32_power_of_two_division(payload)
     )
     payload, pointer_rewrites = shared.normalize_cbe_address_roundtrips(payload)
+    payload, string_array_arguments = shared.normalize_cbe_string_array_arguments(payload)
+    payload, static_byte_geps = shared.normalize_cbe_static_byte_geps(payload)
     payload, exact_byte_arrays_rewritten = (
         shared.normalize_cbe_exact_byte_array_initializers(payload)
     )
@@ -1667,25 +1518,14 @@ def adapt_cbe(
         shared.normalize_cbe_single_block_pointer_temporaries(payload)
     )
     payload, removed_consts, zero_arrays = remove_duplicate_const_declarations(shared, payload)
-    if target_profile == "mcs51":
-        payload, mcs51_program_pointer_casts = (
-            normalize_mcs51_program_pointer_casts(
-                payload,
-                expected_program_pointer_casts,
-                expected_member_pointer_casts,
-            )
-        )
-        payload, mcs51_vtable_address_point_stores = (
-            normalize_mcs51_vtable_address_point_stores(payload)
-        )
-    else:
-        require(
-            expected_program_pointer_casts == 0
-            and expected_member_pointer_casts == 0,
-            "MCS251 unexpectedly requested MCS51 program-pointer rewrites",
-        )
-        mcs51_program_pointer_casts = []
-        mcs51_vtable_address_point_stores = []
+    payload, vtable_addresses = shared.normalize_cbe_vtable_addresses(payload)
+    require(
+        expected_program_pointer_casts == 0
+        and expected_member_pointer_casts == 0,
+        "MCS251 must not request cross-address-space program-pointer rewrites",
+    )
+
+
 
     require(re.search(rf"\b{re.escape(abi_symbol)}\s*\(void\)", payload) is not None,
             "runtime ABI identity is absent from CBE output")
@@ -1699,13 +1539,14 @@ def adapt_cbe(
        if native_string_headers else "") + """#ifndef __cplusplus
 typedef unsigned char bool;
 #endif
-""" + (program_pointer_typedef + "\n" if target_profile == "mcs51" else "") + (
+""" + ("") + (
         "\n".join(fp_constant_typedefs) + "\n"
         if fp_constant_typedefs else ""
     ) + """
 #define __forceinline inline
 #define __ATTRIBUTE_WEAK__
 #define __MSVC_INLINE__
+#define __noreturn _Noreturn
 #define __ATTRIBUTELIST__(x)
 #define __FUNCTIONALIGN__(x)
 #define __attribute__(x)
@@ -1762,6 +1603,8 @@ typedef unsigned char bool;
         "function_typedef_order_after": typedefs_after,
         "fp_constant_typedefs_preserved": fp_constant_typedef_names,
         "fpclass_helpers_preserved": fpclass_helper_names,
+        "fabs_helpers_normalized": fabs_helpers,
+        "mcs251_indirect_calls_normalized": mcs251_indirect_calls,
         "native_memory_header_preserved": bool(native_string_headers),
         "native_memory_functions": native_memory_functions,
         "u24_negation_helpers_repaired": u24_negation_helpers_repaired,
@@ -1771,14 +1614,16 @@ typedef unsigned char bool;
         "select_helpers_initialized": select_helpers_initialized,
         "unconditional_helpers_initialized": unconditional_helpers_initialized,
         "floating_comparison_helpers_preserved": fcmp_helper_names,
+        "native_string_array_arguments": string_array_arguments,
+        "static_byte_geps": static_byte_geps,
         "exact_byte_array_initializers_rewritten": exact_byte_arrays_rewritten,
+        "integer_negation_helpers_repaired": integer_negation_helpers_repaired,
         "const_byte_array_address_casts_rewritten": (
             const_byte_array_address_casts_rewritten
         ),
         "stateless_struct_returns_initialized": stateless_struct_returns_initialized,
         "single_block_pointer_temporaries_eliminated": single_block_pointer_temporaries_eliminated,
-        "mcs51_program_pointer_casts": mcs51_program_pointer_casts,
-        "mcs51_vtable_address_point_stores": mcs51_vtable_address_point_stores,
+        "vtable_addresses_normalized": vtable_addresses,
         "original_function_alignment_symbols": (
             observed_function_alignment_symbols
         ),
@@ -1798,17 +1643,25 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ir", required=True, type=Path)
     parser.add_argument("--raw-c", required=True, type=Path)
+    parser.add_argument("--native-storage", type=Path)
     parser.add_argument("--c-abi-preserve", required=True, type=Path)
     parser.add_argument("--output-c", required=True, type=Path)
     parser.add_argument("--audit-json", required=True, type=Path)
     parser.add_argument("--expected-triple", required=True)
     parser.add_argument("--expected-layout", required=True)
     parser.add_argument("--abi-identity-symbol", required=True)
-    parser.add_argument("--target-profile", choices=("mcs51", "mcs251"), required=True)
+    parser.add_argument("--target-profile", choices=("mcs251",), required=True)
     args = parser.parse_args()
     shared = load_canary_adapter()
     ir = args.ir.read_text(encoding="utf-8")
     raw = args.raw_c.read_text(encoding="utf-8")
+    storage_report = None
+    if args.native_storage:
+        spec = importlib.util.spec_from_file_location("native_storage", Path(__file__).with_name("native-storage.py"))
+        storage = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(storage)
+        raw, storage_report = storage.apply_storage(raw, ir,
+            json.loads(args.native_storage.read_text()), args.target_profile, shared.cbe_mangle)
     c_abi_preserve_symbols, c_abi_preserve_sha256 = read_c_abi_preserve(
         args.c_abi_preserve
     )
@@ -1850,9 +1703,10 @@ def main() -> int:
     report = {
         "schema_version": ADAPTER_SCHEMA_VERSION,
         "outcome": "pass",
-        "qualification": "EXPERIMENTAL_STC_MCS51_MCS251_12MHZ_ARDUINO_CLI",
+        "qualification": "EXPERIMENTAL_STC_MCS251_12MHZ_ARDUINO_CLI",
         "ir": ir_report,
         "llvm_cbe": cbe_report,
+        "native_storage": storage_report,
     }
     args.output_c.parent.mkdir(parents=True, exist_ok=True)
     args.output_c.write_text(adapted, encoding="utf-8", newline="\n")
@@ -1865,6 +1719,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except (AdapterError, OSError, json.JSONDecodeError) as error:
-        print(f"STCXX_ARDUINO_CLI_ADAPTER=FAIL: {error}")
+    except (RuntimeError, OSError, ValueError) as error:
+        print(f"STCXX_ARDUINO_CLI_ADAPTER=FAIL: {error}", file=sys.stderr)
         raise SystemExit(1)

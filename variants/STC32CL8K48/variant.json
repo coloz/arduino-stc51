@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "as_of": "2026-09-05",
+  "as_of": "2026-09-13",
   "model": "STC32CL8K48",
   "family": "STC32CL",
   "selection": "mcs251_catalog",
@@ -51,9 +51,13 @@
     "package_dependent": true,
     "startup_selector": null,
     "analog_aliases_enabled": true,
-    "separate_pullup": false
+    "separate_pullup": true
   },
   "peripherals": {
+    "pwm_layout": 1,
+    "memory_timing_layout": 1,
+    "bus_layout": 1,
+    "wire_layout": 1,
     "uart1": true,
     "uart1_buffered_rx": true,
     "timer0_clock_divider": null,
@@ -121,5 +125,5 @@
   },
   "official_product_page": "https://www.stcmicro.com/cn/stc/stc32cl8k64.html",
   "caveat": "Verify the concrete package pinout; unavailable pins are rejected by the core masks.",
-  "data_quality_note": "Program Flash in MCS251 Source mode is 0xFF0000-0xFFBFFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. The experimental C++11 core profile is exposed at 12 MHz; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings. The 19 logical port names represent 17 physical pads; P1.4/P0.2 and P1.5/P0.3 remain physical aliases."
+  "data_quality_note": "Program Flash in MCS251 Source mode is 0xFF0000-0xFFBFFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. The experimental C++11 core profile is exposed at 12 MHz; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings. The 19 logical port names represent 17 physical pads; P1.4/P0.2 and P1.5/P0.3 remain physical aliases. STC32G manual dated 2026-09-08, sections 4.3, 11, 13, 23, 25 and 26: enable classic SPI, 6-bit hardware I2C, advanced PWM, separate pull-up controls and WTST/CKCON startup. Default SPI SS uses bonded P1.2; P1.0 and P5.2 are absent on TSSOP20."
 }

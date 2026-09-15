@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "asOf": "2026-09-06",
+  "asOf": "2026-09-13",
   "hostSupport": "Windows x64, Linux x86_64, macOS arm64 and x86_64 (macOS 11+)",
   "tools": [
     {
       "id": "sdcc-mcs251",
       "packageName": "sdcc-mcs251",
       "version": "4.6.0-mcs251-20260804-r1",
-      "purpose": "Primary compiler, assembler, archiver and linker for both -mmcs51 and experimental -mmcs251",
+      "purpose": "Compiler, assembler and linker for the MCS251 Arduino platform (-mmcs251)",
       "upstream": "https://github.com/gevico/sdcc-c251",
       "sourceTag": "v4.6.0-mcs251-20260804",
       "sourceCommit": "b09075b6a93e6afe10645181e3aeff041ea37f87",
@@ -59,8 +59,8 @@
       ]
     },
     {
-      "id": "mcs51-tools",
-      "packageName": "MCS51Tools",
+      "id": "stc-host-tools",
+      "packageName": "STCHostTools",
       "version": "2026.07.10",
       "purpose": "Windows BusyBox shell used to run the repository's POSIX Arduino wrappers; the macOS flavour satisfies the platform dependency but is not executed",
       "upstream": "https://github.com/DeqingSun/ch55xduino",
@@ -93,13 +93,13 @@
       ]
     },
     {
-      "id": "mcs51-archive-tools",
-      "packageName": "MCS51ArchiveTools",
+      "id": "sdcc-archive-tools",
+      "packageName": "SDCCArchiveTools",
       "version": "build.13407_4",
       "purpose": "Windows compatibility-tested sdar used only to create Arduino core.a archives; macOS recipes use the primary native toolchain's sdar",
       "upstream": "https://github.com/DeqingSun/ch55xduino",
       "license": "sdar is GPL-3.0-or-later per its --version output; the unchanged upstream bundles contain mixed SDCC component licenses",
-      "compatibility": "The Windows helper was verified to archive SDCC 4.6 MCS51 and MCS251 .rel objects; the 4.6 compiler/linker remains the active ABI toolchain.",
+      "compatibility": "Pinned Windows archive helper for MCS251 .rel objects; the compiler/linker remains the active ABI toolchain. Upstream archive filenames are unchanged.",
       "systems": [
         {
           "host": "i686-mingw32",

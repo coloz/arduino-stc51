@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Arduino-style software SPI master with C and C++ profile routing.
+ * Arduino-style SPI master with hardware selection and software fallback.
  *
  * The SPI object is a const table of function pointers so a C sketch can use
  * SPI.begin(), SPI.transfer(), and similar syntax.  The opt-in C++ profile
@@ -57,13 +57,15 @@ extern "C" {
 #endif
 
 #ifndef SPI_DEFAULT_MOSI_PIN
-# define SPI_DEFAULT_MOSI_PIN P3_2
+# define SPI_DEFAULT_MOSI_PIN PIN_SPI_MOSI
 #endif
 #ifndef SPI_DEFAULT_MISO_PIN
-# define SPI_DEFAULT_MISO_PIN P3_3
+# define SPI_DEFAULT_MISO_PIN PIN_SPI_MISO
 #endif
 #ifndef SPI_DEFAULT_SCK_PIN
-# if defined(PIN_VALID_MASK_P3) && ((PIN_VALID_MASK_P3 & 0x30U) == 0x30U)
+# if defined(PIN_SPI_SCK)
+#  define SPI_DEFAULT_SCK_PIN PIN_SPI_SCK
+# elif defined(PIN_VALID_MASK_P3) && ((PIN_VALID_MASK_P3 & 0x30U) == 0x30U)
 #  define SPI_DEFAULT_SCK_PIN P3_4
 # else
 /* STC8G1K08A exposes only P3.0--P3.3; P5.4 is its portable fallback. */
@@ -71,7 +73,9 @@ extern "C" {
 # endif
 #endif
 #ifndef SPI_DEFAULT_SS_PIN
-# if defined(PIN_VALID_MASK_P3) && ((PIN_VALID_MASK_P3 & 0x30U) == 0x30U)
+# if defined(PIN_SPI_SS)
+#  define SPI_DEFAULT_SS_PIN PIN_SPI_SS
+# elif defined(PIN_VALID_MASK_P3) && ((PIN_VALID_MASK_P3 & 0x30U) == 0x30U)
 #  define SPI_DEFAULT_SS_PIN P3_5
 # else
 /* Keep SS adjacent to the fallback clock pin on STC8G1K08A. */
@@ -80,6 +84,15 @@ extern "C" {
 #endif
 
 void SPI_begin(void) STC_SPI_REENTRANT;
+#define STC_SPI_OK 0u
+#define STC_SPI_INVALID 1u
+#define STC_SPI_BUSY 2u
+#define STC_SPI_TIMEOUT 3u
+uint8_t SPI_configurationError(void) STC_SPI_REENTRANT;
+uint8_t SPI_setPinsChecked(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
+                           uint8_t ss_pin) STC_SPI_REENTRANT;
+uint8_t SPI_beginTransactionChecked(unsigned long clock_hz, uint8_t bit_order,
+                                     uint8_t data_mode) STC_SPI_REENTRANT;
 void SPI_setPins(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
                  uint8_t ss_pin) STC_SPI_REENTRANT;
 void SPI_beginTransaction(unsigned long clock_hz, uint8_t bit_order,
@@ -107,6 +120,11 @@ typedef struct {
     void (*notUsingInterrupt)(uint8_t interrupt_number) STC_SPI_REENTRANT;
     void (*setSettings)(unsigned long clock_hz, uint8_t bit_order,
                         uint8_t data_mode) STC_SPI_REENTRANT;
+    uint8_t (*configurationError)(void) STC_SPI_REENTRANT;
+    uint8_t (*setPinsChecked)(uint8_t mosi_pin, uint8_t miso_pin, uint8_t sck_pin,
+                              uint8_t ss_pin) STC_SPI_REENTRANT;
+    uint8_t (*beginTransactionChecked)(unsigned long clock_hz, uint8_t bit_order,
+                                        uint8_t data_mode) STC_SPI_REENTRANT;
 } STCSPIClass;
 
 extern const STCSPIClass SPI;

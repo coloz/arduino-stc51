@@ -9,13 +9,13 @@ fi
 
 lock=$1
 test -f "$lock"
-command -v python3 >/dev/null
-command -v sha256sum >/dev/null
-
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
-toolchain_root=${STCXX_TOOLCHAIN_ROOT:-$(dirname -- "$repository_root")/stcxx}
-
+if [ "$(uname -s)" = Darwin ]; then
+    . "$repository_root/tools/wrapper/stc-macos-env.sh"
+fi
+command -v python3 >/dev/null
+command -v sha256sum >/dev/null
 lock_value() {
     python3 - "$lock" "$1" <<'PY'
 import json
@@ -26,21 +26,6 @@ for component in sys.argv[2].split("."):
 print(value)
 PY
 }
-
-clang=${STCXX_CLANG:-${HOME}/.cache/arduino-stc51/clang-build-20.1.8/bin/clang}
-llvm_link=${STCXX_LLVM_LINK:-/usr/bin/llvm-link-20}
-opt=${STCXX_OPT:-/usr/bin/opt-20}
-llvm_dis=${STCXX_LLVM_DIS:-/usr/bin/llvm-dis-20}
-llvm_cbe=${STCXX_LLVM_CBE:-/var/tmp/arduino-stc51-cpp-bridge/llvm-cbe-local/build/tools/llvm-cbe/llvm-cbe}
-sdcc=${STCXX_SDCC:-$toolchain_root/out/bin/sdcc}
-sdcc_root=$(dirname "$(dirname "$sdcc")")
-if [ -x "$sdcc_root/libexec/sdcc" ]; then
-    sdcc_elf=$sdcc_root/libexec/sdcc
-else
-    sdcc_elf=$sdcc_root/src/sdcc
-fi
-libclang_cpp=$(ldd "$clang" | awk '/libclang-cpp\.so\.20\.1/ {print $3; exit}')
-test -n "$libclang_cpp"
 
 emit_verified() {
     label=$1
@@ -59,17 +44,41 @@ emit_verified() {
     printf '%s\t%s\t%s\n' "$label" "$path" "$actual"
 }
 
+paths_helper=$repository_root/tools/cpp-cli/toolchain-paths.sh
+emit_verified toolchain_paths "$paths_helper" pipeline_helpers.toolchain_paths.sha256
+. "$paths_helper"
+stcxx_resolve_tools "$(lock_value tools.sdcc.source_project_wsl)" "$repository_root" "$lock"
+sdcc_root=$sdcc_build_root
+if [ "$(uname -s)" = Darwin ] || [ "$(lock_value host)" = linux-x86_64 ]; then
+    macos_verifier=$repository_root/tools/cpp-cli/verify-macos-frontend.py
+    emit_verified macos_frontend_verifier "$macos_verifier" pipeline_helpers.macos_frontend_verifier.sha256
+    python3 "$macos_verifier" --lock "$lock" \
+        --root "${STCXX_CPP_TOOLS_ROOT:?missing pinned frontend package}" \
+        --tool clang "$clang" --tool llvm-link "$llvm_link" --tool opt "$opt" \
+        --tool llvm-dis "$llvm_dis" --tool llvm-cbe "$llvm_cbe"
+fi
 emit_verified clang_20 "$clang" tools.clang.sha256
+libclang_cpp=$(stcxx_resolve_library "$clang" libclang-cpp.so.20.1)
 emit_verified libclang_cpp "$libclang_cpp" tools.clang.shared_library_sha256
 emit_verified llvm_link "$llvm_link" tools.llvm_link.sha256
 emit_verified opt "$opt" tools.opt.sha256
 emit_verified llvm_dis "$llvm_dis" tools.llvm_dis.sha256
 emit_verified llvm_cbe "$llvm_cbe" tools.llvm_cbe.sha256
+for frontend_name in clang llvm_link opt llvm_dis llvm_cbe; do
+    case "$frontend_name" in
+        clang) frontend=$clang ;;
+        llvm_link) frontend=$llvm_link ;;
+        opt) frontend=$opt ;;
+        llvm_dis) frontend=$llvm_dis ;;
+        llvm_cbe) frontend=$llvm_cbe ;;
+    esac
+    libllvm=$(stcxx_resolve_library "$frontend" libLLVM.so.20.1)
+    emit_verified "${frontend_name}_libllvm" "$libllvm" tools.llvm_shared_library.sha256
+done
 emit_verified sdcc_wrapper "$sdcc" tools.sdcc.sha256
 emit_verified sdcc_elf "$sdcc_elf" tools.sdcc.elf_sha256
 emit_verified sdar "$sdcc_root/bin/sdar" tools.sdar.sha256
 emit_verified sdas251 "$sdcc_root/bin/sdas251" tools.sdas251.sha256
-emit_verified sdas8051 "$sdcc_root/bin/sdas8051" tools.sdas8051.sha256
 emit_verified sdld "$sdcc_root/bin/sdld" tools.sdld.sha256
 emit_verified sdldmcs251 "$sdcc_root/bin/sdldmcs251" tools.sdldmcs251.sha256
 emit_verified sdcpp "$sdcc_root/bin/sdcpp" tools.sdcpp.sha256

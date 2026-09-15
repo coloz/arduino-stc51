@@ -1,7 +1,16 @@
 #!/bin/sh
-# Enter the locked Linux C++ pipeline without passing shell source through the
+# Enter the locked native C++ pipeline without passing shell source through the
 # Windows command-line parser.  The caller uses the marker to distinguish a
 # WSL startup failure from a real compiler or linker failure.
+
+# This marker is supplied as a separate argument by the Windows wrappers;
+# native Unix invocations keep using Arduino's selected native compiler.
+if [ "${1:-}" = --windows-host ]; then
+    export STCXX_WINDOWS_HOST=1
+    shift
+else
+    unset STCXX_WINDOWS_HOST
+fi
 
 if [ "$#" -lt 4 ]; then
     exit 126
@@ -18,7 +27,14 @@ case "$CLI_SCRIPT" in
 esac
 [ -f "$CLI_SCRIPT" ] && [ -r "$CLI_SCRIPT" ] || exit 126
 
-HANDSHAKE_LINUX=$(wslpath -a "$HANDSHAKE_WINDOWS") || exit 126
+to_native_path() {
+    case "$1" in
+        [A-Za-z]:/*|[A-Za-z]:\\*|//*) wslpath -a "$1" ;;
+        *) realpath -m -- "$1" ;;
+    esac
+}
+
+HANDSHAKE_LINUX=$(to_native_path "$HANDSHAKE_WINDOWS") || exit 126
 HANDSHAKE_LINUX=$(printf '%s' "$HANDSHAKE_LINUX" | tr -d '\r')
 case "$HANDSHAKE_LINUX" in
     /*) ;;
@@ -32,7 +48,7 @@ esac
 : > "$HANDSHAKE_LINUX" || exit 126
 [ -f "$HANDSHAKE_LINUX" ] || exit 126
 
-PIPELINE_READY_LINUX=$(wslpath -a "$PIPELINE_READY_WINDOWS") || exit 126
+PIPELINE_READY_LINUX=$(to_native_path "$PIPELINE_READY_WINDOWS") || exit 126
 PIPELINE_READY_LINUX=$(printf '%s' "$PIPELINE_READY_LINUX" | tr -d '\r')
 case "$PIPELINE_READY_LINUX" in
     /*) ;;
@@ -45,4 +61,4 @@ esac
 
 rm -f "$PIPELINE_READY_LINUX" || exit 126
 export STCXX_PIPELINE_READY_MARKER="$PIPELINE_READY_LINUX"
-exec bash "$CLI_SCRIPT" "$@"
+exec "${STCXX_BASH:-bash}" "$CLI_SCRIPT" "$@"

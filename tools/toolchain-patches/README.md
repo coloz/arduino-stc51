@@ -1,10 +1,12 @@
-# MCS51/MCS251 C++ toolchain patches
+# MCS251 C++ toolchain patches
+
+> Current platform (2026-09-13): only ten MCS251 STC32/AI8051U boards are maintained. MCS51 Arduino support and STC16F40K128 have been removed. The mixed-target matrices and compiler provenance below are historical; current usage is in [the platform guide](../../README.md). Shared upstream compiler implementation and exact binary provenance remain intact.
 
 > Lifecycle update (2026-09-06): the active platform now has **20 models / 23 execution profiles**
 > (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
 > The 22-model / 25-profile / 31-workload set and removed-device details below are
 > historical toolchain/qualification records, not the current support list or new PASS evidence.
-> See the [lifecycle review](../../docs/variant-lifecycle.md).
+> See the [current variant configuration](../../docs/variants-mcs251.md).
 
 > Source candidate update (2026-09-09): the mirrored complete patch now adds
 > bounded MCS251 full-Flash placement and optional function/data sections.

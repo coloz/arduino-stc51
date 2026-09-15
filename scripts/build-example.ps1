@@ -1,10 +1,12 @@
 [CmdletBinding()]
 param(
     [string]$ArduinoCli = 'arduino-cli',
-    [string]$Fqbn = 'arduino-stc51:mcs51:stc8g1k08a:clock=12m',
+    [string]$Fqbn = 'arduino-stc51:mcs251:stc32g8k64:clock=12m',
     [string]$SketchPath,
     [string]$WorkDirectory,
-    [string]$ToolCacheDirectory
+    [string]$ToolCacheDirectory,
+    [string]$ToolManifestPath,
+    [string[]]$BuildProperty = @()
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,8 +18,15 @@ $SketchPath = (Resolve-Path -LiteralPath $SketchPath).Path
 if (-not (Test-Path -LiteralPath $SketchPath -PathType Container)) {
     throw 'SketchPath must be a sketch directory containing a matching .ino file.'
 }
+$SketchName = Split-Path -Leaf $SketchPath
+if (-not (Test-Path -LiteralPath (Join-Path $SketchPath "$SketchName.ino") -PathType Leaf)) {
+    throw "SketchPath must contain $SketchName.ino."
+}
 if (-not $WorkDirectory) { $WorkDirectory = Join-Path $RepoRoot '.build/example' }
 if (-not $ToolCacheDirectory) { $ToolCacheDirectory = Join-Path $RepoRoot 'sdk/downloads/toolchain' }
+if (-not $ToolManifestPath) { $ToolManifestPath = Join-Path $RepoRoot 'tools/toolchain-manifest.json' }
+$ToolManifestPath = (Resolve-Path -LiteralPath $ToolManifestPath).Path
+$ToolManifestHash = (Get-FileHash -LiteralPath $ToolManifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $WorkDirectory = [IO.Path]::GetFullPath($WorkDirectory)
 $ToolCacheDirectory = [IO.Path]::GetFullPath($ToolCacheDirectory)
 if ($WorkDirectory -match '\s' -or $SketchPath -match '\s') {
@@ -26,7 +35,7 @@ if ($WorkDirectory -match '\s' -or $SketchPath -match '\s') {
 $Devices = (Get-Content -Raw -Encoding UTF8 (Join-Path $RepoRoot 'tools/variants/devices.json') | ConvertFrom-Json).devices
 $FqbnParts = $Fqbn.Split(':')
 if ($FqbnParts.Count -lt 3 -or $FqbnParts[0] -ne 'arduino-stc51' -or
-    $FqbnParts[1] -ne 'mcs51' -or $FqbnParts[2] -notin @($Devices.id)) {
+    $FqbnParts[1] -ne 'mcs251' -or $FqbnParts[2] -notin @($Devices.id)) {
     throw "Unknown arduino-stc51 board: $Fqbn"
 }
 
@@ -52,25 +61,36 @@ New-Item -ItemType Directory -Force -Path $RunRoot,$Data,$Extract,$Build,$ToolCa
 $VersionLine = Select-String -LiteralPath (Join-Path $RepoRoot 'platform.txt') -Pattern '^version=(.+)$'
 $Version = $VersionLine.Matches[0].Groups[1].Value
 $Package = & (Join-Path $PSScriptRoot 'package-platform.ps1') -Version $Version -OutputDirectory (Join-Path $RunRoot 'package')
-$Platform = Join-Path $Data "packages/arduino-stc51/hardware/mcs51/$Version"
+$Platform = Join-Path $Data "packages/arduino-stc51/hardware/mcs251/$Version"
 New-Item -ItemType Directory -Force -Path $Platform | Out-Null
 & tar -xjf $Package.path -C $Extract
 Assert-ExitCode 'Platform extraction'
 Copy-Item -Recurse -Force (Join-Path $Extract "arduino-stc51-$Version/*") -Destination $Platform
 
-$Manifest = Get-Content -Raw -Encoding UTF8 (Join-Path $RepoRoot 'tools/toolchain-manifest.json') | ConvertFrom-Json
+$Manifest = Get-Content -Raw -Encoding UTF8 $ToolManifestPath | ConvertFrom-Json
+$InstalledTools = @()
 foreach ($Tool in $Manifest.tools) {
     $System = @($Tool.systems | Where-Object { $_.host -match 'mingw32$' } | Select-Object -First 1)[0]
     if ($null -eq $System) { throw "No Windows tool archive is defined for $($Tool.id)." }
-    $Archive = Join-Path $RepoRoot "dist/$($System.archiveFileName)"
+    # Local candidates can carry their archives beside an explicit manifest.
+    $Archive = Join-Path (Split-Path -Parent $ToolManifestPath) $System.archiveFileName
+    if (-not (Test-Path -LiteralPath $Archive -PathType Leaf)) {
+        $Archive = Join-Path $RepoRoot "dist/$($System.archiveFileName)"
+    }
     if (-not (Test-Path -LiteralPath $Archive -PathType Leaf)) {
         $Archive = Join-Path $ToolCacheDirectory $System.archiveFileName
         if (-not (Test-Path -LiteralPath $Archive -PathType Leaf)) {
             $Partial = "$Archive.$([guid]::NewGuid().ToString('N')).part"
-            & curl.exe --fail --location --retry 3 --silent --show-error --output $Partial $System.url
-            Assert-ExitCode "Download $($Tool.id)"
-            Assert-Archive -System $System -Archive $Partial
-            Move-Item -LiteralPath $Partial -Destination $Archive
+            try {
+                & curl.exe --fail --location --retry 3 --silent --show-error --output $Partial $System.url
+                Assert-ExitCode "Download $($Tool.id)"
+                Assert-Archive -System $System -Archive $Partial
+                Move-Item -LiteralPath $Partial -Destination $Archive
+            } finally {
+                if (Test-Path -LiteralPath $Partial) {
+                    Remove-Item -LiteralPath $Partial -Force
+                }
+            }
         }
     }
     Assert-Archive -System $System -Archive $Archive
@@ -84,6 +104,10 @@ foreach ($Tool in $Manifest.tools) {
         Assert-ExitCode "$($Tool.id) extraction"
     }
     Copy-Item -Recurse -Force (Join-Path $ToolExtract "$($System.archiveRoot)/*") -Destination $ToolTarget
+    $InstalledTools += [pscustomobject]@{
+        id = $Tool.id; version = $Tool.version; path = $ToolTarget
+        archive = $Archive; sha256 = $System.sha256
+    }
 }
 
 # Reuse Arduino CLI's discovery and ctags tools when already installed.
@@ -112,10 +136,25 @@ if (-not (Test-Path -LiteralPath (Join-Path $Data 'package_index.json')) -or
     & $ArduinoCli core update-index --config-file $Config | Out-Host
     Assert-ExitCode 'Initialize Arduino CLI indexes and built-in tools'
 }
-& $ArduinoCli compile --clean --fqbn $Fqbn --build-path $Build --config-file $Config $SketchPath | Out-Host
-Assert-ExitCode 'Compile sketch'
+# Windows PowerShell 5 turns redirected native stderr into ErrorRecords.
+# WSL diagnostics must not abort before the actual compiler exit is checked.
+$PreviousErrorAction = $ErrorActionPreference
+$CompileArguments = @('compile', '--clean', '--fqbn', $Fqbn, '--build-path', $Build, '--config-file', $Config)
+foreach ($Property in $BuildProperty) { $CompileArguments += @('--build-property', $Property) }
+$CompileArguments += $SketchPath
+try {
+    $ErrorActionPreference = 'Continue'
+    & $ArduinoCli @CompileArguments | Out-Host
+    $CompileExitCode = $LASTEXITCODE
+} finally {
+    $ErrorActionPreference = $PreviousErrorAction
+}
+if ($CompileExitCode -ne 0) { throw "Compile sketch failed with exit code $CompileExitCode." }
 $Hex = @(Get-ChildItem -LiteralPath $Build -Filter '*.hex')
 if ($Hex.Count -ne 1) { throw "Expected one Intel HEX output in $Build; found $($Hex.Count)." }
+if ((Get-FileHash -LiteralPath $ToolManifestPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $ToolManifestHash) {
+    throw 'Tool manifest changed during the build.'
+}
 Write-Host "Firmware: $($Hex[0].FullName)"
 Write-Host "Arduino CLI configuration: $Config"
 [pscustomobject]@{
@@ -124,4 +163,8 @@ Write-Host "Arduino CLI configuration: $Config"
     config = $Config
     build = $Build
     platform = $Platform
+    tool_manifest = $ToolManifestPath
+    tool_manifest_sha256 = $ToolManifestHash
+    installed_tools = $InstalledTools
+    build_properties = @($BuildProperty)
 }

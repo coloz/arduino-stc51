@@ -2,20 +2,11 @@
   "schema_version": 1,
   "api_version": 1,
   "profile": "stc-arduino-cxx-v1-class-layer",
-  "qualification": "EXPERIMENTAL_MCS51_MCS251_COMPILE_LINK",
+  "qualification": "EXPERIMENTAL_MCS251_COMPILE_LINK",
   "production_status": "EXPERIMENTAL_NOT_PRODUCTION_RELEASE",
   "platform_cpp_enabled": true,
   "platform_cpp_activation": "Explicit cppcore=enabled menu selection; plain C remains the default",
   "implemented_target_profiles": {
-    "mcs51": {
-      "target_triple": "msp430-stc51-none-eabi",
-      "data_layout": "e-m:e-p:24:8-p1:16:8-P1-i8:8-i16:8-i32:8-i64:8-i128:8-f32:8-f64:8-f128:8-a:8-n8:16:32-S8",
-      "ordinary_function_pointer_bytes": 2,
-      "data_member_pointer_bytes": 2,
-      "member_function_pointer_bytes": 4,
-      "member_pointer_codegen_integer_bits": 16,
-      "member_call_program_address_space": 1
-    },
     "mcs251": {
       "target_triple": "msp430-stc-none-eabi",
       "data_layout": "E-m:e-p:24:8-i8:8-i16:8-i32:8-i64:8-i128:8-f32:8-f64:8-f128:8-a:8-n8:16:32-S8",
@@ -40,11 +31,9 @@
     "STCXX_TARGET_ABI=1"
   ],
   "required_one_of_defines": [
-    "STCXX_TARGET_MCS51=1",
     "STCXX_TARGET_MCS251=1"
   ],
   "target_endianness_defines": {
-    "STCXX_TARGET_MCS51": "STCXX_TARGET_ENDIAN_LITTLE=1",
     "STCXX_TARGET_MCS251": "STCXX_TARGET_ENDIAN_BIG=1"
   },
   "include_directories": [
@@ -180,7 +169,10 @@
     "liquidcrystal_initialization": "constructors record pins without using uninitialized Core timers; call begin/init after Core startup; public init rebinds pins and begins 16x1",
     "liquidcrystal_row_offsets": "per-instance setRowOffsets; begin resets offsets from column count; no busy reads or dual-enable 40x4",
     "sd_cpp": {
-      "path_overloads": ["const char *", "String"],
+      "path_overloads": [
+        "const char *",
+        "String"
+      ],
       "begin_clock_argument": "accepted for source compatibility but currently ignored by the fixed software-SPI backend",
       "availableForWrite": "cache capacity for an active writable file; zero for invalid or read-only handles; not a free-disk-space guarantee",
       "file_write": "FAT16/32 root 8.3 create/append/seek-overwrite/flush/close and remove; one active handle, no sparse files or power-fail atomicity",
@@ -189,20 +181,49 @@
   },
   "network_abstractions": {
     "api_baseline": "ArduinoCore-API 1.5.2",
-    "headers": ["IPAddress.h", "Client.h", "Server.h", "Udp.h"],
+    "headers": [
+      "IPAddress.h",
+      "Client.h",
+      "Server.h",
+      "Udp.h"
+    ],
     "implementation": "IPv4/IPv6 IPAddress plus abstract transport interfaces",
     "network_stack": "not provided"
   },
   "freestanding_headers": {
-    "c": ["stddef.h", "stdint.h", "stdbool.h", "limits.h", "inttypes.h", "stdio.h", "stdlib.h", "string.h", "ctype.h", "math.h"],
-    "cxx": ["new", "cstddef", "cstdint", "cstdlib", "cstring", "cctype", "cmath", "initializer_list", "type_traits", "utility", "limits", "algorithm"],
+    "c": [
+      "stddef.h",
+      "stdint.h",
+      "stdbool.h",
+      "limits.h",
+      "inttypes.h",
+      "stdio.h",
+      "stdlib.h",
+      "string.h",
+      "ctype.h",
+      "math.h"
+    ],
+    "cxx": [
+      "new",
+      "cstddef",
+      "cstdint",
+      "cstdlib",
+      "cstring",
+      "cctype",
+      "cmath",
+      "initializer_list",
+      "type_traits",
+      "utility",
+      "limits",
+      "algorithm"
+    ],
     "host_behavior": "include_next to the host standard library",
     "target_behavior": "minimal no-exception/no-RTTI declarations and templates for the STC Clang freestanding target"
   },
   "native_libc_boundary": {
     "allocator_source": "../stcxx_libc_abi.c",
-    "allocator_contract": "native malloc/calloc/realloc return values are converted to generic pointers before crossing into C++; MCS51 XDATA tag is zero; MCS251 is flat",
-    "string_contract": "native wrappers preserve the ISO int API for memset/strchr/strrchr and convert the byte arguments before calling SDCC; explicit C++ memset does not call the native MCS51 one-byte API directly",
+    "allocator_contract": "native malloc/calloc/realloc return values are converted to generic pointers before crossing into C++; MCS251 uses flat 24-bit pointers",
+    "string_contract": "native wrappers preserve the ISO int API for memset/strchr/strrchr and convert the byte arguments before calling SDCC",
     "stdio_source": "../stcxx_stdio.c",
     "stdio_supported": "native bounded snprintf; sprintf from SDCC; printf/puts/putchar on initialized UART1; getchar blocks for UART1 input",
     "stdio_limits": "installed SDCC format subset only; FILE, scanf, and Clang va_list entry points explicitly unavailable",
@@ -218,7 +239,18 @@
     },
     "pgmspace_data_fallback": {
       "enabled_when": "STCXX_FLASH_STRINGS=0",
-      "source_compatibility": ["F", "PSTR", "PROGMEM", "pgm_read_byte", "pgm_read_word", "pgm_read_dword", "pgm_read_ptr", "String(const __FlashStringHelper *)", "Print::print(const __FlashStringHelper *)", "Print::println(const __FlashStringHelper *)"],
+      "source_compatibility": [
+        "F",
+        "PSTR",
+        "PROGMEM",
+        "pgm_read_byte",
+        "pgm_read_word",
+        "pgm_read_dword",
+        "pgm_read_ptr",
+        "String(const __FlashStringHelper *)",
+        "Print::print(const __FlashStringHelper *)",
+        "Print::println(const __FlashStringHelper *)"
+      ],
       "F_static_type": "const __FlashStringHelper *",
       "F_overload_semantics": "selects canonical String and Print flash-helper overloads even though the fallback reads the underlying literal as ordinary data",
       "external_flash_helper_values": "accepted by String and Print as ordinary data pointers, including third-party f_str-style return values",
@@ -227,7 +259,10 @@
       "harvard_flash_qualifier": false,
       "compile_time_type_probe": "tests/cpp/pgmspace_f_type_probe.h",
       "host_fallback_runtime_probe": "tests/cpp/pgmspace_data_fallback_runtime.cpp",
-      "target_frontend_probes": ["tests/cpp/pgmspace_data_fallback_probe.cpp", "tests/cpp/library-compat/core_api_syntax_probe.cpp"]
+      "target_frontend_probes": [
+        "tests/cpp/pgmspace_data_fallback_probe.cpp",
+        "tests/cpp/library-compat/core_api_syntax_probe.cpp"
+      ]
     },
     "complete_build_identity": [
       "target",
@@ -251,7 +286,7 @@
     "arduino_cli_bridge_adapter": {
       "scope": "Arduino CLI whole-program LLVM IR and LLVM-CBE fail-closed target adaptation",
       "helper_path": "tools/cpp-cli/adapt.py",
-      "helper_sha256": "20927fac8b80881351e162033435492226b761dee07d7772d12350f140d9b431",
+      "helper_sha256": "4bc77ccf048ce1439252f1ea4a6f94bac16837dc02a0f8cdd42420214c860c7d",
       "audit_schema_version": 2,
       "c_abi_preservation_policy": "exact-internalize-public-api-list-file",
       "c_identifier_linkage_policy": "protect-declarations-and-noninternal-definitions",
@@ -265,11 +300,16 @@
     },
     "llvm_itanium_member_function_alignment": {
       "policy": "Preserve every explicit LLVM align-2 function through LLVM-CBE and SDCC; member-function pointer targets must be a subset; select ASxxxx local parity from final relocation and require every final function address to be even",
-      "target_profiles": ["mcs51", "mcs251"],
+      "target_profiles": [
+        "mcs251"
+      ],
       "alignment_bytes": 2,
-      "assembler_directives": [".even", ".odd"],
+      "assembler_directives": [
+        ".even",
+        ".odd"
+      ],
       "helper_path": "tools/cpp-cli/align-member-functions.py",
-      "helper_sha256": "e3c847171cddf406214d81cf89a62e6b8cda3874f44a0dabb0c2fd34f2971b04",
+      "helper_sha256": "8d0dae028092b40f663d9a8548c7e4d50cf505feecfefa19f3f49e8f6818d364",
       "regression_path": "tests/cpp/test_member_function_alignment.py",
       "regression_sha256": "07a022b4dd9f2535d3d59905c5bc14c281d2388adcf1916562a18539c422e8b3",
       "audit_schema_version": 2,
@@ -279,10 +319,12 @@
     },
     "arduino_cli_sdcc_warning_audit": {
       "scope": "Arduino CLI generated C compilation diagnostics after the locked whole-program CBE audit",
-      "policy": "Audited MCS51 generic-to-program casts are normalized through uintptr_t and must emit no warning 244; at most one source-located warning 357 is accepted, only for the exact ArduinoJson 7.4.3 DeserializationError::f_str two-level read-only pgm_read chain; all other source warnings and every ASxxxx address truncation fail closed",
-      "target_profiles": ["mcs51", "mcs251"],
+      "policy": "at most one source-located warning 357 is accepted, only for the exact ArduinoJson 7.4.3 DeserializationError::f_str two-level read-only pgm_read chain; all other source warnings and every ASxxxx address truncation fail closed",
+      "target_profiles": [
+        "mcs251"
+      ],
       "driver_path": "tools/cpp-cli/stcxx-cli.sh",
-      "driver_sha256": "dd87bfe49d828f6dd11750c7911cff01be542fee7acbc09d8236c96b60f978f9",
+      "driver_sha256": "80085a00ea79e64db9f596473776164f3d93b74b15610a2f33a32ecbaa88725a",
       "regression_path": "tests/cpp/library-compat/test-warning357-fail-closed.py",
       "regression_sha256": "b24c3490588f1b7c814b823a3d37ac8f8c20dd098a827fc0c8b56ef8b06af765",
       "audit_count_field": "verified_source_pgm_warning_count",
@@ -291,12 +333,17 @@
     },
     "arduino_cli_sdcc_gcse_workaround": {
       "scope": "Arduino CLI LLVM-CBE generated bridge compilation only",
-      "policy": "Disable SDCC 4.6.0 GCSE exactly once for every generated whole-program C++ bridge on MCS51 and MCS251; native C and per-TU placeholder compilation retain normal optimization",
-      "affected_target_profiles": ["mcs51", "mcs251"],
+      "policy": "Disable SDCC 4.6.0 GCSE exactly once for every generated whole-program C++ bridge on MCS251; native C and per-TU placeholder compilation retain normal optimization",
+      "affected_target_profiles": [
+        "mcs251"
+      ],
       "required_sdcc_flag": "--nogcse",
-      "unaffected_compilation_paths": ["native-c", "cpp-placeholder-rel"],
+      "unaffected_compilation_paths": [
+        "native-c",
+        "cpp-placeholder-rel"
+      ],
       "driver_path": "tools/cpp-cli/stcxx-cli.sh",
-      "driver_sha256": "dd87bfe49d828f6dd11750c7911cff01be542fee7acbc09d8236c96b60f978f9",
+      "driver_sha256": "80085a00ea79e64db9f596473776164f3d93b74b15610a2f33a32ecbaa88725a",
       "regression_path": "tests/cpp/test_ptrdiff_pointer_audit.py",
       "regression_sha256": "f6153f67bd5e56862163134a1a943b0c876f48362d5d4672ead6021aac9c4083",
       "build_manifest_binding": "toolchain-lock hash binding the driver and regression plus generated bridge artifact hashes"
@@ -304,14 +351,14 @@
     "llvm_cbe_fail_closed_adapter": {
       "policy": "Only ArduinoJson 7.4.3 V743JB42 AllowAllFilter::operator[] with the exact one-byte integral_constant_OC_10 return definition, two-void-pointer C signature, three StructReturn uses, and an otherwise unused synthetic return alias may be zero-initialized; wrong type/shape/use/function pairings fail closed",
       "helper_path": "tools/cpp-core-pipeline/audit_and_adapt.py",
-      "helper_sha256": "d5786ada45174a4da0fd6c01ac0e2b589533e87fd8090347a136e60459b1ad24",
+      "helper_sha256": "b58b74005c6d897b6867c66eea3cd96d8e416cf487d15662f637acfa1a0e6b9f",
       "regression_path": "tools/cpp-core-pipeline/test_typedef_determinism.py",
       "regression_sha256": "48f8610a8d04fb7e6e73b2bc4780d35f749b6f3ac8746429378fc20193bbb7a0",
       "standalone_source_project": "D:\\Git\\stc51\\stcxx",
       "standalone_source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
       "standalone_bridge_regression_sha256": "8d4ab2140b002754a56b7cbec2d32b3bb610fe1aa92cd9ac08baeea46e8b417d",
-      "published_out_lock_sha256": "127cbed44a13052360a403bde6495de9de08f0b6bb1614e1613681660105f595",
-      "published_out_manifest_sha256": "35b33920150a280dcb10bc1252bf490a350ce51b01b639855df1ad000761f735"
+      "published_out_lock_sha256": "99d94df0094dec600abebe6e4540425afcc19c407e3155a24be0035f7bc2b075",
+      "published_out_manifest_sha256": "1c2e7b0eba11884a91264eb2b313d2fd445f13ee30d2e44daed7a4321aa224d2"
     },
     "flash_strings": [
       "STCXX_FLASH_STRINGS=1",
@@ -322,7 +369,7 @@
     ],
     "runtime": [
       "generated constructor bridge described by runtime-manifest.json",
-      "one target define: STCXX_TARGET_MCS51 or STCXX_TARGET_MCS251",
+      "one target define: STCXX_TARGET_MCS251",
       "allocator address-space implementation",
       "throwing new/new[] failure notifies the OOM hook and then panics if it returns; nothrow failure returns null without invoking either hook"
     ],
@@ -331,11 +378,29 @@
       "snapshot_api": "stcxx_allocator_read_telemetry",
       "snapshot_result": "six packed uint16_t fields: arena, initial total, current total, current largest, minimum total, minimum largest",
       "sdcc_malloc_abi_source": "device/lib/malloc.c",
-      "sdcc_malloc_abi_source_sha256": "344c80c4bf8f4bb5fbe03e9e3bbbd63be76328340033c943947a15105bb86fba",
-      "sdcc_malloc_abi_source_git_blob": "fd17c388683fe100ecd5cedd8a4194194d1c1f32",
-      "sampled_operations": ["stcxx_malloc", "stcxx_realloc"],
+      "sdcc_malloc_abi_source_sha256": "2649be26b08eeb4be411d52deb21864da91084d30c082a2674376fa9cef7ec7e",
+      "sdcc_malloc_abi_source_git_blob": "bc6f24625f7ed0959bef5c2fa18b056cbaaf786f",
+      "sdcc_malloc_abi_sources": {
+        "device/lib/malloc.c": {
+          "raw_sha256": "2649be26b08eeb4be411d52deb21864da91084d30c082a2674376fa9cef7ec7e",
+          "git_blob": "bc6f24625f7ed0959bef5c2fa18b056cbaaf786f"
+        },
+        "device/lib/mcs251/heap.h": {
+          "raw_sha256": "95dc3f1ab3cb956c214e0266de9d4c51648a8f40ca9174adf439e7b73767b280",
+          "git_blob": "570a7f5650147f8b101157ee2b4ec02b8a7be274"
+        },
+        "device/lib/_heap_init.c": {
+          "raw_sha256": "bcf1eeb505c089cb310398e0c6932e273df2b37acd913fa3598b10ffafa88c43",
+          "git_blob": "0dd3c49a5fc1cc6171d3c8a2033d554d6b89b83b"
+        }
+      },
+      "sampled_operations": [
+        "stcxx_malloc",
+        "stcxx_realloc"
+      ],
       "excluded_operations": "third-party direct libc malloc/realloc/free calls",
       "state_translation_unit": "cores/STC/stcxx_heap_state.c",
+      "optional_code_translation_unit": "cores/STC/stcxx_heap_telemetry.c",
       "state_storage": "8 bytes of XDATA in a separate archive member",
       "link_accounting": "the heap-provider REL XSEG equals the configured arena; the state REL contributes exactly 8 additional XDATA bytes, defines no heap provider, and is selected exactly once",
       "heap_map_provider_audit": {
@@ -349,48 +414,15 @@
     }
   },
   "evidence": {
-    "host_conformance": "examples/CppHostConformance",
-    "canonical_header_probe": "tests/cpp/runtime/run-host-tests.sh",
-    "outcome_embedding_policy": "NO_CURRENT_MATRIX_OR_LIBRARY_OUTCOME_IN_PACKAGED_CORE_CONTRACT",
-    "implemented_frontend_profiles": ["mcs51", "mcs251"],
+    "outcome_embedding_policy": "Current results are documented per build; historical mixed-target matrices are retired.",
+    "implemented_frontend_profiles": [
+      "mcs251"
+    ],
     "declared_scope": {
-      "physical_variants": 22,
-      "execution_profiles": 25,
-      "exact_qemu_machines": 25,
-      "locked_workloads": 31,
-      "default_timing_profiles": 9,
-      "default_timing_workloads": 11
+      "physical_variants": 10,
+      "execution_profiles": 10
     },
-    "authoritative_variant_matrix": {
-      "path": "tests/cpp/variant-matrix/results.json",
-      "required_schema_version": 2,
-      "binding": "The matrix must be generated from retained build evidence and a separate exact-QEMU audit; its evidence object binds both files by repository-relative path and SHA-256."
-    },
-    "authoritative_exact_qemu_runtime": {
-      "path_binding": "tests/cpp/variant-matrix/results.json.evidence.runtime",
-      "required_audit_schema_version": 4,
-      "binding": "The runtime audit must bind the same build-evidence SHA-256, all per-profile firmware/build-manifest identities, the locked QEMU source and binaries, all 25 exact-machine profiles and all 31 required locked workload results; the supplemental default-timing gate covers 9 profiles and 11 workloads."
-    },
-    "hardware": "NOT_RUN",
-    "authoritative_library_compatibility": {
-      "path": "tests/cpp/library-compat/results.json",
-      "binding": "Library compile, link, runtime and capacity outcomes are recorded per probe and are not promoted by this Core contract."
-    },
-    "k246_cpp_canary": {
-      "outcome": "pass",
-      "scope": "HISTORICAL_SUPPLEMENTAL_DIRECT_CANARY_NOT_CURRENT_VARIANT_MATRIX",
-      "clock_hz": 12000000,
-      "arduino_fqbn_identity": "arduino-stc51:mcs51:stc32g144k246:cppcore=enabled,clock=12m",
-      "default_24mhz_board_configuration": "NOT_QUALIFIED",
-      "pipeline": "tools/cpp-core-pipeline/run.ps1",
-      "result": "tests/qemu/results/7c6caaeab4bebaaa/cpp-runtime/result.json",
-      "qemu_summary": "tests/qemu/results/7c6caaeab4bebaaa/cpp-runtime/summary.json",
-      "revalidation": "tests/qemu/results/7c6caaeab4bebaaa/cpp-runtime/revalidation.json",
-      "firmware_sha256": "c076a900f866b1066cd18c51a5feea54a23057bb8b7f131f51f5011c5d03af25",
-      "qemu_default_runs": "5/5",
-      "qemu_locked_runs": "5/5",
-      "physical_hardware": "NOT_RUN",
-      "arduino_library_compatibility": "tests/cpp/library-compat/results.json"
-    }
+    "validation_report": "docs/mcs251-platform-20260913.md",
+    "hardware": "No hardware reflashing in this platform-removal change"
   }
 }

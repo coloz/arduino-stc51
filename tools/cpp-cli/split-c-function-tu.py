@@ -9,7 +9,7 @@ import json
 import os
 import re
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -93,17 +93,28 @@ class Function:
         return self.storage == "static"
 
 
-def parse_translation_unit(ast: dict[str, Any], source: Path, source_bytes: bytes) -> list[Function]:
+def parse_translation_unit(ast: dict[str, Any], source: Path, source_bytes: bytes,
+                           *, shared_file_state: bool = False) -> list[Function]:
     if ast.get("kind") != "TranslationUnitDecl":
         fail("Clang AST root is not TranslationUnitDecl")
     size = len(source_bytes)
     functions: list[Function] = []
     seen_names: set[str] = set()
+    initializer_functions: set[str] = set()
 
     for declaration in ast.get("inner", []):
         if not isinstance(declaration, dict) or declaration.get("isImplicit"):
             continue
         kind = declaration.get("kind")
+        if kind == "VarDecl" and shared_file_state:
+            # Variables are retained verbatim, including macro initializers
+            # and declarations from headers. Their source ranges are never
+            # edited, but their initializer callbacks must stay defined.
+            for node in walk(declaration):
+                referenced = node.get('referencedDecl', {})
+                if referenced.get('kind') == 'FunctionDecl' and referenced.get('name'):
+                    initializer_functions.add(referenced['name'])
+            continue
         if kind == "FunctionDecl" and not any(
             isinstance(child, dict) and child.get("kind") == "CompoundStmt"
             for child in declaration.get("inner", [])
@@ -156,6 +167,8 @@ def parse_translation_unit(ast: dict[str, Any], source: Path, source_bytes: byte
 
         calls: set[str] = set()
         for node in walk(bodies[0]):
+            if node.get("kind") in {"GCCAsmStmt", "MSAsmStmt"}:
+                fail(f"inline assembly prevents source call-graph closure: {name}")
             if node.get("kind") != "DeclRefExpr":
                 continue
             referenced = node.get("referencedDecl")
@@ -178,6 +191,8 @@ def parse_translation_unit(ast: dict[str, Any], source: Path, source_bytes: byte
 
     if not functions:
         fail("translation unit has no source-owned function definitions")
+    functions = [replace(function, calls=tuple(sorted(set(function.calls) | initializer_functions)))
+                 for function in functions]
     ordered = sorted(functions, key=lambda item: item.body_begin)
     previous_end = -1
     for function in ordered:
@@ -220,13 +235,19 @@ def select_members(functions: list[Function], requested_roots: list[str]) -> lis
 
     selected_roots = set(requested_roots)
     pending = list(requested_roots)
+    visited: set[str] = set()
     while pending:
         current = by_name[pending.pop()]
+        if current.name in visited:
+            continue
+        visited.add(current.name)
         for called in current.calls:
             target = by_name.get(called)
-            if target is not None and not target.is_static and called not in selected_roots:
-                selected_roots.add(called)
-                pending.append(called)
+            if target is not None:
+                if not target.is_static:
+                    selected_roots.add(called)
+                if called not in visited:
+                    pending.append(called)
 
     selected: list[tuple[str, set[str]]] = []
     for root in sorted(selected_roots):
@@ -257,7 +278,7 @@ def render_member(source_bytes: bytes, functions: list[Function], keep: set[str]
     return b"".join(chunks)
 
 
-def verify_rel(path: Path, root: str, external_names: set[str]) -> dict[str, Any]:
+def verify_rel(path: Path, root: str, external_names: set[str], expected_roots=None) -> dict[str, Any]:
     raw = path.read_bytes()
     try:
         lines = raw.decode("ascii").splitlines()
@@ -285,11 +306,12 @@ def verify_rel(path: Path, root: str, external_names: set[str]) -> dict[str, Any
     if len(definitions) != len(set(definitions)) or len(references) != len(set(references)):
         fail(f"{path}: split output has duplicate public symbol records")
     expected = "_" + root
-    if definitions.count(expected) != 1:
-        fail(f"{path}: expected exactly one definition of {expected}")
+    expected_set = {"_" + name for name in (expected_roots or {root})}
+    if any(definitions.count(name) != 1 for name in expected_set):
+        fail(f"{path}: expected exactly one definition of each selected entry")
     leaked = sorted(
         name for name in definitions
-        if name.startswith("_") and name[1:] in external_names and name != expected
+        if name.startswith("_") and name[1:] in external_names and name not in expected_set
     )
     if leaked:
         fail(f"{path}: split output leaks other source entry definitions: {', '.join(leaked)}")
@@ -303,6 +325,7 @@ def verify_rel(path: Path, root: str, external_names: set[str]) -> dict[str, Any
         "references": sorted(references),
         "areas": areas,
         "expected_external_definition": expected,
+        "expected_external_definitions": sorted(expected_set),
         "symbol_gate": "PASS",
     }
 
@@ -318,6 +341,8 @@ def main() -> None:
     parser.add_argument("--clang-arg", action="append", default=[])
     parser.add_argument("--expected-source-sha256")
     parser.add_argument("--verify-rel", action="append", default=[], metavar="ROOT=PATH")
+    parser.add_argument("--merge-roots", action="store_true",
+                        help="Keep the selected closure in one TU, sharing private functions and their static state")
     arguments = parser.parse_args()
 
     source = Path(arguments.source).resolve()
@@ -344,21 +369,26 @@ def main() -> None:
         ast = json.loads(completed.stdout)
     except json.JSONDecodeError as error:
         fail(f"Clang emitted malformed AST JSON: {error}")
-    functions = parse_translation_unit(ast, source, source_bytes)
+    functions = parse_translation_unit(ast, source, source_bytes,
+                                       shared_file_state=arguments.merge_roots)
     requested_roots = load_roots(arguments)
     selected = select_members(functions, requested_roots)
+    selected_external_names = {root for root, _ in selected}
+    if arguments.merge_roots:
+        selected = [(selected[0][0], set().union(*(keep for _, keep in selected)))]
 
     output_dir.mkdir(parents=True, exist_ok=True)
     members: list[dict[str, Any]] = []
     for index, (root, keep) in enumerate(selected):
         generated = render_member(source_bytes, functions, keep)
-        if generated == source_bytes:
+        if generated == source_bytes and not arguments.merge_roots:
             fail(f"split member {root} unexpectedly equals the original source")
         member_path = output_dir / f"{index:04d}-{sanitize_name(root)}.c"
         member_path.write_bytes(generated)
         members.append({
             "root": root,
-            "static_helper_closure": sorted(keep - {root}),
+            "static_helper_closure": sorted(keep & {f.name for f in functions if f.is_static}),
+            "external_definitions": sorted(keep & selected_external_names),
             "source": str(member_path),
             "source_sha256": digest_bytes(generated),
             "source_size": len(generated),
@@ -377,7 +407,8 @@ def main() -> None:
         external_names = {item.name for item in functions if not item.is_static}
         for member in members:
             root = member["root"]
-            member["compiled_rel"] = verify_rel(rel_by_root[root], root, external_names)
+            member["compiled_rel"] = verify_rel(rel_by_root[root], root, external_names,
+                                                 set(member['external_definitions']))
 
     audit = {
         "schema_version": 1,
@@ -395,8 +426,11 @@ def main() -> None:
         "external_function_count": sum(not item.is_static for item in functions),
         "static_function_count": sum(item.is_static for item in functions),
         "requested_roots": requested_roots,
-        "selected_root_count": len(members),
-        "discarded_external_count": sum(not item.is_static for item in functions) - len(members),
+        "selected_root_count": len(selected_external_names),
+        "emitted_member_count": len(members),
+        "private_helper_identity": "shared-single-TU" if arguments.merge_roots else "per-entry-TU",
+        "file_scope_state": "retained-once-with-initializer-function-closure" if arguments.merge_roots else "no-definitions",
+        "discarded_external_count": sum(not item.is_static for item in functions) - len(selected_external_names),
         "members": members,
         "functions": [
             {
@@ -411,7 +445,7 @@ def main() -> None:
         "gates": {
             "clang_ast_json": "PASS",
             "source_hash": "PASS",
-            "no_file_scope_data_definitions": "PASS",
+            "file_scope_state_identity": "PASS",
             "no_file_scope_assembly": "PASS",
             "all_function_bodies_have_exact_source_ranges": "PASS",
             "all_requested_roots_are_external_definitions": "PASS",
