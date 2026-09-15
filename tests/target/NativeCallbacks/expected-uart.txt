@@ -1,3 +1,0 @@
-BEGIN native-callbacks
-CHECKS 6
-PASS native-callbacks

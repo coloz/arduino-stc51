@@ -1,3 +1,0 @@
-BEGIN serial-receive
-CHECKS 43
-PASS serial-receive

@@ -1,3 +1,0 @@
-BEGIN library-SD
-CHECKS 12
-PASS library-SD

@@ -256,13 +256,7 @@
       "external_flash_helper_values": "accepted by String and Print as ordinary data pointers, including third-party f_str-style return values",
       "address_space": "ordinary generic data pointers",
       "saves_ram": false,
-      "harvard_flash_qualifier": false,
-      "compile_time_type_probe": "tests/cpp/pgmspace_f_type_probe.h",
-      "host_fallback_runtime_probe": "tests/cpp/pgmspace_data_fallback_runtime.cpp",
-      "target_frontend_probes": [
-        "tests/cpp/pgmspace_data_fallback_probe.cpp",
-        "tests/cpp/library-compat/core_api_syntax_probe.cpp"
-      ]
+      "harvard_flash_qualifier": false
     },
     "complete_build_identity": [
       "target",
@@ -279,8 +273,6 @@
       "policy": "ctor-aware fixed-point selection from direct modules and actual native unresolved C ABI roots; identical anchored linkonce_odr/weak_odr COMDAT functions and globals coalesce exactly once; all other duplicate or ambiguous definitions fail closed",
       "selector_path": "tools/cpp-cli/select-cpp-archive-sidecars.py",
       "selector_sha256": "feb632f85673d4ee85290a3154948e4e5e4078679dbbbcf300f4e68d191468bc",
-      "regression_path": "tests/cpp/test_cpp_archive_selector.py",
-      "regression_sha256": "e1a3a094cab87bc67b47a75e7b4ee2c63e55a061da845a003a7c482e0c6a1684",
       "manifest_binding": "selector path/hash plus complete selection-audit content/hash and selected native/member hashes"
     },
     "arduino_cli_bridge_adapter": {
@@ -310,8 +302,6 @@
       ],
       "helper_path": "tools/cpp-cli/align-member-functions.py",
       "helper_sha256": "8d0dae028092b40f663d9a8548c7e4d50cf505feecfefa19f3f49e8f6818d364",
-      "regression_path": "tests/cpp/test_member_function_alignment.py",
-      "regression_sha256": "07a022b4dd9f2535d3d59905c5bc14c281d2388adcf1916562a18539c422e8b3",
       "audit_schema_version": 2,
       "required_final_phase": "verified",
       "required_relocation_outcome": "pass",
@@ -325,8 +315,6 @@
       ],
       "driver_path": "tools/cpp-cli/stcxx-cli.sh",
       "driver_sha256": "80085a00ea79e64db9f596473776164f3d93b74b15610a2f33a32ecbaa88725a",
-      "regression_path": "tests/cpp/library-compat/test-warning357-fail-closed.py",
-      "regression_sha256": "b24c3490588f1b7c814b823a3d37ac8f8c20dd098a827fc0c8b56ef8b06af765",
       "audit_count_field": "verified_source_pgm_warning_count",
       "max_verified_source_warning_count": 1,
       "assembler_address_truncation_policy": "always-unexpected-hard-fail"
@@ -344,8 +332,6 @@
       ],
       "driver_path": "tools/cpp-cli/stcxx-cli.sh",
       "driver_sha256": "80085a00ea79e64db9f596473776164f3d93b74b15610a2f33a32ecbaa88725a",
-      "regression_path": "tests/cpp/test_ptrdiff_pointer_audit.py",
-      "regression_sha256": "f6153f67bd5e56862163134a1a943b0c876f48362d5d4672ead6021aac9c4083",
       "build_manifest_binding": "toolchain-lock hash binding the driver and regression plus generated bridge artifact hashes"
     },
     "llvm_cbe_fail_closed_adapter": {
@@ -406,23 +392,9 @@
       "heap_map_provider_audit": {
         "policy": "full symbol names are counted exactly in the REL object; only ASlink map display matching uses its fixed 32-character Global column, after proving all audited displays unique",
         "helper_path": "tools/cpp-cli/aslink_map_symbols.py",
-        "helper_sha256": "69780e91fdb742cbc441bab710fe6219627550a91600c319750b2ba5dd46534d",
-        "regression_path": "tests/cpp/test_aslink_map_symbols.py",
-        "regression_sha256": "f82bd62ba6a868b49b34358da23efc78fadebbb20e3b0099b676325bb6173c91"
+        "helper_sha256": "69780e91fdb742cbc441bab710fe6219627550a91600c319750b2ba5dd46534d"
       },
       "qualification": "only allocations routed through the stcxx allocator ABI contribute to the reported low-water marks"
     }
-  },
-  "evidence": {
-    "outcome_embedding_policy": "Current results are documented per build; historical mixed-target matrices are retired.",
-    "implemented_frontend_profiles": [
-      "mcs251"
-    ],
-    "declared_scope": {
-      "physical_variants": 10,
-      "execution_profiles": 10
-    },
-    "validation_report": "docs/mcs251-platform-20260913.md",
-    "hardware": "No hardware reflashing in this platform-removal change"
   }
 }

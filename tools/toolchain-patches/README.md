@@ -6,7 +6,7 @@
 > (13 MCS51 + 10 MCS251). STC8A8K64S4A12 and STC32F12K54 were removed.
 > The 22-model / 25-profile / 31-workload set and removed-device details below are
 > historical toolchain/qualification records, not the current support list or new PASS evidence.
-> See the [current variant configuration](../../docs/variants-mcs251.md).
+> See the [current device metadata](../variants/devices.json).
 
 > Source candidate update (2026-09-09): the mirrored complete patch now adds
 > bounded MCS251 full-Flash placement and optional function/data sections.
@@ -262,11 +262,10 @@ It does not qualify Windows/macOS packages, physical hardware, or broad
 Arduino-library compatibility. Both MCS51 and MCS251 frontends remain
 experimental. This provenance note intentionally records no current outcome
 for the 25-profile/31-workload compile/link/capacity and exact-QEMU matrix.
-Read the authoritative retained
-[`tests/cpp/variant-matrix/results.json`](https://github.com/coloz/arduino-stc51/blob/main/tests/cpp/variant-matrix/results.json)
-from a complete source checkout; its evidence object must bind the retained
-build and exact-QEMU audit JSON by path and SHA-256. Missing, partial, stale,
-schema-invalid, or unbound JSON never counts as PASS.
+Historical mixed-target reports have been removed from the source tree.
+Release qualification requires new records binding the actual build,
+firmware and tool identities; the historical results above do not qualify
+the current platform.
 
 The stale Linux `dist/...-r1.tar.bz2` was removed after inspection. Its
 embedded `sdcc` SHA-256 was

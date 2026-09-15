@@ -6,4 +6,4 @@
 - [`downloads/`](downloads/) 是可选的本地下载缓存，目录内容默认被其局部 `.gitignore` 忽略。
 - 下载脚本位于 [`../scripts/fetch-stc-sdk.ps1`](../scripts/fetch-stc-sdk.ps1)，下载目录必须由调用者显式指定。
 
-完整的工具链选择、兼容性和许可说明见 [`../docs/toolchain-and-sdk.md`](../docs/toolchain-and-sdk.md)。
+编译工具配置见 [C++ 驱动说明](../tools/cpp-cli/README.md)，第三方许可见 [LICENSES](../LICENSES)。官方 SDK 仅作为寄存器及算法参考；Keil C251 对象和运行库不能直接当作 SDCC ABI 的 Arduino 库链接。

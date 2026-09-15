@@ -134,7 +134,7 @@ try {
         Copy-Item -Force (Join-Path $RepoRoot "tools/cpp-core-pipeline/$RuntimeFile") -Destination $CppPipelineTarget
     }
     Copy-Item -Force (Join-Path $RepoRoot 'tools/toolchain-manifest.json') -Destination $ToolsTarget
-    foreach ($PlatformDirectory in @('docs', 'libraries', 'LICENSES')) {
+    foreach ($PlatformDirectory in @('libraries', 'LICENSES')) {
         $SourceDirectory = Join-Path $RepoRoot $PlatformDirectory
         if (Test-Path -LiteralPath $SourceDirectory) {
             Copy-Item -Recurse -Force $SourceDirectory -Destination $PackageRoot

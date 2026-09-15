@@ -1,9 +1,9 @@
 # 0.0.3（源码开发版，未发布）
 
 - 补齐 STC32CL8K48／64 的硬件 I²C、SPI、PWM、独立上拉和存储器访问加速；默认 SDA=P3.3、SCL=P3.2，SPI SS=P1.2。
-- 修正 STC32 独立 SPI 第三组引脚为 P4.0/P4.1/P4.3，以及独立上拉访问的 XFR 开关保护。引脚使用见[实际开发说明](docs/arduino-practical-api.md)。
+- 修正 STC32 独立 SPI 第三组引脚为 P4.0/P4.1/P4.3，以及独立上拉访问的 XFR 开关保护。
 - Arduino 架构改为 `mcs251`；仅维护 10 个 STC32/AI8051U 型号，统一使用 MCS251。
 - 移除 10 个 MCS51-only variants，以及独立 MCS51 C++ ABI、程序指针转换、栈审计、旧外设寄存器分支和维护配置。
 - FQBN、库 architectures、安装/CI 路径和工具包本地名称同步更新。旧 FQBN 需迁移并清理旧安装及构建缓存。
 - 旧 MCS51 发布平台退出当前索引。0.0.3 尚无发布下载项；使用源码安装脚本。底层仍被 MCS251 使用的公共依赖及上游来源标识保留。
-- API、库和宿主要求见[文档目录](docs/README.md)。
+- 使用方式及宿主要求见 [README.md](README.md)。

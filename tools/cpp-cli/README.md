@@ -1,6 +1,6 @@
 # Arduino MCS251 C++ driver
 
-`stcxx-cli.sh` 提供预处理、C/C++ 编译和最终链接入口，仅接受 MCS251。Clang/LLVM-CBE/SDCC 和运行时适配器由 toolchain-lock.json 校验。保留原生 C ABI 根、归档 sidecar 选择、只读数据存储、函数指针对齐、警告结构和堆/栈布局检查；已移除另一 CPU 架构的专用适配。Windows 路径与 POSIX 路径均可传入。详见 [工具链说明](../../docs/toolchain-and-sdk.md)。
+`stcxx-cli.sh` 提供预处理、C/C++ 编译和最终链接入口，仅接受 MCS251。Clang/LLVM-CBE/SDCC 和运行时适配器由 toolchain-lock.json 校验。保留原生 C ABI 根、归档 sidecar 选择、只读数据存储、函数指针对齐、警告结构和堆/栈布局检查；已移除另一 CPU 架构的专用适配。Windows 路径与 POSIX 路径均可传入。源码构建入口见 [README.md](../../README.md)。
 
 Linux 编译和链接使用 Arduino 选中的 SDCC；显式 `STCXX_SDCC` 或
 `STCXX_TOOLCHAIN_ROOT` 可选择开发候选。目录解析先跟随符号链接，再识别
@@ -14,10 +14,6 @@ Windows 的 C++ 入口仍使用 WSL 内受锁定的 Linux 工具。
 Linux 候选索引生成器会拒绝仍选择开发锁的 SDK。可分发 Linux 前端与 Mac
 一样校验完整文件清单，包含资源头文件和私有库，并拒绝加载器环境覆盖。
 共用校验器暂保留历史文件名 `verify-macos-frontend.py`。
-
-维护者运行 `scripts/check-cpp-targets.py --installed-frontend ...` 可以验证
-安装后的自动查找流程；该模式不注入 `STCXX_CPP_TOOLS_ROOT`。显式
-`--frontend PATH` 仍用于开发回归。
 
 `STCXX_CPP_TOOLS_ROOT` 可指定前端目录，其 `bin` 下应包含 `clang`、`llvm-link`、
 `opt`、`llvm-dis` 和 `llvm-cbe`；各工具原有的 `STCXX_*` 环境变量可分别覆盖。
@@ -38,4 +34,4 @@ Mac C++ 入口需要 Bash 4.4+、GNU coreutils 和 Python 3。默认从
 `/opt/homebrew/opt/bash/bin/bash`、`/opt/homebrew/opt/coreutils/libexec/gnubin`
 及 `/opt/homebrew/bin` 查找；可通过 `STCXX_BASH`、`STCXX_COREUTILS_BIN` 指定
 前两者。缺少依赖会直接报告原因。当前前端最低部署版本为 macOS 15，实际测试
-系统为 macOS 15.7.1 ARM64。宿主要求见[宿主范围](../../docs/release-host-scope.md)。
+系统为 macOS 15.7.1 ARM64。Intel Mac 及其他系统版本需要各自的工具包和验证。

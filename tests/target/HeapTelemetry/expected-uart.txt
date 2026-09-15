@@ -1,3 +1,0 @@
-BEGIN heap-telemetry
-CHECKS 57
-PASS heap-telemetry

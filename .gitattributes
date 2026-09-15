@@ -2,7 +2,3 @@
 *.tar.bz2 binary
 *.zip binary
 *.patch text eol=lf whitespace=-trailing-space,-space-before-tab
-
-# Retained evidence is content-addressed and must survive Git byte-for-byte.
-tests/qemu/results/** -text -eol
-tests/cpp/library-compat/evidence/** -text -eol

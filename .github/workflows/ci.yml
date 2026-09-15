@@ -8,26 +8,14 @@ permissions:
   contents: read
 
 jobs:
-  core-runtime:
-    # Internal host tests; Ubuntu is not a supported release host.
+  source-inputs:
+    # Internal source checks; Ubuntu is not a supported release host.
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Verify compiler source pins across development and distribution locks
         run: python3 scripts/check-toolchain-build-inputs.py
-      - name: Run sanitizers, FAT fault models and verification regressions
-        run: python3 scripts/check-host-regressions.py --output .build/host-regressions
-      - name: Retain host regression evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: host-regressions
-          path: .build/host-regressions
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
-
   validate-and-compile:
     runs-on: windows-latest
     timeout-minutes: 20

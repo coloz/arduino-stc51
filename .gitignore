@@ -17,5 +17,3 @@ tmp/
 
 # Release binaries are generated locally or downloaded from GitHub Releases.
 /dist/
-
-# Tests are versioned; package-platform.ps1 excludes them from board archives.

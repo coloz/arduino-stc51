@@ -1,5 +1,5 @@
 # arduino-stc51 plain-C core and platform.
-# See docs/toolchain-and-sdk.md for compiler provenance and support boundaries.
+# See README.md and tools/cpp-cli/README.md for compiler usage and support boundaries.
 
 name=arduino-stc51
 version=0.0.3

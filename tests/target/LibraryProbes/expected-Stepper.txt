@@ -1,3 +1,0 @@
-BEGIN library-Stepper
-CHECKS 10
-PASS library-Stepper

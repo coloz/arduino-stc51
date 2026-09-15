@@ -71,8 +71,7 @@ foreach ($name in @('sdld', 'sdldmcs251')) {
     if ((Hash (Join-Path $outRoot "bin/$name")) -ne $compilerLock.sdcc."reference_${name}_sha256") { throw "Published $name does not match compiler lock" }
 }
 $paths = @('tools/cpp-cli/toolchain-lock.json', 'cores/STC/cpp/core-manifest.json',
-           'cores/STC/cpp/runtime-manifest.json', 'docs/cpp-runtime-contract.md',
-           'docs/toolchain-and-sdk.md', 'tools/toolchain-patches/README.md')
+           'cores/STC/cpp/runtime-manifest.json', 'tools/toolchain-patches/README.md')
 $driverBindingCounts = @{
     'tools/cpp-cli/toolchain-lock.json' = 1
     'cores/STC/cpp/core-manifest.json' = 2

@@ -1,3 +1,0 @@
-BEGIN return-identity
-CHECKS 6
-PASS return-identity

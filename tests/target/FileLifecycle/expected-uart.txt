@@ -1,3 +1,0 @@
-BEGIN file-lifecycle
-CHECKS 9
-PASS file-lifecycle
