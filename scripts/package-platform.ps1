@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '0.0.3',
+    [string]$Version = '0.0.4',
     [string]$OutputDirectory,
     [ValidateSet('development', 'portable')]
     [string]$LinuxToolchain = 'development'
@@ -59,14 +59,10 @@ try {
     $ToolsTarget = New-Item -ItemType Directory -Force -Path (Join-Path $PackageRoot 'tools')
     Copy-Item -Recurse -Force (Join-Path $RepoRoot 'tools/wrapper') -Destination $ToolsTarget
     $VariantToolsTarget = New-Item -ItemType Directory -Force -Path (Join-Path $ToolsTarget 'variants')
-    foreach ($VariantTool in @('devices.json', 'generate.mjs')) {
-        Copy-Item -Force (Join-Path $RepoRoot "tools/variants/$VariantTool") -Destination $VariantToolsTarget
-    }
-    Copy-Item -Recurse -Force (Join-Path $RepoRoot 'tools/toolchain-patches') -Destination $ToolsTarget
+    Copy-Item -LiteralPath (Join-Path $RepoRoot 'tools/variants/devices.json') -Destination $VariantToolsTarget
     # The Arduino CLI bridge uses locked fail-closed adapters and alignment
-    # helpers. Copy an explicit runtime allow-list so local QEMU builds,
-    # regression reports and Python caches can never leak into a release
-    # archive.
+    # helpers. Copy an explicit runtime allow-list so maintenance scripts,
+    # regression reports and Python caches stay outside the installed platform.
     $CppCliTarget = New-Item -ItemType Directory -Force -Path (Join-Path $ToolsTarget 'cpp-cli')
     $CppCliRuntimeFiles = @(
         'adapt.py',
@@ -134,7 +130,6 @@ try {
     foreach ($RuntimeFile in @('audit_and_adapt.py', 'README.md')) {
         Copy-Item -Force (Join-Path $RepoRoot "tools/cpp-core-pipeline/$RuntimeFile") -Destination $CppPipelineTarget
     }
-    Copy-Item -Force (Join-Path $RepoRoot 'tools/toolchain-manifest.json') -Destination $ToolsTarget
     foreach ($PlatformDirectory in @('libraries', 'LICENSES')) {
         $SourceDirectory = Join-Path $RepoRoot $PlatformDirectory
         if (Test-Path -LiteralPath $SourceDirectory) {
@@ -144,23 +139,10 @@ try {
 
     $ExamplesTarget = New-Item -ItemType Directory -Force -Path (Join-Path $PackageRoot 'examples')
     Get-ChildItem -LiteralPath (Join-Path $RepoRoot 'examples') -Directory |
-        Where-Object { $_.Name -ne 'CppHostConformance' } |
         ForEach-Object { Copy-Item -LiteralPath $_.FullName -Recurse -Force -Destination $ExamplesTarget }
 
-    # Package operational build/install helpers explicitly; regression runners
-    # and local experiments are not platform runtime dependencies.
-    $ScriptsTarget = New-Item -ItemType Directory -Force -Path (Join-Path $PackageRoot 'scripts')
-    foreach ($ScriptFile in @(
-        'build-example.ps1', 'package-platform.ps1',
-        'fetch-stc-sdk.ps1', 'inspect-cpp-toolchain.sh',
-        'bootstrap-wsl-cpp-qemu-deps.sh',
-        'build-linux-toolchain.sh', 'finalize-linux-toolchain.py', 'linux-toolchain.Dockerfile',
-        'build-macos-toolchain.sh', 'finalize-macos-toolchain.py', 'check-mcs251-isr-context.mjs',
-        'verify-mcs251-image.ps1', 'verify-stc32g144k246-image.ps1',
-        'verify-standalone-release.sh'
-    )) {
-        Copy-Item -Force (Join-Path $RepoRoot "scripts/$ScriptFile") -Destination $ScriptsTarget
-    }
+    # Source builds, packaging, index generation and CI checks run from the
+    # repository. Arduino recipes only execute tools/wrapper and tools/cpp-cli.
     $ToolchainLicensesTarget = New-Item -ItemType Directory -Force -Path (Join-Path $ToolsTarget 'toolchain-licenses')
     Copy-Item -LiteralPath (Join-Path $RepoRoot 'tools/toolchain-licenses/boost-LICENSE_1_0.txt') -Destination $ToolchainLicensesTarget
 
@@ -194,8 +176,7 @@ try {
         'tools/cpp-cli/stcxx-cli.sh',
         'tools/cpp-cli/toolchain-lock.json',
         'tools/wrapper/stc-wsl-launch.sh',
-        'tools/cpp-core-pipeline/audit_and_adapt.py',
-        'tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch'
+        'tools/cpp-core-pipeline/audit_and_adapt.py'
     )
     foreach ($RelativePath in $RequiredCppRuntime) {
         if (-not (Test-Path -LiteralPath (Join-Path $PackageRoot $RelativePath))) {
@@ -220,9 +201,15 @@ try {
             throw "Removed core file entered package staging: $RelativePath"
         }
     }
-    # Regression sources and local results are outside the platform package.
-    if (Test-Path -LiteralPath (Join-Path $PackageRoot 'tests')) {
-        throw 'Source-only tests or retained evidence entered package staging.'
+    # Keep repository maintenance resources out of the installed platform.
+    foreach ($SourceOnlyPath in @(
+        'scripts', 'tests', '.github', 'tools/toolchain-patches',
+        'tools/clang-stc-target', 'tools/llvm-cbe-stc',
+        'tools/variants/generate.mjs', 'tools/toolchain-manifest.json'
+    )) {
+        if (Test-Path -LiteralPath (Join-Path $PackageRoot $SourceOnlyPath)) {
+            throw "Source-only resource entered package staging: $SourceOnlyPath"
+        }
     }
     $ForbiddenCppRuntime = @(
         Get-ChildItem -LiteralPath $PackageRoot -Recurse -Force |
@@ -272,8 +259,9 @@ try {
     }
     $ForbiddenArchiveEntries = @($ArchiveContents | Where-Object {
         $_ -match '(^|/)(__pycache__|\.build-[^/]*)(/|$)' -or
-        $_ -match '(^|/)tests(/|$)' -or
-        $_ -match '/(scripts|tools/variants)/test[-_][^/]+$' -or
+        $_ -match '(^|/)(scripts|tests|\.github)(/|$)' -or
+        $_ -match '/tools/(toolchain-patches|clang-stc-target|llvm-cbe-stc)(/|$)' -or
+        $_ -match '/tools/(variants/generate\.mjs|toolchain-manifest\.json)$' -or
         $_ -match '(^|/)\.adapter-regression\.json$' -or
         $_ -match '\.pyc$' -or
         $_ -match '/cores/STC/(String\.h|stcxx_string_backend\.c)$'

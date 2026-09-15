@@ -80,6 +80,9 @@ foreach ($Tool in $Manifest.tools) {
     if (-not (Test-Path -LiteralPath $Archive -PathType Leaf)) {
         $Archive = Join-Path $ToolCacheDirectory $System.archiveFileName
         if (-not (Test-Path -LiteralPath $Archive -PathType Leaf)) {
+            if (-not $System.url) {
+                throw "No published tool archive is available. Supply the locked $($System.archiveFileName) through ToolCacheDirectory or an explicit ToolManifestPath."
+            }
             $Partial = "$Archive.$([guid]::NewGuid().ToString('N')).part"
             try {
                 & curl.exe --fail --location --retry 3 --silent --show-error --output $Partial $System.url

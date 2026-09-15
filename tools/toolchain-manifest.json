@@ -6,7 +6,7 @@
     {
       "id": "sdcc-mcs251",
       "packageName": "sdcc-mcs251",
-      "version": "4.6.0-stc.0.0.3",
+      "version": "4.6.0-stc.0.0.4",
       "purpose": "Compiler, assembler and linker for the MCS251 Arduino platform (-mmcs251)",
       "upstream": "https://github.com/gevico/sdcc-c251",
       "sourceTag": "v4.6.0-mcs251-20260804",
@@ -15,7 +15,6 @@
       "systems": [
         {
           "host": "x86_64-mingw32",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.zip",
           "archiveFileName": "sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.zip",
           "archiveRoot": "sdcc-mcs251",
           "size": 14570039,
@@ -25,7 +24,6 @@
         },
         {
           "host": "arm64-apple-darwin",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2",
           "archiveFileName": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2",
           "archiveRoot": "sdcc-mcs251",
           "size": 4387332,
@@ -34,40 +32,7 @@
           "buildHost": "Native macOS ARM64 r9"
         }
       ]
-    },
-    {
-      "id": "stc-host-tools",
-      "packageName": "STCHostTools",
-      "version": "2026.07.10",
-      "purpose": "Windows BusyBox shell used to run the repository's POSIX Arduino wrappers; the macOS flavour satisfies the platform dependency but is not executed",
-      "upstream": "https://github.com/DeqingSun/ch55xduino",
-      "license": "Mixed upstream tool licenses; see the archives and CH55xDuino repository",
-      "systems": [
-        {
-          "host": "i686-mingw32",
-          "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.26/ch55xduino-tools_mingw32-2026.07.10.tar.bz2",
-          "archiveFileName": "ch55xduino-tools_mingw32-2026.07.10.tar.bz2",
-          "archiveRoot": "tools",
-          "size": 698817,
-          "sha256": "df874247dfeb44b23aae3c0da813363bb156e802c4d29a3cba975027ee14bc63"
-        },
-        {
-          "host": "x86_64-apple-darwin",
-          "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.26/ch55xduino-tools_macosx-2026.07.10.tar.bz2",
-          "archiveFileName": "ch55xduino-tools_macosx-2026.07.10.tar.bz2",
-          "archiveRoot": "tools",
-          "size": 54816,
-          "sha256": "dd57aac57b551da76d78af8daa7af9243ea554237381c6638011ce98061a85a3"
-        },
-        {
-          "host": "x86_64-pc-linux-gnu",
-          "url": "https://github.com/DeqingSun/ch55xduino/releases/download/0.0.26/ch55xduino-tools_linux64-2026.07.10.tar.bz2",
-          "archiveFileName": "ch55xduino-tools_linux64-2026.07.10.tar.bz2",
-          "archiveRoot": "tools",
-          "size": 19787,
-          "sha256": "af976f6ad99f1aeaec87c17c058a329af02f2a642fdbf144a2380a119478cab4"
-        }
-      ]
     }
-  ]
+  ],
+  "distributionStatus": "withdrawn; use matching local archives until a new release is published"
 }

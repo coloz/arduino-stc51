@@ -21,8 +21,7 @@ Linux 候选索引生成器会拒绝仍选择开发锁的 SDK。可分发 Linux 
 `packages/<packager>/tools/<name>/<version>` 中选择锁定的准确版本；缺少该版本
 会报错。未含该绑定的开发锁保留原有开发路径。目录覆盖不会跳过摘要校验，缺失文件不会
 回退到其他主机工具。Clang 的 `libclang-cpp` 及五个工具各自实际解析到的
-`libLLVM.so.20.1` 也必须匹配锁文件；`scripts/inspect-cpp-toolchain.sh` 使用相同的
-路径解析并输出这些实现的摘要。
+`libLLVM.so.20.1` 也必须匹配锁文件；编译入口直接完成这些路径及摘要检查。
 
 ARM64 Mac 使用 `toolchain-lock.macos-arm64.json` 和原生工具，不再进入 WSL。
 按候选索引安装时自动选择该锁声明的前端依赖。开发目录可设置

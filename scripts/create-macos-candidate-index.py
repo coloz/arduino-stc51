@@ -67,6 +67,11 @@ def sdk_metadata(path, host='arm64-apple-darwin'):
         if host == 'x86_64-mingw32':
             require(properties.get('compiler.ar.path.windows') == '{runtime.tools.sdcc-mcs251.path}/bin',
                     'Windows distribution must select the current SDCC archive helper')
+            require(properties.get('compiler.shell.cmd.windows') == 'powershell.exe' and
+                    properties.get('compiler.wrapper.compile.windows') ==
+                    '"{compiler.wrapper.path}/stc-windows.ps1" compile',
+                    'Windows distribution must use the system PowerShell adapter')
+            read('tools/wrapper/stc-windows.ps1')
         lock = json.loads(read('tools/cpp-cli/' + HOSTS[host][0]))
         devices = json.loads(read('tools/variants/devices.json'))['devices']
         require(devices and all(d['target'] == 'mcs251' for d in devices), 'Invalid SDK target scope')
@@ -75,7 +80,7 @@ def sdk_metadata(path, host='arm64-apple-darwin'):
 
 
 def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64-apple-darwin', *,
-           wsl_sdcc=None, host_tools=None):
+           wsl_sdcc=None):
     require(host in HOSTS, 'Unsupported candidate host')
     parsed = urlsplit(base_url)
     require(parsed.scheme == 'https' or (parsed.scheme == 'http' and parsed.hostname in ('127.0.0.1', 'localhost', '::1')),
@@ -84,9 +89,9 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
             'Invalid asset base URL')
     require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', sdcc_version), 'Invalid SDCC tool version')
     windows = host == 'x86_64-mingw32'
-    require((wsl_sdcc is not None and host_tools is not None) if windows else
-            (wsl_sdcc is None and host_tools is None), 'Windows requires WSL SDCC and host tools; other hosts must omit them')
-    archives = [platform, sdcc, frontend] + ([wsl_sdcc, host_tools] if windows else [])
+    require((wsl_sdcc is not None) if windows else (wsl_sdcc is None),
+            'Windows requires WSL SDCC; other hosts must omit it')
+    archives = [platform, sdcc, frontend] + ([wsl_sdcc] if windows else [])
     require(len({p.name for p in archives}) == len(archives), 'Archive filenames must be distinct')
     require(all(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', p.name) for p in archives), 'Unsafe archive filename')
     require(not output.exists() and not output.is_symlink(), 'Output index already exists')
@@ -110,8 +115,7 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
     tool_assets = [('sdcc-mcs251', sdcc_version, sdcc), (binding['name'], binding['version'], frontend)]
     if windows:
         for key, name, archive, expected in (
-                ('arduino_wsl_sdcc', 'sdcc-mcs251-wsl', wsl_sdcc, lock['tools']['sdcc']['distribution_archive_sha256']),
-                ('arduino_host_tools', 'STCHostTools', host_tools, lock['windows_host_tools']['archive_sha256'])):
+                ('arduino_wsl_sdcc', 'sdcc-mcs251-wsl', wsl_sdcc, lock['tools']['sdcc']['distribution_archive_sha256']),):
             dependency = lock.get(key)
             require(isinstance(dependency, dict) and set(dependency) == {'packager', 'name', 'version'} and
                     dependency['packager'] == 'arduino-stc51' and dependency['name'] == name and
@@ -145,11 +149,10 @@ def main():
     parser.add_argument('--base-url', required=True)
     parser.add_argument('--host', choices=sorted(HOSTS), default='arm64-apple-darwin')
     parser.add_argument('--wsl-sdcc', type=Path)
-    parser.add_argument('--host-tools', type=Path)
     args = parser.parse_args()
     try:
         result = create(args.platform, args.sdcc, args.frontend, args.sdcc_version, args.base_url, args.output, args.host,
-                        wsl_sdcc=args.wsl_sdcc, host_tools=args.host_tools)
+                        wsl_sdcc=args.wsl_sdcc)
     except (ValueError, OSError, KeyError, tarfile.TarError) as error:
         parser.exit(2, str(error) + '\n')
     print(json.dumps(result))

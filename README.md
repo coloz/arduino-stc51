@@ -1,32 +1,20 @@
 # arduino-stc51
 
-面向 STC **MCS251** 芯片的 Arduino core。当前发布版本 **0.0.3**，仅维护 10 个型号；所有型号固定使用 `-mmcs251`，Arduino 架构标识为 `mcs251`。
+面向 STC **MCS251** 芯片的 Arduino core。当前开发版本 **0.0.4（未发布）**，仅维护 10 个型号；所有型号固定使用 `-mmcs251`，Arduino 架构标识为 `mcs251`。
 
 MCS51 芯片、板项和 C++ 适配路径已移除。旧的 `arduino-stc51:mcs51:…` FQBN 不再适用，需要重新安装当前源码并选择新板项。工程名仍为 `arduino-stc51`。
 
 当前版本供开发和有限场景验证使用，尚未完成实板验收。产品板需验证实际时钟、接线和外设功能；编译成功不代表实板验收通过。
 
-本次发布面向 **Windows x64 和 Apple Silicon Mac（macOS 15+）**。Windows C++ 需要 WSL Ubuntu；macOS C++ 需要 `brew install bash coreutils python`。Linux 独立宿主和 Intel Mac 不在本版发布支持范围内。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
+当前维护范围为 **Windows x64 和 Apple Silicon Mac（macOS 15+）**。Windows C++ 需要 WSL Ubuntu；macOS C++ 需要 `brew install bash coreutils python`。Linux 独立宿主和 Intel Mac 不在当前支持范围内。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
 
-## 安装发布版
+## 当前分发状态
 
-在 Arduino IDE 的“附加开发板管理器网址”中添加以下地址，然后在开发板管理器中安装 **arduino-stc51 0.0.3**：
+**0.0.2 和 0.0.3 安装版已撤下，当前没有可安装的 Release。** 开发板管理器索引暂为空，后续版本尚未发布。历史安装包和下载地址已停用。
 
-```text
-https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
-```
+Windows 的编译辅助操作使用系统自带的 Windows PowerShell 5.1，无需额外的 shell 工具包。普通 C 使用原生 SDCC；C++ 继续通过 WSL Ubuntu 调用已锁定的 Clang/LLVM-CBE/SDCC 工具链。macOS 使用原生工具与系统 `/bin/sh`。
 
-Arduino CLI 安装与编译：
-
-```sh
-arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
-arduino-cli core install arduino-stc51:mcs251@0.0.3 --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
-arduino-cli compile --fqbn arduino-stc51:mcs251:stc32g12k128:clock=12m /path/to/Blink
-```
-
-C++ 配置在 FQBN 的菜单部分增加 `,cppcore=enabled`。Windows 首次使用 C++ 前安装并初始化 WSL Ubuntu（`wsl --install -d Ubuntu`），在 Ubuntu 内安装 `bash python3 coreutils`。工具链由开发板管理器安装并校验，无需相邻源码仓库。旧版的 `arduino-stc51:mcs51:…` 工程需要选择新的型号和架构，并重新构建。
-
-平台包、独立 `stc-cli` 烧录工具、源码、校验和及验证报告见 [v0.0.3 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.3)。
+维护者可用本地、经过 SHA-256 校验的工具包构建源码。`scripts/create-release-index.py` 用于生成候选安装索引，输出应放在本地工作目录；仓库根目录的公开索引保持为空，直到重新发布。
 
 ## 支持型号
 
@@ -49,13 +37,14 @@ STC32CL8K48／64 提供硬件 Wire、SPI、PWM 和访问加速，默认 Wire 接
 
 ## 从源码构建
 
-准备 Arduino CLI、PowerShell、tar，以及所需编译工具。以下命令在仓库根目录执行：
+准备 Arduino CLI、PowerShell、tar，以及所需编译工具。以下命令在源码仓库根目录执行；开发板管理器安装包不包含 `scripts` 维护工具：
 
 ```powershell
 $env:STCXX_WSL_DISTRO = 'Ubuntu'
 $build = .\scripts\build-example.ps1 `
-    -Fqbn 'arduino-stc51:mcs251:stc32g12k128:cppcore=enabled,clock=12m' `
-    -WorkDirectory D:\stc51-work
+    -Fqbn 'arduino-stc51:mcs251:stc32g12k128:clock=12m' `
+    -WorkDirectory D:\stc51-work `
+    -ToolCacheDirectory D:\stc51-tools
 $build.firmware
 ```
 
@@ -63,7 +52,7 @@ $build.firmware
 
 省略 `cppcore=enabled` 时使用 plain C。安装脚本不传 FQBN 时默认编译 STC32G8K64、12 MHz 的 plain C Blink，可使用固定的原生工具包。G12K128、G144K246 等完整 Flash 布局需要重建后的 SDCC 分区功能；旧原版工具包不满足时构建会明确拒绝。C++ 路径使用相邻 `stcxx` 项目的已锁定工具链，Windows 下通过 WSL 调用，默认 SDCC 为 `D:\Git\stc51\stcxx\out\bin\sdcc`。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
 
-源码安装脚本用于维护者调试；普通用户使用上面的开发板管理器安装方式。打包不会自动发布。版本变化见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
+源码安装脚本用于维护者调试。公开工具下载暂停期间，须通过 `-ToolCacheDirectory` 提供锁定的 SDCC 归档，或通过 `-ToolManifestPath` 指定已验证的本地工具清单。打包不会自动发布。版本变化见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
 
 ## C++ 与 Arduino API
 
@@ -75,7 +64,7 @@ ABI 使用 16 位 `int`、32 位 `long`/`size_t`/`ptrdiff_t`、24 位指针，�
 
 ## 烧录
 
-从 Release 下载对应系统的 `stc-cli` 并解压，或使用相邻 `stc-cli` 项目的当前源码构建。先用 `validate` 检查生成的 HEX，再按实物型号和端口烧录，例如：
+使用相邻 `stc-cli` 项目的当前源码构建烧录工具，或使用已经验证的本地副本。先用 `validate` 检查生成的 HEX，再按实物型号和端口烧录，例如：
 
 ```powershell
 $stc = '..\stc-cli\target\release\stc-cli.exe'
@@ -95,5 +84,7 @@ node .\tools\variants\generate.mjs
 ```
 
 生成器仅接受 MCS251 型号，并拒绝遗留的孤立 variant 目录。平台和库架构声明统一为 `mcs251`。修改 [devices.json](tools/variants/devices.json) 后重新生成配置。CI 保留工具链源码锁定检查、型号元数据检查和示例编译。
+
+`scripts` 只保留源码构建、工具链打包、索引生成和发布校验入口。用户安装包保留 core、variants、库、示例、编译驱动、锁文件及许可说明；维护脚本、工具链源码补丁和生成器只放在源码仓库。
 
 第三方 SDK、SDCC 的公共 `include/mcs51` 目录和固定上游归档名属于 MCS251 仍需的依赖或来源记录，不代表继续提供 MCS51 Arduino 支持。项目采用 [MIT 许可证](LICENSE)，第三方许可保留于 [LICENSES](LICENSES)。

@@ -211,13 +211,5 @@
     "packager": "arduino-stc51",
     "name": "sdcc-mcs251-wsl",
     "version": "4.6.0-mcs251-20260804-r8"
-  },
-  "arduino_host_tools": {
-    "packager": "arduino-stc51",
-    "name": "STCHostTools",
-    "version": "2026.07.10"
-  },
-  "windows_host_tools": {
-    "archive_sha256": "df874247dfeb44b23aae3c0da813363bb156e802c4d29a3cba975027ee14bc63"
   }
 }

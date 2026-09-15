@@ -19,39 +19,7 @@ for ARGUMENT in "$@"; do
     fi
 done
 
-convert_stcxx_wsl_path() {
-    STCXX_PATH_INPUT="$1"
-    STCXX_PATH_ATTEMPT=1
-    STCXX_PATH_STATUS=4
-    while [ "$STCXX_PATH_ATTEMPT" -le 3 ]; do
-        STCXX_PATH_CANDIDATE=$("$STCXX_WSL_EXECUTABLE" -d "$WSL_DISTRIBUTION" -- \
-            wslpath -a "$STCXX_PATH_INPUT")
-        STCXX_PATH_STATUS=$?
-        STCXX_PATH_CANDIDATE=$(printf '%s' "$STCXX_PATH_CANDIDATE" | \
-            tr -d '\r')
-        if [ "$STCXX_PATH_STATUS" -eq 0 ]; then
-            case "$STCXX_PATH_CANDIDATE" in
-                /*)
-                    case "$STCXX_PATH_CANDIDATE" in
-                        *'
-'*) ;;
-                        *)
-                            printf '%s\n' "$STCXX_PATH_CANDIDATE"
-                            return 0
-                            ;;
-                    esac
-                    ;;
-            esac
-            STCXX_PATH_STATUS=4
-        fi
-        STCXX_PATH_ATTEMPT=$((STCXX_PATH_ATTEMPT + 1))
-    done
-    printf 'Unable to resolve an absolute WSL path after 3 attempts: %s\n' \
-        "$STCXX_PATH_INPUT" >&2
-    return "$STCXX_PATH_STATUS"
-}
-
-run_stcxx_wsl_cli() {
+run_stcxx_native_cli() {
     STCXX_HANDSHAKE_MARKER="$1"
     STCXX_PIPELINE_READY_MARKER="$2"
     shift 2
@@ -60,19 +28,13 @@ run_stcxx_wsl_cli() {
     while [ "$STCXX_LAUNCH_ATTEMPT" -le 3 ]; do
         rm -f "$STCXX_HANDSHAKE_MARKER" \
             "$STCXX_PIPELINE_READY_MARKER" || return 4
-        # The standalone launcher creates the marker only after WSL has
+        # The standalone launcher creates the marker only after it has
         # started and validated the CLI.  The CLI creates the second marker
         # only after its tool/provenance preflight, immediately before the
         # actual compiler pipeline.  Keeping inline shell source out of argv
-        # avoids a second round of Windows BusyBox argument parsing.
-        if [ "$STCXX_NATIVE_UNIX" -eq 1 ]; then
-            STCXX_ARDUINO_SDCC="$SDCC" sh "$WSL_LAUNCHER_LINUX" "$CLI_SCRIPT_LINUX" \
-                "$STCXX_HANDSHAKE_MARKER" "$STCXX_PIPELINE_READY_MARKER" "$@"
-        else
-            "$STCXX_WSL_EXECUTABLE" -d "$WSL_DISTRIBUTION" -- sh "$WSL_LAUNCHER_LINUX" --windows-host \
-                "$CLI_SCRIPT_LINUX" "$STCXX_HANDSHAKE_MARKER" \
-                "$STCXX_PIPELINE_READY_MARKER" "$@"
-        fi
+        # preserves argument boundaries when starting the native driver.
+        STCXX_ARDUINO_SDCC="$SDCC" sh "$WSL_LAUNCHER_LINUX" "$CLI_SCRIPT_LINUX" \
+            "$STCXX_HANDSHAKE_MARKER" "$STCXX_PIPELINE_READY_MARKER" "$@"
         STCXX_LAUNCH_STATUS=$?
         if [ -f "$STCXX_PIPELINE_READY_MARKER" ]; then
             return "$STCXX_LAUNCH_STATUS"
@@ -90,27 +52,19 @@ run_stcxx_wsl_cli() {
     return "$STCXX_LAUNCH_STATUS"
 }
 
-run_stcxx_wsl() {
+run_stcxx_native() {
     MODE="$1"
     shift
-    WSL_DISTRIBUTION=${STCXX_WSL_DISTRO:-Ubuntu}
     WRAPPER_PATH=$(printf '%s\n' "$0" | tr '\\' '/')
     WRAPPER_DIRECTORY=${WRAPPER_PATH%/*}
     PLATFORM_TOOLS=${WRAPPER_DIRECTORY%/wrapper}
     CLI_SCRIPT_WINDOWS="$PLATFORM_TOOLS/cpp-cli/stcxx-cli.sh"
-    STCXX_NATIVE_UNIX=0
     case "$(uname -s)" in
-        Darwin)
-            . "$WRAPPER_DIRECTORY/stc-macos-env.sh" || return $?
-            STCXX_NATIVE_UNIX=1 ;;
-        Linux) STCXX_NATIVE_UNIX=1 ;;
+        Darwin) . "$WRAPPER_DIRECTORY/stc-macos-env.sh" || return $? ;;
+        Linux) ;;
+        *) printf 'Use the PowerShell adapter on Windows.\n' >&2; return 2 ;;
     esac
-    if [ "$STCXX_NATIVE_UNIX" -eq 1 ]; then
-        CLI_SCRIPT_LINUX=$(realpath -e "$CLI_SCRIPT_WINDOWS") || return $?
-    else
-        . "$WRAPPER_DIRECTORY/stc-wsl-env.sh" || return $?
-        CLI_SCRIPT_LINUX=$(convert_stcxx_wsl_path "$CLI_SCRIPT_WINDOWS") || return $?
-    fi
+    CLI_SCRIPT_LINUX=$(realpath -e "$CLI_SCRIPT_WINDOWS") || return $?
     case "$CLI_SCRIPT_LINUX" in
         */cpp-cli/stcxx-cli.sh)
             WSL_LAUNCHER_LINUX="${CLI_SCRIPT_LINUX%/cpp-cli/stcxx-cli.sh}/wrapper/stc-wsl-launch.sh"
@@ -146,7 +100,7 @@ run_stcxx_wsl() {
     HANDSHAKE_MARKER_WINDOWS=$(printf '%s\n' "$HANDSHAKE_MARKER" | tr '\\' '/')
     PIPELINE_READY_MARKER_WINDOWS=$(printf '%s\n' \
         "$PIPELINE_READY_MARKER" | tr '\\' '/')
-    run_stcxx_wsl_cli "$HANDSHAKE_MARKER_WINDOWS" \
+    run_stcxx_native_cli "$HANDSHAKE_MARKER_WINDOWS" \
         "$PIPELINE_READY_MARKER_WINDOWS" \
         "$MODE" "$SOURCE_WINDOWS" "$OBJECT_WINDOWS" "$ARGUMENT_FILE_WINDOWS"
     STATUS=$?
@@ -163,29 +117,22 @@ run_stcxx_wsl() {
 if [ "$STCXX_CPP_PROFILE" -eq 1 ]; then
     case "$MARK:$SOURCE" in
         re11:*.cpp|re11:*.cpp.merged)
-            run_stcxx_wsl preprocess-deps "$@"
+            run_stcxx_native preprocess-deps "$@"
             exit $?
             ;;
         re12:*.cpp|re12:*.cpp.merged)
-            run_stcxx_wsl preprocess-macros "$@"
+            run_stcxx_native preprocess-macros "$@"
             exit $?
             ;;
         re2:*.cpp|re2:*.cpp.merged)
-            run_stcxx_wsl compile-cpp "$@"
+            run_stcxx_native compile-cpp "$@"
             exit $?
             ;;
         re1:*.c)
-            run_stcxx_wsl compile-c "$@"
+            run_stcxx_native compile-c "$@"
             exit $?
             ;;
     esac
-fi
-
-# ash resolves a Windows executable without its suffix, but BusyBox xargs does
-# not. Arduino's tool property intentionally uses the cross-platform name
-# "sdcc", so normalize it once before either execution path is selected.
-if [ ! -f "$SDCC" ] && [ -f "$SDCC.exe" ]; then
-    SDCC="$SDCC.exe"
 fi
 
 # Older SDCC drivers only warn about unknown options.  Do not silently emit
@@ -263,8 +210,7 @@ if [ "$MARK" = "re12" ]; then
                 cd "$WORK_DIRECTORY" || exit 4
                 # Keep every original argument before -MF, preventing
                 # fragments of Arduino's unquoted dependency path from being
-                # misread as compiler input files. macOS xargs and the Windows
-                # BusyBox xargs applet implement -0.
+                # misread as compiler input files. Native xargs accepts -0.
                 ARGUMENT_FILE=".stc-sdcc-arguments-$$"
                 : > "$ARGUMENT_FILE" || exit 4
                 for ARGUMENT in "$@"; do
