@@ -124,8 +124,9 @@ try {
         $PackagedPlatform = [IO.File]::ReadAllText($PackagedPlatformPath)
         $OldArchiveProperty = 'compiler.ar.path.windows={runtime.tools.SDCCArchiveTools.path}/bin'
         $NewArchiveProperty = 'compiler.ar.path.windows={runtime.tools.sdcc-mcs251.path}/bin'
-        if (-not $PackagedPlatform.Contains($OldArchiveProperty)) {
-            throw 'Expected development Windows archive-tool property is missing.'
+        if (-not $PackagedPlatform.Contains($OldArchiveProperty) -and
+            -not $PackagedPlatform.Contains($NewArchiveProperty)) {
+            throw 'Expected Windows archive-tool property is missing.'
         }
         [IO.File]::WriteAllText($PackagedPlatformPath, $PackagedPlatform.Replace($OldArchiveProperty, $NewArchiveProperty), [Text.UTF8Encoding]::new($false))
     }

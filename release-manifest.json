@@ -1,92 +1,99 @@
 {
   "schema_version": 1,
-  "version": "0.0.2",
-  "tag": "v0.0.2",
-  "date": "2026-09-06",
-  "stc_cli_source_commit": "94d0f2d3133fee2340c768ffdf5dd11d33391312",
+  "version": "0.0.3",
+  "tag": "v0.0.3",
+  "date": "2026-09-15",
+  "stc_cli_source_commit": "8d3495536425d84b1f2ce58458404a5bce559ba9",
+  "stcxx_source_commit": "d860f8550ddd42dc9fba931720b45d6585b5fba4",
   "assets": [
     {
-      "name": "arduino-stc51-0.0.2.tar.bz2",
-      "size": 306665,
-      "sha256": "778bc7cbdd61845020c6f3ca4f656c1ed38ac332144db5ba3a9cb9db7b538473",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/arduino-stc51-0.0.2.tar.bz2"
+      "name": "arduino-stc51-0.0.3.tar.bz2",
+      "size": 341478,
+      "sha256": "fde1308d16d7d5cd280180e0f28e69fa198ce3a6cac5e1b890dd630f8c9fd5db",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/arduino-stc51-0.0.3.tar.bz2"
+    },
+    {
+      "name": "ch55xduino-tools_mingw32-2026.07.10.tar.bz2",
+      "size": 698817,
+      "sha256": "df874247dfeb44b23aae3c0da813363bb156e802c4d29a3cba975027ee14bc63",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/ch55xduino-tools_mingw32-2026.07.10.tar.bz2"
     },
     {
       "name": "package_arduino-stc51_index.json",
-      "size": 12260,
-      "sha256": "0428d8d6f2ec84692447b6b2bed3487412acbf03cd7dd182b18c44a6911434a3",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/package_arduino-stc51_index.json"
+      "size": 6176,
+      "sha256": "a71158634365b1abdf51b9b82bf90ed3427a9a66dda766a9801d3b151c5f217c",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/package_arduino-stc51_index.json"
     },
     {
       "name": "release-qualification.json",
-      "size": 57053,
-      "sha256": "5d82d97124b5d5bcce12c64ea9d072cf45c56f43d7055b4b6ac3cfcdf16ef3d7",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/release-qualification.json"
+      "size": 83185,
+      "sha256": "a09b9f5699158f19b379b29e9428de0d936b08c20a1e6a01df5ef0f16feeefee",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/release-qualification.json"
     },
     {
-      "name": "sdcc-mcs251-linux-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2",
-      "size": 5468410,
-      "sha256": "262c639cff31730670bd0ac759d49747a6cf0f93b57dbbf24dc56680e84319c2",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-linux-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2"
+      "name": "sdcc-mcs251-linux-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.tar.bz2",
+      "size": 5989685,
+      "sha256": "1cc208786fbb65245053294c7e5af770291dc3ccf30425238afb47008bfd6d65",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/sdcc-mcs251-linux-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.tar.bz2"
     },
     {
-      "name": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2",
-      "size": 4178343,
-      "sha256": "a6fc82f9afbafd1bdd306a325856b93ed847ee2a0f9cfbd7575bc2354b0c0d11",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2"
+      "name": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2",
+      "size": 4387332,
+      "sha256": "9c8c5bafa339e4cd72c513be673f15e3fdf36d51acbb89f029864035a38d97cf",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2"
     },
     {
-      "name": "sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2",
-      "size": 4273088,
-      "sha256": "18c3df7435cc9c2e90b211d159e92caf5f1d3f3425b9bae6f587659a2b12c8d1",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-macos-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r1.tar.bz2"
-    },
-    {
-      "name": "sdcc-mcs251-source-b09075b6-r1.tar.gz",
-      "size": 38996213,
-      "sha256": "1c3505324f657018330aeb4d40cef2dee746b71450aa041bc9294f2e7ffc9c38",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-source-b09075b6-r1.tar.gz"
-    },
-    {
-      "name": "sdcc-mcs251-windows-x64-b09075b6a93e6afe10645181e3aeff041ea37f87.zip",
-      "size": 27857837,
-      "sha256": "84c3ebecf56994d978c698e5001894cbcb7fbe4aa99772f571cee9be4704f2cb",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-windows-x64-b09075b6a93e6afe10645181e3aeff041ea37f87.zip"
-    },
-    {
-      "name": "stc-cli-0.1.0-linux-x86_64.tar.gz",
-      "size": 544349,
-      "sha256": "c78a9610b3633592024391a5fbae27cca0381b58706fce1adc12ce7bd6f5033c",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stc-cli-0.1.0-linux-x86_64.tar.gz"
+      "name": "sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.zip",
+      "size": 14570039,
+      "sha256": "09e649c72e66387dc48b888d9fc1ecb753ac22ac466288db4edd559d29ec78e3",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.zip"
     },
     {
       "name": "stc-cli-0.1.0-macos-arm64.tar.gz",
-      "size": 504965,
-      "sha256": "510e13c8600e6f2c03b1b1669b698475db24034e2fcbb9d8e201ba887aa629c6",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stc-cli-0.1.0-macos-arm64.tar.gz"
-    },
-    {
-      "name": "stc-cli-0.1.0-macos-x86_64.tar.gz",
-      "size": 536052,
-      "sha256": "75df02e0801332c9998c0ad9d50f4b0e0fa6ded8845715aff84eff3997b1b1cd",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stc-cli-0.1.0-macos-x86_64.tar.gz"
+      "size": 610666,
+      "sha256": "516b525ef2d473e1862432d6b416ea6d73f75beaa663c440e232194ecf9b97bb",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/stc-cli-0.1.0-macos-arm64.tar.gz"
     },
     {
       "name": "stc-cli-0.1.0-source.tar.gz",
-      "size": 65066,
-      "sha256": "278ab6b83b6cad2098458ff117e947323f5c7017bfad71689383f25915f5a13d",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stc-cli-0.1.0-source.tar.gz"
+      "size": 110484,
+      "sha256": "416ee944c88badca2eb070407635a036bd634a7ce219764ef1dcc941e38020a3",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/stc-cli-0.1.0-source.tar.gz"
     },
     {
       "name": "stc-cli-0.1.0-windows-x86_64.zip",
-      "size": 476330,
-      "sha256": "3ff24945433a889c1148b44a7c34f60fda097e2dced75d75bae8037b924a7c0f",
-      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stc-cli-0.1.0-windows-x86_64.zip"
+      "size": 605585,
+      "sha256": "267373a90cd65b5eeca6865e4a114936a48b22b596c1d4eeffd2836e87f9ad55",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/stc-cli-0.1.0-windows-x86_64.zip"
+    },
+    {
+      "name": "stc51-native-macos-host-0.0.3.tar.bz2",
+      "size": 262,
+      "sha256": "6b0e3ce5165531b3caf1cbfae8a369e8d7c5efafc9448a4872cfbe3ecb0caeb5",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/stc51-native-macos-host-0.0.3.tar.bz2"
+    },
+    {
+      "name": "stcxx-frontend-20.1.8-linux-x86_64-r3.tar.bz2",
+      "size": 84823444,
+      "sha256": "c93c8a8a347febd5a34f6840a40a980d0eba43501f99955ce834fd69979d214c",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/stcxx-frontend-20.1.8-linux-x86_64-r3.tar.bz2"
+    },
+    {
+      "name": "stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2",
+      "size": 54382979,
+      "sha256": "f0850765b5edf5f667a87a8910c9581510aa30febb1e297cfc036a38acf3e77a",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2"
+    },
+    {
+      "name": "stcxx-source-d860f8550.tar.gz",
+      "size": 101814326,
+      "sha256": "caa1eefdfd8f6dcbed429e516971b757eb3b7b52f588c22659c2a72bd678e3ad",
+      "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/stcxx-source-d860f8550.tar.gz"
     }
   ],
   "checksum_files": [
     "release-manifest.json",
     "SHA256SUMS"
   ],
-  "note": "The manifest lists payload assets; SHA256SUMS additionally hashes this manifest. No hardware qualification."
+  "note": "Compile/link and offline validation only; no hardware qualification."
 }

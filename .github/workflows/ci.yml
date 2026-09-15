@@ -27,7 +27,7 @@ jobs:
       - name: Validate generated metadata
         shell: pwsh
         run: |
-          $Package = ./scripts/package-platform.ps1 -Version 0.0.3
+          $Package = ./scripts/package-platform.ps1 -Version 0.0.3 -LinuxToolchain portable
           $Package | Out-Host
           "STC_PLATFORM_ARCHIVE=$($Package.path)" | Out-File `
             -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -198,7 +198,7 @@ jobs:
           if ($Dirty.Count -ne 0) { throw "Build polluted the repository:`n$($Dirty -join "`n")" }
 
   verify-release:
-    needs: [core-runtime, validate-and-compile, compile-macos]
+    needs: [source-inputs, validate-and-compile, compile-macos]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-22.04
     timeout-minutes: 15
@@ -227,9 +227,6 @@ jobs:
           - os: macos-15
             host: arm64-apple-darwin
             file_arch: arm64
-          - os: macos-15-intel
-            host: x86_64-apple-darwin
-            file_arch: x86_64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:

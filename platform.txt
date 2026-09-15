@@ -35,7 +35,7 @@ compiler.cpp.flags={compiler.c.flags}
 
 compiler.S.flags=-c -g -x assembler-with-cpp
 compiler.ar.path={runtime.tools.sdcc-mcs251.path}/bin
-compiler.ar.path.windows={runtime.tools.SDCCArchiveTools.path}/bin
+compiler.ar.path.windows={runtime.tools.sdcc-mcs251.path}/bin
 compiler.ar.cmd=sdar
 compiler.ar.wrapper=sdar.sh
 compiler.ar.flags=rcs
@@ -59,9 +59,7 @@ recipe.cpp.o.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wra
 
 recipe.S.o.pattern="{compiler.path}/{compiler.c.cmd}" {compiler.S.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.S.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
 
-# The development manifest retains an older Windows compiler that needs a
-# separate archive helper. Portable SDK packaging selects the current SDCC
-# candidate's own sdar; its Windows runtime imports are verified when staged.
+# The pinned Windows compiler includes sdar and its runtime dependencies.
 recipe.ar.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-archive.sh" "{compiler.ar.path}/{compiler.ar.cmd}" "{archive_file_path}" "{object_file}" {compiler.ar.flags} {compiler.ar.extra_flags}
 
 recipe.c.combine.pattern="{compiler.shell.cmd}" {compiler.shell.args} "{compiler.wrapper.path}/stc-link.sh" "{compiler.path}/{compiler.c.elf.cmd}" {build.target} {compiler.c.elf.flags} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.cpp_link_flags} {build.cpp_target_link_flags} {compiler.c.elf.extra_flags} {object_files} "{build.path}/{archive_file}" --out-fmt-ihx -o "{build.path}/{build.project_name}.hex"
