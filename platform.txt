@@ -35,7 +35,7 @@ compiler.c.elf.wrapper=sdcc-link.sh
 compiler.c.elf.flags=--code-size {upload.maximum_size} --xram-size {upload.maximum_xdata_size} --model-{build.memory_model} {build.link_flags} {build.flash_flags}
 
 # Plain-C remains the default. Every explicit cppcore=enabled/12 MHz profile
-# routes genuine .cpp translation units through the locked WSL
+# routes genuine .cpp translation units through the locked native
 # Clang/LLVM-CBE bridge, using the MCS251 ABI for every supported board.
 compiler.cpp.cmd=sdcc
 compiler.cpp.wrapper=sdcc.sh

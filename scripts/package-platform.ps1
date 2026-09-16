@@ -2,9 +2,7 @@
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
     [string]$Version = '0.0.1',
-    [string]$OutputDirectory,
-    [ValidateSet('development', 'portable')]
-    [string]$LinuxToolchain = 'development'
+    [string]$OutputDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -78,7 +76,16 @@ try {
         'stcxx-cli.sh',
         'toolchain-paths.sh',
         'toolchain-lock.json',
-        'toolchain-lock.linux-x86_64.json',
+        'toolchain-lock.windows-x86_64.json',
+        'stcxx-cli.py',
+        'archive_members.py',
+        'cpp-metadata.py',
+        'c-metadata.py',
+        'check-heap.py',
+        'check-sidecars.py',
+        'audit-bridge-warnings.py',
+        'audit-heap-link.py',
+        'write-link-manifest.py',
         'toolchain-lock.macos-arm64.json',
         'verify-macos-frontend.py',
         'README.md'
@@ -103,28 +110,6 @@ try {
         if ($SourceHash -cne $PackagedHash) {
             throw "Packaged cpp-cli runtime differs from source: $RuntimeFile"
         }
-    }
-    # The source checkout retains its development tool pins. Distribution
-    # builds select the maintained portable lock at the normal runtime path,
-    # so compilation and all target verifiers use exactly the same lock.
-    if ($LinuxToolchain -eq 'portable') {
-        $PortableLockPath = Join-Path $CppCliTarget 'toolchain-lock.linux-x86_64.json'
-        $PortableLock = Get-Content -Raw -Encoding UTF8 $PortableLockPath | ConvertFrom-Json
-        if ($PortableLock.host -ne 'linux-x86_64' -or
-            $PortableLock.arduino_frontend.name -ne 'stcxx-frontend' -or
-            -not $PortableLock.linux_frontend.manifest_sha256) {
-            throw 'Portable Linux lock is missing its host, dependency or manifest binding.'
-        }
-        Copy-Item -LiteralPath $PortableLockPath -Destination (Join-Path $CppCliTarget 'toolchain-lock.json') -Force
-        $PackagedPlatformPath = Join-Path $PackageRoot 'platform.txt'
-        $PackagedPlatform = [IO.File]::ReadAllText($PackagedPlatformPath)
-        $OldArchiveProperty = 'compiler.ar.path.windows={runtime.tools.SDCCArchiveTools.path}/bin'
-        $NewArchiveProperty = 'compiler.ar.path.windows={runtime.tools.sdcc-mcs251.path}/bin'
-        if (-not $PackagedPlatform.Contains($OldArchiveProperty) -and
-            -not $PackagedPlatform.Contains($NewArchiveProperty)) {
-            throw 'Expected Windows archive-tool property is missing.'
-        }
-        [IO.File]::WriteAllText($PackagedPlatformPath, $PackagedPlatform.Replace($OldArchiveProperty, $NewArchiveProperty), [Text.UTF8Encoding]::new($false))
     }
     $CppPipelineTarget = New-Item -ItemType Directory -Force -Path (Join-Path $ToolsTarget 'cpp-core-pipeline')
     foreach ($RuntimeFile in @('audit_and_adapt.py', 'README.md')) {
@@ -175,7 +160,7 @@ try {
         'tools/cpp-cli/native-storage.py',
         'tools/cpp-cli/stcxx-cli.sh',
         'tools/cpp-cli/toolchain-lock.json',
-        'tools/wrapper/stc-wsl-launch.sh',
+        'tools/wrapper/stc-native-launch.sh',
         'tools/cpp-core-pipeline/audit_and_adapt.py'
     )
     foreach ($RelativePath in $RequiredCppRuntime) {
@@ -274,7 +259,6 @@ try {
     $Hash = (Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash.ToLowerInvariant()
     [pscustomobject]@{
         version = $Version
-        linuxToolchain = $LinuxToolchain
         archiveFileName = $ArchiveName
         size = $Item.Length
         checksum = "SHA-256:$Hash"

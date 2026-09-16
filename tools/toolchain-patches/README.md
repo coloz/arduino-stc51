@@ -6,7 +6,7 @@
 
 维护入口：
 
-- `scripts/build-linux-toolchain.sh`：构建供 Windows C++ 的 WSL 环境使用的 SDCC 工具包。
+- `scripts/build-linux-toolchain.sh`：构建内部源码维护使用的 Linux SDCC 工具包，不进入 Windows 或 macOS 的安装依赖。
 - `scripts/build-macos-toolchain.sh`：构建原生 macOS SDCC 工具包。
 - `scripts/check-toolchain-build-inputs.py`：检查构建脚本、补丁与分发锁中的源码身份一致。
 

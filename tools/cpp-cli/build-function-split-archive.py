@@ -9,9 +9,14 @@ import json
 import re
 import subprocess
 import sys
-import importlib.util
 from dataclasses import dataclass, field
 from pathlib import Path
+import importlib.util
+
+_archive_spec = importlib.util.spec_from_file_location('archive_members', Path(__file__).with_name('archive_members.py'))
+_archive_module = importlib.util.module_from_spec(_archive_spec)
+_archive_spec.loader.exec_module(_archive_module)
+read_member = _archive_module.read_member
 from typing import Any
 
 
@@ -145,7 +150,7 @@ def archive_symbols(sdar: Path, archive: Path) -> tuple[set[str], set[str]]:
     definitions: set[str] = set()
     references: set[str] = set()
     for name in listing:
-        parsed = parse_rel_bytes(run([str(sdar), "-p", str(archive), name]), f"{archive}({name})")
+        parsed = parse_rel_bytes(read_member(sdar, archive, name), f"{archive}({name})")
         definitions.update(parsed["definitions"])
         references.update(parsed["references"])
     return definitions, references
@@ -471,7 +476,7 @@ def main() -> None:
     if listing != names:
         fail("SDAR output member order/identity differs from the selected closure")
     for binding in archive_member_sources:
-        archived = run([str(sdar), "-p", str(output_archive), binding["name"]])
+        archived = read_member(sdar, output_archive, binding["name"])
         if digest_bytes(archived) != binding["source_rel_sha256"]:
             fail(f"SDAR member differs from its source REL: {binding['name']}")
 

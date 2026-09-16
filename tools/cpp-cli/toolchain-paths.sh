@@ -61,14 +61,6 @@ stcxx_resolve_tools() {
         sdcc=$STCXX_SDCC
     elif [ -n "${STCXX_TOOLCHAIN_ROOT:-}" ]; then
         sdcc=$STCXX_TOOLCHAIN_ROOT/out/bin/sdcc
-    elif [ "${STCXX_WINDOWS_HOST:-0}" = 1 ] && [ -n "${2:-}" ] && [ -n "${3:-}" ]; then
-        stcxx_wsl_sdcc_root=$(stcxx_installed_tool_root "$2" "$3" arduino_wsl_sdcc 'WSL SDCC') || return 2
-        if [ -n "$stcxx_wsl_sdcc_root" ]; then
-            sdcc=$stcxx_wsl_sdcc_root/bin/sdcc
-        else
-            # Legacy development locks predate the installed WSL dependency.
-            sdcc=$1/out/bin/sdcc
-        fi
     else
         sdcc=${STCXX_ARDUINO_SDCC:-$1/out/bin/sdcc}
     fi

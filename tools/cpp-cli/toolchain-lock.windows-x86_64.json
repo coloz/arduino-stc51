@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "qualification": "experimental-mcs251-12mhz-arduino-cli-compile-link",
+  "qualification": "native Windows x64 distribution; release execution evidence recorded separately",
   "target_triple": "msp430-stc-none-eabi",
   "data_layout": "E-m:e-p:24:8-i8:8-i16:8-i32:8-i64:8-i128:8-f32:8-f64:8-f128:8-a:8-n8:16:32-S8",
   "abi_identity_symbol": "__stcxx_abi_stc_arduino_cxx_v1_mcs251_be_size4_pdiff4_ptr3_fnptr3_guard1_direct",
@@ -38,22 +38,17 @@
         "stock_msp430_probe.cpp": "c8f3c0d3d2ba62bbd1f15896c0da52bb14e802f0fcc3a615ff69356bf51d3cc8",
         "stock_relative_vtable_probe.cpp": "7d2a46a447d298324f37207457d676e326e23f82c3f902d4ca0748f556fb31ae"
       },
-      "sha256": "3f8a65ecc46337c0ac98d95f57000b0781d4ecab38ca9a824edafae20bc1b514",
-      "shared_library_sha256": "c077f912c1712d7e27cb2fc6ad7a5616b3dbc09be28c0f9f39d57441b898892a",
+      "sha256": "f2271162b1147e786e88814ec45e282bbb08586ce0a549202785da7d2199bcf4",
       "source_project_posix": "/mnt/d/Git/stc51/stcxx"
     },
-    "llvm_shared_library": {
-      "soname": "libLLVM.so.20.1",
-      "sha256": "534e754938eb16120b8dcdbbfbd73124fe4cbe0102f9ee835be8e61b676d3342"
-    },
     "llvm_link": {
-      "sha256": "b79a51df5ed8b3ad63a7f702626506b0eeb8a69361079df34e578b1e05e7a33f"
+      "sha256": "002b7da5a1729d74335ee119b23f9f14e7f3349d2b603e65b70d8ab8bca19b52"
     },
     "opt": {
-      "sha256": "32bfeace80e4b4d6cd7fc432dfe6578b810970e88eb42a63b4ff1217dd31d720"
+      "sha256": "19227bbaf391513217a6b547290427aac5c08f6eb00246935dc877c69a8f8ecb"
     },
     "llvm_dis": {
-      "sha256": "5ff8f88667efc841d077675e6fe645a1134c3356abfd2e5e55e37d4e1d1d185c"
+      "sha256": "1292c88e6fd9ccd16d64bfd4d2b4c8e485265602b31a5a99a12e6822db421ff6"
     },
     "llvm_cbe": {
       "repository": "https://github.com/JuliaHubOSS/llvm-cbe.git",
@@ -63,7 +58,7 @@
       "source_project_patch_file": "arduino/patches/llvm-cbe-83f1bea-stc-sdcc.patch",
       "patch_file": "tools/llvm-cbe-stc/llvm-cbe-83f1bea-stc-sdcc.patch",
       "patch_sha256": "eb9687ce401a3f95c53c424f8af7c1c1a4ceca76be734812148ef18e6948fdf7",
-      "sha256": "fa6a43e832b77ad3342767471a1962ef836fa22e5ac5b5877f6e0f18e3d9207b",
+      "sha256": "2f6198fc1a674695e95e32fe3866104d409de7b22f8f634740217a307d527a45",
       "sret_policy": "explicit caller-owned result pointer for both STC IR targets",
       "source_project_posix": "/mnt/d/Git/stc51/stcxx"
     },
@@ -93,33 +88,30 @@
         }
       },
       "upstream_base_commit": "b09075b6a93e6afe10645181e3aeff041ea37f87",
-      "fixed_entry": "/mnt/d/Git/stc51/stcxx/out/bin/sdcc",
-      "published_out_lock_file": "out/toolchain-lock.json",
-      "published_out_lock_sha256": "99d94df0094dec600abebe6e4540425afcc19c407e3155a24be0035f7bc2b075",
-      "published_out_manifest_file": "out/MANIFEST.sha256",
-      "published_out_manifest_sha256": "1c2e7b0eba11884a91264eb2b313d2fd445f13ee30d2e44daed7a4321aa224d2",
       "standalone_bridge_adapter_sha256": "faf8c44e22c09037d29f9332941c6dcf8d8a4236148fd94020ca0264c5665ad5",
       "standalone_bridge_regression_sha256": "8d4ab2140b002754a56b7cbec2d32b3bb610fe1aa92cd9ac08baeea46e8b417d",
       "patch_file": "tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch",
       "patch_sha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
-      "sha256": "d0d88b0d94f1ac74a709c57115c67f89afe65e96e64c9b51efd83ddc40928cd6",
-      "elf_sha256": "993d42f5909fe1e32a6b05dc06ea15bdc2cb13649fb1eefd7deb13892319fd22",
-      "source_project_posix": "/mnt/d/Git/stc51/stcxx"
+      "sha256": "119a31c3211cca5907864f1b2f854f4f1767d97741339ff91696179d473730f8",
+      "elf_sha256": "119a31c3211cca5907864f1b2f854f4f1767d97741339ff91696179d473730f8",
+      "native_package_manifest_sha256": "2d381473a5313af69bb8d434ed0fea8938862d6cd5d0fa2d7326409d5efbc6f1",
+      "source_project_posix": "/mnt/d/Git/stc51/stcxx",
+      "windows_package_archive_sha256": "09e649c72e66387dc48b888d9fc1ecb753ac22ac466288db4edd559d29ec78e3"
     },
     "sdar": {
-      "sha256": "11ff1c60f9173ae51de587661e09cfc1d38957f5f5f6b9f16d2c0375626f40c3"
+      "sha256": "a6ca9d7b29d45d88a5aff3dd5aebddbe0f72c5e8fa2f06069b72eb11a7e73504"
     },
     "sdas251": {
-      "sha256": "deabfea0abb0a5271613fb254dace91a2253891c9024530135755a66914c01d9"
+      "sha256": "e29eadad71ce25472e76080d926d84faf6a176bf9311bef9fdb486c2a5951a24"
     },
     "sdld": {
-      "sha256": "da12ccd78e2f057e5f084e3bfffa1da959156a30e64d87d779ee112f4abc5507"
+      "sha256": "408572216844551dbda07dc1801b6215d8ab1da1af98208cd0653f5487544523"
     },
     "sdldmcs251": {
-      "sha256": "da12ccd78e2f057e5f084e3bfffa1da959156a30e64d87d779ee112f4abc5507"
+      "sha256": "408572216844551dbda07dc1801b6215d8ab1da1af98208cd0653f5487544523"
     },
     "sdcpp": {
-      "sha256": "8bf66efb6f3e56ff21354e8d7a26a7b701a8c3b19466ab2e3951bd2aaac16cf2"
+      "sha256": "88bee54f1ac13813b44ce37427ad74b5ceac8294f81b01319605c0e81f5c05c2"
     },
     "sdcc_inputs": {
       "libsdcc_sha256": "8aee6a772406c64add18a58dbd8936c1c57e4966671bb80df925339a1043917b",
@@ -154,8 +146,8 @@
       "sha256": "b921cef5faf28b1a150301119f270d495564e6d1be7ec800746f3c0feee8d58b"
     },
     "arduino_cli_driver": {
-      "path": "tools/cpp-cli/stcxx-cli.sh",
-      "sha256": "a504a15b41916b80dbbe76ee737cdb39193fbce212a0e90bb8e26b2de6a5afe9"
+      "path": "tools/cpp-cli/stcxx-cli.py",
+      "sha256": "ef889d21c8699fcadb1b2d8d62e6547fcb52b7aca4723b40ccd7a7cd1a5644a1"
     },
     "native_storage": {
       "path": "tools/cpp-cli/native-storage.py",
@@ -177,13 +169,17 @@
       "path": "tools/cpp-cli/build-function-split-archive.py",
       "sha256": "f350371afb48b3a8a04ddad531e5171b0465214d67bdf2935bc0c527f2edf31a"
     },
+    "macos_frontend_verifier": {
+      "path": "tools/cpp-cli/verify-macos-frontend.py",
+      "sha256": "9d9a64ea7c73172516e85c642afd2fe6112c0ce6c7f7bb3c475240234966bea0"
+    },
     "c_abi_root_collector": {
       "path": "tools/cpp-cli/collect-c-abi-roots.py",
       "sha256": "2b3ac78b3ea3cc7848b012c7ad53609f51cf818f904be259502c2374b55713ad"
     },
-    "macos_frontend_verifier": {
-      "path": "tools/cpp-cli/verify-macos-frontend.py",
-      "sha256": "9d9a64ea7c73172516e85c642afd2fe6112c0ce6c7f7bb3c475240234966bea0"
+    "windows_cli_driver": {
+      "path": "tools/cpp-cli/stcxx-cli.py",
+      "sha256": "ef889d21c8699fcadb1b2d8d62e6547fcb52b7aca4723b40ccd7a7cd1a5644a1"
     },
     "archive_member_reader": {
       "path": "tools/cpp-cli/archive_members.py",
@@ -207,7 +203,12 @@
       }
     }
   },
-  "host": "linux-x86_64-development",
+  "host": "windows-x86_64",
+  "arduino_frontend": {
+    "packager": "arduino-stc51",
+    "name": "stcxx-frontend",
+    "version": "20.1.8-stc.3"
+  },
   "shared_checks": {
     "cpp-metadata": "8d8a91fb0c07e1e10a22b0a43b6b0467eb4f40ea5599646bced4088ad5534dca",
     "c-metadata": "0eb5f258beae050051e7f41d52b0cb2e52e24882a86de6f5d778c540304a77ee",
@@ -216,5 +217,60 @@
     "audit-bridge-warnings": "010d03e2b03be1ef12d6baa65899f286b173dfb8e8c78bcb3795acfda0c01daf",
     "audit-heap-link": "43a18853a459d75715305637042bc0aee8bf7359900de3b2ecbd5ae49f54ddfe",
     "write-link-manifest": "745de8542283e8cb2fb332b10d3125fa66301c12f3e779f24d890d4a04362b1e"
+  },
+  "windows_sdcc_files": {
+    "bin/makebin.exe": "a69d778366f7fbffd7523dbdbac4ff410a172de967067a6835e9994cded3660a",
+    "bin/packihx.exe": "3219a8d5d3b25a2838e5478c11b4d987608d90b4f22254607e6b243826019fc7",
+    "bin/sdar.exe": "a6ca9d7b29d45d88a5aff3dd5aebddbe0f72c5e8fa2f06069b72eb11a7e73504",
+    "bin/sdas251.exe": "e29eadad71ce25472e76080d926d84faf6a176bf9311bef9fdb486c2a5951a24",
+    "bin/sdas8051.exe": "6c0f9ce576777c5533b0fe4e8a08402b7cb668522122eb59dc94ed7733d8c1d6",
+    "bin/sdcc.exe": "119a31c3211cca5907864f1b2f854f4f1767d97741339ff91696179d473730f8",
+    "bin/sdcpp.exe": "88bee54f1ac13813b44ce37427ad74b5ceac8294f81b01319605c0e81f5c05c2",
+    "bin/sdld.exe": "408572216844551dbda07dc1801b6215d8ab1da1af98208cd0653f5487544523",
+    "bin/sdldmcs251.exe": "408572216844551dbda07dc1801b6215d8ab1da1af98208cd0653f5487544523",
+    "bin/sdnm.exe": "1a7424379727570b9ded5cd17a229a2cd371f61e9e2ef818ee559ce784b3e909",
+    "bin/sdobjcopy.exe": "d7b0da65050a5912161aa5f205adccfda7fab312e1d1d74a3d946108420fb92e",
+    "bin/sdranlib.exe": "d7947786955c9b2fb29e652ad0f25e56cf92cf6f20b4863d540eff5cf74a0321"
+  },
+  "windows_frontend": {
+    "archive_sha256": "42103860d1ac311e4c60b4f1f144c301cc1dca9aa4a922ff2aa221c14fdad056",
+    "manifest_sha256": "336b242a9969ec2a012ed5b8fce3912ab67f62fb29902d9cd122e42a31b24a21",
+    "bootstrap_files": {
+      "python/_asyncio.pyd": "c77de90cad749087a0c5dc5e19d78d24f6ef44e7e5ac19b8420cfc0cea62395d",
+      "python/_bz2.pyd": "65f610646d10d5babea080e060d244b546ec52c54012e5e937dc72dcc2e2e7bc",
+      "python/_ctypes.pyd": "0e56107a891100535f2da79d85a5ae65ff1227b4765bd108f8593ac1a1110d81",
+      "python/_decimal.pyd": "aeacfead2befcc0768063a037bb64bd32109ae09cb144e5f571b04dd7965db9d",
+      "python/_elementtree.pyd": "5009a9a53c03ef8387443b5cf6ce08e5c3a79727466a0b931c5bbca915bf89ca",
+      "python/_hashlib.pyd": "03d233dbace599168eaffec823de6ed7beec8c2a4ebfe9b8a3d8e042a59af3ba",
+      "python/_lzma.pyd": "e3deecc1f59a3b811c608861decd84de1e8df8bafd5e2b39188861318c5a38cf",
+      "python/_msi.pyd": "b49332bae154ebdd8c3d5e7ddfdde336d9c47f91ba028dc67bafb2420b3dbb5c",
+      "python/_multiprocessing.pyd": "2c636df7059cb0dd7e978dd735c7c5c8ddb09cf94754cf9e232296b96c5c545a",
+      "python/_overlapped.pyd": "662126ff80c3a1b4cedf74074029c12ae4743e6d3b37376e39ac70aacb7d4d3c",
+      "python/_queue.pyd": "48e76e0ad63f6932b4a77b5819f41c1e7595636ca8d9e824f0943a14b8bb5035",
+      "python/_socket.pyd": "3efa4636cf9e350856f6927d67a4c2564bf9bd2758a00bbf17d3aece5b60016d",
+      "python/_sqlite3.pyd": "64b51df2805c58b023a875e8ae3be7ac7f61ef664f32ca6c90f6315da47ef0bc",
+      "python/_ssl.pyd": "0bc527d2dbc50009f43b2ed5d5982c4f63f4b647647ffa9eda612dcda80f6040",
+      "python/_uuid.pyd": "acce4f281d7ffb2dec0997527faf25b1df62ad7bd3032c568ddcf65c90edc867",
+      "python/_wmi.pyd": "a980f1e7a29842bd946863fc2693fbeb555a9dc0f9e1630dfed9a2fcdef3ece2",
+      "python/_zoneinfo.pyd": "76f1439cda82ab6976df6ba505c4079444703f6d44d8b0259ce59c0ff4279fb4",
+      "python/libcrypto-3.dll": "ccfffddcd3defb8d899026298af9af43bc186130f8483d77e97c93233d5f27d7",
+      "python/libffi-8.dll": "eff52743773eb550fcc6ce3efc37c85724502233b6b002a35496d828bd7b280a",
+      "python/libssl-3.dll": "007142039f04d04e0ed607bda53de095e5bc6a8a10d26ecedde94ea7d2d7eefe",
+      "python/LICENSE.txt": "e502c6b880ff58d614901495a9009c136539cd0b1e2a2abb8fc00b934c203419",
+      "python/pyexpat.pyd": "d615e193d1affcdbfe504e90d3621cbdcff94bf72b79d899126534507fd6d27a",
+      "python/python.cat": "5d85439736ae088d9680b391e2bca55ca7e9cc5b41a12ebe8e2f554506c7e72e",
+      "python/python.exe": "4d6f5f81a4bca11191c4c7c6b43632694d0a4ce74e068619d8fdc161d469859a",
+      "python/python3.dll": "fb975a606e7fbf74f64260e3f60c3490b4f74a183c0926fd6ed1ac4c52ac7b1c",
+      "python/python312._pth": "2820f241bc9d6810d4db21c21cca3845799367fbdf0199620fb37c86a74b945c",
+      "python/python312.dll": "9a0e3435aaa680d868150f87ab3e388ad2eebc22f87e036155c7b4eda8cd2120",
+      "python/python312.zip": "fb131c0ef7e35cc5250a74c8cd18744bf4115fb8163710711f3758d7df3d1f88",
+      "python/pythonw.exe": "d72294fb338bc2fc8896d25a7395a4db466425427e1559e77185d5135a830681",
+      "python/select.pyd": "d4d7181b11db0bd22a6cd5cda6f8583d1f5c77615fd0a6ca33350619d6e0438a",
+      "python/sqlite3.dll": "8daa45684bf6688fca28d956b2e8942f2fa98f656675ce68e6d61dd869848a7a",
+      "python/unicodedata.pyd": "208ee1cd3cbad0828433ca7246b05be2b1ff5569983d27d296c0b38888585488",
+      "python/vcruntime140.dll": "052ad6a20d375957e82aa6a3c441ea548d89be0981516ca7eb306e063d5027f4",
+      "python/vcruntime140_1.dll": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
+      "python/winsound.pyd": "100e8d676777603c7258daf9b2f23ef001f09f1596d8708de359326fff72bddd"
+    }
   }
 }

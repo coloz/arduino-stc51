@@ -96,7 +96,7 @@ def check(root, compiler_root=None):
     require(patch_sha == lock['patch_sha256'], 'SDK patch differs from the C++ toolchain lock')
     expected = {'TAG': upstream['sourceTag'], 'COMMIT': lock['upstream_base_commit'], 'PATCH_SHA256': patch_sha}
     inputs = [lock_path, manifest_path, patch]
-    for name in ('toolchain-lock.linux-x86_64.json', 'toolchain-lock.macos-arm64.json'):
+    for name in ('toolchain-lock.windows-x86_64.json', 'toolchain-lock.macos-arm64.json'):
         path = root / 'tools/cpp-cli' / name
         distributed = json.loads(path.read_text(encoding='utf-8'))['tools']['sdcc']
         require(distributed['patch_sha256'] == patch_sha and

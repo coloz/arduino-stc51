@@ -5,7 +5,10 @@ Builds a small native-process fixture with the .NET compiler supplied with
 Windows PowerShell. No installed Arduino compiler or external shell is needed.
 """
 import os
+import hashlib
+import json
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
@@ -19,6 +22,11 @@ class Fixture {
                           Encoding.UTF8.GetBytes(String.Join("\0", args) + "\0"));
         Console.WriteLine("fixture stdout");
         Console.Error.WriteLine("fixture stderr");
+        if (args.Length == 7 && args[0] == "-I" && args[1] == "-B") {
+            byte[] payload = File.ReadAllBytes(args[6]);
+            File.WriteAllBytes(Environment.GetEnvironmentVariable("STC_TEST_ARGV") + ".payload", payload);
+            return Encoding.UTF8.GetString(payload).Contains("-DFAIL=1") ? 23 : 0;
+        }
         if (Array.IndexOf(args, "-DFAIL=1") >= 0) return 23;
         if (Array.IndexOf(args, "--help") >= 0) {
             Console.WriteLine("--function-sections --data-sections"); return 0;
@@ -123,6 +131,37 @@ def main():
         assert result.stdout.decode().splitlines() == ['STC_PROGRAM_BYTES 256', 'STC_RAM_BYTES 2']
         memory.write_text('unrecognized report\n')
         invoke('bad memory report', 'size', memory, status=4)
+
+        # Verify the actual C++ dispatch uses a native process, an isolated
+        # interpreter and lossless argument files, including failure cleanup.
+        platform = work / 'platform'
+        staged_wrapper = platform / 'tools/wrapper/stc-windows.ps1'
+        staged_wrapper.parent.mkdir(parents=True)
+        shutil.copyfile(wrapper, staged_wrapper)
+        wrapper = staged_wrapper
+        driver = platform / 'tools/cpp-cli/stcxx-cli.py'
+        driver.parent.mkdir(parents=True)
+        driver.write_text('# native driver fixture\n')
+        frontend = work / 'native frontend'
+        interpreter = frontend / 'python/python.exe'
+        interpreter.parent.mkdir(parents=True)
+        shutil.copyfile(executable, interpreter)
+        lock = {'host': 'windows-x86_64', 'windows_frontend': {'bootstrap_files': {
+                    'python/python.exe': hashlib.sha256(interpreter.read_bytes()).hexdigest()}},
+                'pipeline_helpers': {'windows_cli_driver': {'sha256': hashlib.sha256(driver.read_bytes()).hexdigest()}}}
+        lock_path = driver.with_name('toolchain-lock.windows-x86_64.json')
+        lock_path.write_text(json.dumps(lock))
+        env['STCXX_CPP_TOOLS_ROOT'] = str(frontend)
+        cpp_flags = ['-DSTCXX_CPP_CORE=1', *flags]
+        invoke('native C++ argv', 'compile', executable, merged, obj, 're2', *cpp_flags)
+        assert argv()[:6] == ['-I', '-B', str(driver), 'compile-cpp', str(merged), str(obj)]
+        assert (work / 'argv.bin.payload').read_bytes().decode().split('\0')[:-1] == cpp_flags
+        assert not list(work.glob('*.stcxx-arguments-*'))
+        invoke('native C++ failure', 'compile', executable, merged, obj, 're2', *cpp_flags, '-DFAIL=1', status=23)
+        assert not list(work.glob('*.stcxx-arguments-*'))
+        lock['windows_frontend']['bootstrap_files']['python/python.exe'] = '0' * 64
+        lock_path.write_text(json.dumps(lock))
+        invoke('reject changed native runtime', 'compile', executable, merged, obj, 're2', *cpp_flags, status=4)
         print(f'PASS: {count} Windows recipe checks')
 
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "asOf": "2026-09-15",
-  "hostSupport": "Windows x64 and Apple Silicon macOS 15+; Windows C++ requires WSL Ubuntu",
+  "asOf": "2026-09-16",
+  "hostSupport": "Native Windows x64 and Apple Silicon macOS 15+; no WSL dependency",
   "tools": [
     {
       "id": "sdcc-mcs251",
@@ -32,6 +32,31 @@
           "sourcePatchSha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
           "buildHost": "Native macOS ARM64 r9",
           "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2"
+        }
+      ]
+    },
+    {
+      "id": "stcxx-frontend",
+      "packageName": "stcxx-frontend",
+      "version": "20.1.8-stc.3",
+      "purpose": "Native Clang/LLVM-CBE C++ frontend; Windows package includes embedded Python",
+      "license": "LLVM Apache-2.0 WITH LLVM-exception; Python PSF license; see each archive",
+      "systems": [
+        {
+          "host": "x86_64-mingw32",
+          "archiveFileName": "stcxx-frontend-20.1.8-windows-x86_64-r1.tar.bz2",
+          "archiveRoot": "stcxx-frontend",
+          "size": 86686769,
+          "sha256": "42103860d1ac311e4c60b4f1f144c301cc1dca9aa4a922ff2aa221c14fdad056",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stcxx-frontend-20.1.8-windows-x86_64-r1.tar.bz2"
+        },
+        {
+          "host": "arm64-apple-darwin",
+          "archiveFileName": "stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2",
+          "archiveRoot": "stcxx-frontend",
+          "size": 54382979,
+          "sha256": "f0850765b5edf5f667a87a8910c9581510aa30febb1e297cfc036a38acf3e77a",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2"
         }
       ]
     }

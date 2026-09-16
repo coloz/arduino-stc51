@@ -17,6 +17,12 @@ import json
 import re
 import subprocess
 from pathlib import Path
+import importlib.util
+
+_archive_spec = importlib.util.spec_from_file_location('archive_members', Path(__file__).with_name('archive_members.py'))
+_archive_module = importlib.util.module_from_spec(_archive_spec)
+_archive_spec.loader.exec_module(_archive_module)
+read_member = _archive_module.read_member
 
 
 SYMBOL_PATTERN = re.compile(
@@ -153,11 +159,7 @@ def run() -> int:
         for member in listing:
             if member in excluded:
                 continue
-            payload = subprocess.run(
-                [str(args.sdar), "-p", str(archive), member],
-                check=True,
-                stdout=subprocess.PIPE,
-            ).stdout
+            payload = read_member(args.sdar, archive, member)
             consume(payload, f"{archive}({member})", "native-archive-member")
 
     unresolved_native = native_references - native_definitions

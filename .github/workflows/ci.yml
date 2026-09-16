@@ -32,7 +32,7 @@ jobs:
       - name: Validate generated metadata
         shell: pwsh
         run: |
-          $Package = ./scripts/package-platform.ps1 -Version 0.0.1 -LinuxToolchain portable
+          $Package = ./scripts/package-platform.ps1 -Version 0.0.1
           $Package | Out-Host
           "STC_PLATFORM_ARCHIVE=$($Package.path)" | Out-File `
             -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -223,7 +223,7 @@ jobs:
           if ($Dirty.Count -ne 0) { throw "Build polluted the repository:`n$($Dirty -join "`n")" }
 
   verify-release:
-    needs: [source-inputs, validate-and-compile, compile-macos]
+    needs: [source-inputs, validate-and-compile, compile-macos, native-install]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-22.04
     timeout-minutes: 15
@@ -242,6 +242,68 @@ jobs:
           gh release download "$STC_TAG" --dir published
           python3 scripts/verify-release-assets.py package_arduino-stc51_index.json published \
             --platform-archive ci-platform/arduino-stc51-0.0.1.tar.bz2
+
+  native-install:
+    needs: validate-and-compile
+    if: needs.validate-and-compile.outputs.published_tools == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            host: windows
+            programmer: stc-cli-0.1.0-windows-x86_64.zip
+            executable: stc-cli.exe
+          - os: macos-15
+            host: macos
+            programmer: stc-cli-0.1.0-macos-arm64.tar.gz
+            executable: stc-cli
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: arduino-stc51-platform-0.0.1
+          path: ${{ runner.temp }}/native-assets
+      - name: Install native Mac script prerequisites
+        if: runner.os == 'macOS'
+        run: brew install bash coreutils python
+      - name: Verify fresh native installation, C++, cache and firmware
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STC_TEST_HOST: ${{ matrix.host }}
+          STC_PROGRAMMER: ${{ matrix.programmer }}
+          STC_PROGRAMMER_EXE: ${{ matrix.executable }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Assets = Join-Path $env:RUNNER_TEMP 'native-assets'
+          gh release download v0.0.1 --repo coloz/arduino-stc51 --dir $Assets --skip-existing
+          if ($LASTEXITCODE -ne 0) { throw 'Release asset download failed' }
+          python scripts/verify-release-assets.py package_arduino-stc51_index.json $Assets
+          if ($LASTEXITCODE -ne 0) { throw 'Native release assets differ from index' }
+          Copy-Item package_arduino-stc51_index.json (Join-Path $Assets 'package_arduino-stc51_candidate_index.json')
+          $Programmer = Join-Path $env:RUNNER_TEMP 'native-programmer'
+          New-Item -ItemType Directory -Force -Path $Programmer | Out-Null
+          tar -xf (Join-Path $Assets $env:STC_PROGRAMMER) -C $Programmer
+          if ($LASTEXITCODE -ne 0) { throw 'Programmer extraction failed' }
+          $Stc = @(Get-ChildItem $Programmer -Recurse -File -Filter $env:STC_PROGRAMMER_EXE)
+          if ($Stc.Count -ne 1) { throw 'Expected one offline HEX verifier' }
+          python scripts/check-native-install.py --assets $Assets --work (Join-Path $env:RUNNER_TEMP 'native-validation') `
+            --cli (Get-Command arduino-cli).Source --stc $Stc[0].FullName --host $env:STC_TEST_HOST --all-boards
+          if ($LASTEXITCODE -ne 0) { throw 'Native installation qualification failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-validation-${{ matrix.host }}
+          path: |
+            ${{ runner.temp }}/native-validation/*.log
+            ${{ runner.temp }}/native-validation/report.json
 
   compile-macos:
     needs: validate-and-compile

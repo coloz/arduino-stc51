@@ -9,6 +9,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path, PurePosixPath
 import re
 import sys
@@ -56,7 +57,8 @@ def verify(root, expected_digest, selected, environ):
     if set(selected) != names:
         raise ValueError('all five selected frontend tools must be verified')
     for name, path in selected.items():
-        if Path(path).resolve(strict=True) != root / 'bin' / name or not os.access(path, os.X_OK):
+        filename = name + '.exe' if sys.platform == 'win32' else name
+        if Path(path).resolve(strict=True) != root / 'bin' / filename or not os.access(path, os.X_OK):
             raise ValueError('selected frontend tool escapes pinned package: ' + name)
     return len(expected)
 
@@ -70,9 +72,10 @@ def main():
     try:
         lock = json.loads(args.lock.read_text(encoding='utf-8'))
         hosts = {'darwin-arm64': ('darwin', 'arm64', 'macos_frontend'),
-                 'linux-x86_64': ('linux', 'x86_64', 'linux_frontend')}
-        platform, machine, package_key = hosts[lock['host']]
-        if sys.platform != platform or os.uname().machine != machine:
+                 'linux-x86_64': ('linux', 'x86_64', 'linux_frontend'),
+                 'windows-x86_64': ('win32', 'amd64', 'windows_frontend')}
+        system, machine, package_key = hosts[lock['host']]
+        if sys.platform != system or platform.machine().lower() != machine:
             raise ValueError('frontend lock requires native ' + lock['host'])
         if len(args.tool) != 5:
             raise ValueError('duplicate or missing selected frontend tools')

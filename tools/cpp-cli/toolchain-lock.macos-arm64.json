@@ -8,7 +8,6 @@
     "clang": {
       "version": "20.1.8",
       "source_project_windows": "D:\\Git\\stc51\\stcxx",
-      "source_project_wsl": "/mnt/d/Git/stc51/stcxx",
       "source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
       "source_project_patch_file": "arduino/patches/clang-20.1.8-stcsdcc-ir-only.patch",
       "source_archive_sha256": "b7a1b7b0af7b9c7596af6bd46e36d11321926eaa66a7a7dc957ab0a1375ee4b0",
@@ -40,7 +39,8 @@
         "stock_relative_vtable_probe.cpp": "7d2a46a447d298324f37207457d676e326e23f82c3f902d4ca0748f556fb31ae"
       },
       "sha256": "204a41c057ea397ce16398c6fa1ae3289c3c28d7e42f1b24b24d03298eeeec98",
-      "shared_library_sha256": "e79c92884e0296c0062e21641aecde34abf85bec4af7fc6d5b1e021ae5c1c9f5"
+      "shared_library_sha256": "e79c92884e0296c0062e21641aecde34abf85bec4af7fc6d5b1e021ae5c1c9f5",
+      "source_project_posix": "/mnt/d/Git/stc51/stcxx"
     },
     "llvm_shared_library": {
       "soname": "libLLVM.dylib",
@@ -59,18 +59,17 @@
       "repository": "https://github.com/JuliaHubOSS/llvm-cbe.git",
       "commit": "83f1bea66c7415c701925470a2f7596b37153197",
       "source_project_windows": "D:\\Git\\stc51\\stcxx",
-      "source_project_wsl": "/mnt/d/Git/stc51/stcxx",
       "source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
       "source_project_patch_file": "arduino/patches/llvm-cbe-83f1bea-stc-sdcc.patch",
       "patch_file": "tools/llvm-cbe-stc/llvm-cbe-83f1bea-stc-sdcc.patch",
       "patch_sha256": "eb9687ce401a3f95c53c424f8af7c1c1a4ceca76be734812148ef18e6948fdf7",
       "sha256": "0e21cfcd49596efa0dc3a8fe7ea050f63d0237db940a320d2fef6dcd95cf531b",
-      "sret_policy": "explicit caller-owned result pointer for both STC IR targets"
+      "sret_policy": "explicit caller-owned result pointer for both STC IR targets",
+      "source_project_posix": "/mnt/d/Git/stc51/stcxx"
     },
     "sdcc": {
       "version_prefix": "SDCC : mcs51/mcs251 TD- 4.6.0",
       "source_project_windows": "D:\\Git\\stc51\\stcxx",
-      "source_project_wsl": "/mnt/d/Git/stc51/stcxx",
       "source_project_branch": "arduino-cpp-core",
       "source_project_commit": "f16b00a71e3da804b52b796b332ff5696db4280a",
       "source_project_state": "worktree-source-candidate; exact compiler sources are bound by patch_sha256",
@@ -101,7 +100,8 @@
       "sha256": "88f31cb36fdfb2f4c8bccf7c64dd5ff1d8c700ad47734d86b7166a1f5cd754f1",
       "elf_sha256": "88f31cb36fdfb2f4c8bccf7c64dd5ff1d8c700ad47734d86b7166a1f5cd754f1",
       "native_package_archive_sha256": "9c8c5bafa339e4cd72c513be673f15e3fdf36d51acbb89f029864035a38d97cf",
-      "native_package_manifest_sha256": "2d381473a5313af69bb8d434ed0fea8938862d6cd5d0fa2d7326409d5efbc6f1"
+      "native_package_manifest_sha256": "2d381473a5313af69bb8d434ed0fea8938862d6cd5d0fa2d7326409d5efbc6f1",
+      "source_project_posix": "/mnt/d/Git/stc51/stcxx"
     },
     "sdar": {
       "sha256": "9c801d1b8249db85955828f89f6cabd6413c88d87b2a7d18bf5dff322fd2fd9f"
@@ -128,7 +128,7 @@
   "pipeline_helpers": {
     "toolchain_paths": {
       "path": "tools/cpp-cli/toolchain-paths.sh",
-      "sha256": "a3386b8f23e6095455d0631a150ae8d43715310dc0d9e10681b3ef327c61258b"
+      "sha256": "1571dcd4a11c719556a6a02a1a7c9cc1dab7ab05ec49306eb7821c7bf50ba50e"
     },
     "cpp_archive_selector": {
       "path": "tools/cpp-cli/select-cpp-archive-sidecars.py",
@@ -148,15 +148,15 @@
     },
     "member_function_aligner": {
       "path": "tools/cpp-cli/align-member-functions.py",
-      "sha256": "8d0dae028092b40f663d9a8548c7e4d50cf505feecfefa19f3f49e8f6818d364"
+      "sha256": "b921cef5faf28b1a150301119f270d495564e6d1be7ec800746f3c0feee8d58b"
     },
     "arduino_cli_driver": {
       "path": "tools/cpp-cli/stcxx-cli.sh",
-      "sha256": "7a52739c0916e130a978fb99e5a1b5a4afd10f76a3c4835e483487b75799aacb"
+      "sha256": "a504a15b41916b80dbbe76ee737cdb39193fbce212a0e90bb8e26b2de6a5afe9"
     },
     "native_storage": {
       "path": "tools/cpp-cli/native-storage.py",
-      "sha256": "34e8d78a0536807dbfd27f1421615a01a281c732d87f862f646c4077e8c491f0"
+      "sha256": "8301800d3b38d919419f0728420f8549702218dfb8e3fa68323af9ff70774885"
     },
     "readonly_const_slicer": {
       "path": "tools/cpp-cli/slice-readonly-const-rel.py",
@@ -172,11 +172,19 @@
     },
     "function_archive_builder": {
       "path": "tools/cpp-cli/build-function-split-archive.py",
-      "sha256": "c8d9ddf93fb7308e99535719f738b98f07c87a8f97d676874aca8fdfa60fd29f"
+      "sha256": "f350371afb48b3a8a04ddad531e5171b0465214d67bdf2935bc0c527f2edf31a"
     },
     "macos_frontend_verifier": {
       "path": "tools/cpp-cli/verify-macos-frontend.py",
-      "sha256": "8384994b64efd404f0d96dc74197fd439d5ee4c7063cb04245450b209908826a"
+      "sha256": "9d9a64ea7c73172516e85c642afd2fe6112c0ce6c7f7bb3c475240234966bea0"
+    },
+    "c_abi_root_collector": {
+      "path": "tools/cpp-cli/collect-c-abi-roots.py",
+      "sha256": "2b3ac78b3ea3cc7848b012c7ad53609f51cf818f904be259502c2374b55713ad"
+    },
+    "archive_member_reader": {
+      "path": "tools/cpp-cli/archive_members.py",
+      "sha256": "295b7b02bf1346253a7f6903d4863798fb9141ea7187ac84770284f349067376"
     }
   },
   "targets": {
@@ -208,6 +216,15 @@
   "arduino_frontend": {
     "packager": "arduino-stc51",
     "name": "stcxx-frontend",
-    "version": "20.1.8-stc.2"
+    "version": "20.1.8-stc.3"
+  },
+  "shared_checks": {
+    "cpp-metadata": "8d8a91fb0c07e1e10a22b0a43b6b0467eb4f40ea5599646bced4088ad5534dca",
+    "c-metadata": "0eb5f258beae050051e7f41d52b0cb2e52e24882a86de6f5d778c540304a77ee",
+    "check-heap": "235bf13bfc3169ad1861fabf10f534412ca5494a18dc13e6a2feed24d29e1539",
+    "check-sidecars": "22f3351dcca2610a01ad2109af48cc7c2222f1122e3cfead0d07081d3070053a",
+    "audit-bridge-warnings": "010d03e2b03be1ef12d6baa65899f286b173dfb8e8c78bcb3795acfda0c01daf",
+    "audit-heap-link": "43a18853a459d75715305637042bc0aee8bf7359900de3b2ecbd5ae49f54ddfe",
+    "write-link-manifest": "745de8542283e8cb2fb332b10d3125fa66301c12f3e779f24d890d4a04362b1e"
   }
 }

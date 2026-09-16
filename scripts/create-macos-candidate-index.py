@@ -30,8 +30,8 @@ HOSTS = {'arm64-apple-darwin': ('toolchain-lock.macos-arm64.json', 'darwin-arm64
                                'native_package_archive_sha256', 'macos_frontend'),
          'x86_64-pc-linux-gnu': ('toolchain-lock.json', 'linux-x86_64',
                                'distribution_archive_sha256', 'linux_frontend'),
-         'x86_64-mingw32': ('toolchain-lock.json', 'linux-x86_64',
-                            'windows_package_archive_sha256', 'linux_frontend')}
+         'x86_64-mingw32': ('toolchain-lock.windows-x86_64.json', 'windows-x86_64',
+                            'windows_package_archive_sha256', 'windows_frontend')}
 
 
 def sdk_metadata(path, host='arm64-apple-darwin'):
@@ -79,8 +79,7 @@ def sdk_metadata(path, host='arm64-apple-darwin'):
         return version, lock, devices
 
 
-def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64-apple-darwin', *,
-           wsl_sdcc=None):
+def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64-apple-darwin'):
     require(host in HOSTS, 'Unsupported candidate host')
     parsed = urlsplit(base_url)
     require(parsed.scheme == 'https' or (parsed.scheme == 'http' and parsed.hostname in ('127.0.0.1', 'localhost', '::1')),
@@ -88,10 +87,7 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
     require(parsed.netloc and not parsed.query and not parsed.fragment and not parsed.username and not parsed.password,
             'Invalid asset base URL')
     require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', sdcc_version), 'Invalid SDCC tool version')
-    windows = host == 'x86_64-mingw32'
-    require((wsl_sdcc is not None) if windows else (wsl_sdcc is None),
-            'Windows requires WSL SDCC; other hosts must omit it')
-    archives = [platform, sdcc, frontend] + ([wsl_sdcc] if windows else [])
+    archives = [platform, sdcc, frontend]
     require(len({p.name for p in archives}) == len(archives), 'Archive filenames must be distinct')
     require(all(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', p.name) for p in archives), 'Unsafe archive filename')
     require(not output.exists() and not output.is_symlink(), 'Output index already exists')
@@ -113,17 +109,6 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
 
     dependencies = [{'packager': 'arduino-stc51', 'name': 'sdcc-mcs251', 'version': sdcc_version}, binding]
     tool_assets = [('sdcc-mcs251', sdcc_version, sdcc), (binding['name'], binding['version'], frontend)]
-    if windows:
-        for key, name, archive, expected in (
-                ('arduino_wsl_sdcc', 'sdcc-mcs251-wsl', wsl_sdcc, lock['tools']['sdcc']['distribution_archive_sha256']),):
-            dependency = lock.get(key)
-            require(isinstance(dependency, dict) and set(dependency) == {'packager', 'name', 'version'} and
-                    dependency['packager'] == 'arduino-stc51' and dependency['name'] == name and
-                    isinstance(dependency['version'], str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', dependency['version']),
-                    'SDK must bind its exact Windows dependency: ' + key)
-            require(before[str(archive)] == expected, name + ' archive differs from SDK lock')
-            dependencies.append(dependency)
-            tool_assets.append((name, dependency['version'], archive))
     package = {'name': 'arduino-stc51', 'maintainer': 'arduino-stc51 contributors',
                'websiteURL': 'https://github.com/coloz/arduino-stc51', 'email': '',
                'help': {'online': 'https://github.com/coloz/arduino-stc51/issues'},
@@ -148,11 +133,9 @@ def main():
     parser.add_argument('--sdcc-version', required=True)
     parser.add_argument('--base-url', required=True)
     parser.add_argument('--host', choices=sorted(HOSTS), default='arm64-apple-darwin')
-    parser.add_argument('--wsl-sdcc', type=Path)
     args = parser.parse_args()
     try:
-        result = create(args.platform, args.sdcc, args.frontend, args.sdcc_version, args.base_url, args.output, args.host,
-                        wsl_sdcc=args.wsl_sdcc)
+        result = create(args.platform, args.sdcc, args.frontend, args.sdcc_version, args.base_url, args.output, args.host)
     except (ValueError, OSError, KeyError, tarfile.TarError) as error:
         parser.exit(2, str(error) + '\n')
     print(json.dumps(result))

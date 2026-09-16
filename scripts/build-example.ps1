@@ -140,7 +140,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $Data 'package_index.json')) -or
     Assert-ExitCode 'Initialize Arduino CLI indexes and built-in tools'
 }
 # Windows PowerShell 5 turns redirected native stderr into ErrorRecords.
-# WSL diagnostics must not abort before the actual compiler exit is checked.
+# Native compiler diagnostics must not abort before the actual compiler exit is checked.
 $PreviousErrorAction = $ErrorActionPreference
 $CompileArguments = @('compile', '--clean', '--fqbn', $Fqbn, '--build-path', $Build, '--config-file', $Config)
 foreach ($Property in $BuildProperty) { $CompileArguments += @('--build-property', $Property) }

@@ -38,7 +38,7 @@ run_stcxx_native_cli() {
         # only after its tool/provenance preflight, immediately before the
         # actual linker pipeline.  Keeping inline shell source out of argv
         # preserves argument boundaries when starting the native driver.
-        STCXX_ARDUINO_SDCC="$SDCC" sh "$WSL_LAUNCHER_LINUX" "$CLI_SCRIPT_LINUX" \
+        STCXX_ARDUINO_SDCC="$SDCC" sh "$NATIVE_LAUNCHER" "$CLI_SCRIPT_NATIVE" \
             "$STCXX_HANDSHAKE_MARKER" "$STCXX_PIPELINE_READY_MARKER" "$@"
         STCXX_LAUNCH_STATUS=$?
         if [ -f "$STCXX_PIPELINE_READY_MARKER" ]; then
@@ -51,7 +51,7 @@ run_stcxx_native_cli() {
         fi
         STCXX_LAUNCH_ATTEMPT=$((STCXX_LAUNCH_ATTEMPT + 1))
         if [ "$STCXX_LAUNCH_ATTEMPT" -le 3 ]; then
-            sleep "${STCXX_WSL_RETRY_DELAY_SECONDS:-1}"
+            sleep "${STCXX_RETRY_DELAY_SECONDS:-1}"
         fi
     done
     return "$STCXX_LAUNCH_STATUS"
@@ -65,25 +65,25 @@ if [ "$STCXX_CPP_PROFILE" -eq 1 ]; then
     WRAPPER_PATH=$(printf '%s\n' "$0" | tr '\\' '/')
     WRAPPER_DIRECTORY=${WRAPPER_PATH%/*}
     PLATFORM_TOOLS=${WRAPPER_DIRECTORY%/wrapper}
-    CLI_SCRIPT_WINDOWS="$PLATFORM_TOOLS/cpp-cli/stcxx-cli.sh"
+    CLI_SCRIPT_INPUT="$PLATFORM_TOOLS/cpp-cli/stcxx-cli.sh"
     case "$(uname -s)" in
         Darwin) . "$WRAPPER_DIRECTORY/stc-macos-env.sh" || exit $? ;;
         Linux) ;;
         *) printf 'Use the PowerShell adapter on Windows.\n' >&2; exit 2 ;;
     esac
-    CLI_SCRIPT_LINUX=$(realpath -e "$CLI_SCRIPT_WINDOWS") || exit $?
-    case "$CLI_SCRIPT_LINUX" in
+    CLI_SCRIPT_NATIVE=$(realpath -e "$CLI_SCRIPT_INPUT") || exit $?
+    case "$CLI_SCRIPT_NATIVE" in
         */cpp-cli/stcxx-cli.sh)
-            WSL_LAUNCHER_LINUX="${CLI_SCRIPT_LINUX%/cpp-cli/stcxx-cli.sh}/wrapper/stc-wsl-launch.sh"
+            NATIVE_LAUNCHER="${CLI_SCRIPT_NATIVE%/cpp-cli/stcxx-cli.sh}/wrapper/stc-native-launch.sh"
             ;;
         *)
             printf 'Resolved C++ CLI path has an unexpected layout: %s\n' \
-                "$CLI_SCRIPT_LINUX" >&2
+                "$CLI_SCRIPT_NATIVE" >&2
             exit 4
             ;;
     esac
-    OUTPUT_WINDOWS=$(printf '%s\n' "$OUTPUT" | tr '\\' '/')
-    ARGUMENT_FILE="$OUTPUT_WINDOWS.stcxx-link-arguments-$$"
+    OUTPUT_INPUT=$(printf '%s\n' "$OUTPUT" | tr '\\' '/')
+    ARGUMENT_FILE="$OUTPUT_INPUT.stcxx-link-arguments-$$"
     HANDSHAKE_MARKER="$ARGUMENT_FILE.stcxx-handshake"
     PIPELINE_READY_MARKER="$ARGUMENT_FILE.stcxx-pipeline-ready"
     rm -f "$ARGUMENT_FILE" "$HANDSHAKE_MARKER" \
@@ -94,12 +94,12 @@ if [ "$STCXX_CPP_PROFILE" -eq 1 ]; then
     for ARGUMENT in "$@"; do
         printf '%s\0' "$ARGUMENT" >> "$ARGUMENT_FILE" || exit 4
     done
-    HANDSHAKE_MARKER_WINDOWS=$(printf '%s\n' "$HANDSHAKE_MARKER" | tr '\\' '/')
-    PIPELINE_READY_MARKER_WINDOWS=$(printf '%s\n' \
+    HANDSHAKE_MARKER_INPUT=$(printf '%s\n' "$HANDSHAKE_MARKER" | tr '\\' '/')
+    PIPELINE_READY_MARKER_INPUT=$(printf '%s\n' \
         "$PIPELINE_READY_MARKER" | tr '\\' '/')
-    run_stcxx_native_cli "$HANDSHAKE_MARKER_WINDOWS" \
-        "$PIPELINE_READY_MARKER_WINDOWS" \
-        link - "$OUTPUT_WINDOWS" "$ARGUMENT_FILE"
+    run_stcxx_native_cli "$HANDSHAKE_MARKER_INPUT" \
+        "$PIPELINE_READY_MARKER_INPUT" \
+        link - "$OUTPUT_INPUT" "$ARGUMENT_FILE"
     STATUS=$?
     if ! rm -f "$ARGUMENT_FILE" "$HANDSHAKE_MARKER" \
         "$PIPELINE_READY_MARKER"; then

@@ -21,7 +21,6 @@ function Invoke-StcProcess {
     # ProcessStartInfo on Windows PowerShell requires a command-line string.
     # Quote each argv element using the Windows CRT rules; never evaluate it.
     $Quoted = foreach ($Value in $Arguments) {
-        # WSL also parses its own option prefixes before the Linux command.
         # Leave simple options bare, and quote only values that need quoting.
         if ($Value -eq '' -or $Value -match '[\s"]') {
             '"' + [regex]::Replace([regex]::Replace($Value, '(\\*)"', '$1$1\"'), '(\\+)$', '$1$1') + '"'
@@ -76,54 +75,57 @@ function Assert-StcTarget {
 }
 
 function Invoke-StcCpp {
-    param([string]$Mode, [string]$Source, [string]$Object, [string[]]$Arguments)
-    $Wsl = @('Sysnative\wsl.exe', 'System32\wsl.exe') |
-        ForEach-Object { Join-Path $env:SystemRoot $_ } |
-        Where-Object { [IO.File]::Exists($_) } | Select-Object -First 1
-    if (-not $Wsl) { throw 'Cannot find Windows WSL. Install WSL and Ubuntu before compiling C++.' }
-    $Distro = if ($env:STCXX_WSL_DISTRO) { $env:STCXX_WSL_DISTRO } else { 'Ubuntu' }
-    $CliWindows = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../cpp-cli/stcxx-cli.sh')).Replace('\', '/')
-    $CliLinux = $null
-    for ($Attempt = 0; $Attempt -lt 3; ++$Attempt) {
-        $Result = Invoke-StcProcess $Wsl @('-d', $Distro, '--', 'wslpath', '-a', $CliWindows) -Capture
-        $Candidate = $Result.Output.TrimEnd("`r", "`n")
-        if ($Result.Status -eq 0 -and $Candidate.StartsWith('/') -and $Candidate -notmatch '[\r\n]') {
-            $CliLinux = $Candidate
-            break
+    param([string]$Sdcc, [string]$Mode, [string]$Source, [string]$Object, [string[]]$Arguments)
+    $Platform = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+    $LockPath = Join-Path $Platform 'tools/cpp-cli/toolchain-lock.windows-x86_64.json'
+    $Lock = Get-Content -Raw -Encoding UTF8 -LiteralPath $LockPath | ConvertFrom-Json
+    if ($Lock.host -cne 'windows-x86_64') { throw 'Expected a native Windows toolchain lock.' }
+    $Frontend = $env:STCXX_CPP_TOOLS_ROOT
+    if (-not $Frontend) {
+        $Parent = [IO.Directory]::GetParent($Platform)
+        if ($Parent.Name -cne 'mcs251' -or $Parent.Parent.Name -cne 'hardware' -or
+            $Parent.Parent.Parent.Parent.Name -cne 'packages') {
+            throw 'Set STCXX_CPP_TOOLS_ROOT when compiling from a source checkout.'
+        }
+        $Binding = $Lock.arduino_frontend
+        foreach ($Value in @($Binding.packager, $Binding.name, $Binding.version)) {
+            if ($Value -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._+-]*$') { throw 'Invalid native frontend binding.' }
+        }
+        $Frontend = Join-Path $Parent.Parent.Parent.Parent.FullName "$($Binding.packager)/tools/$($Binding.name)/$($Binding.version)"
+    }
+    $Frontend = [IO.Path]::GetFullPath($Frontend)
+    # Verify the complete embedded Python bootstrap before loading its DLLs.
+    if (-not $Lock.windows_frontend.bootstrap_files) { throw 'Missing Python bootstrap inventory.' }
+    foreach ($Entry in $Lock.windows_frontend.bootstrap_files.PSObject.Properties) {
+        $Path = [IO.Path]::GetFullPath((Join-Path $Frontend $Entry.Name))
+        if (-not $Path.StartsWith($Frontend.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Python bootstrap path escapes the frontend package.'
+        }
+        if (-not [IO.File]::Exists($Path) -or
+            (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant() -cne $Entry.Value) {
+            throw "Native Python bootstrap SHA-256 mismatch: $Path"
         }
     }
-    if (-not $CliLinux) { throw "Unable to resolve the C++ driver in WSL: $($Result.Error)" }
-    if (-not $CliLinux.EndsWith('/cpp-cli/stcxx-cli.sh')) { throw 'Unexpected C++ driver layout' }
-    $Launcher = $CliLinux.Substring(0, $CliLinux.Length - '/cpp-cli/stcxx-cli.sh'.Length) + '/wrapper/stc-wsl-launch.sh'
-    $Source = $Source.Replace('\', '/')
-    $Object = $Object.Replace('\', '/')
+    $Python = Join-Path $Frontend 'python/python.exe'
+    $Driver = Join-Path $Platform 'tools/cpp-cli/stcxx-cli.py'
+    if ((Get-FileHash -Algorithm SHA256 -LiteralPath $Driver).Hash.ToLowerInvariant() -cne
+        $Lock.pipeline_helpers.windows_cli_driver.sha256) { throw 'Native C++ driver SHA-256 mismatch.' }
     $Suffix = '.stcxx-arguments-' + [guid]::NewGuid().ToString('N')
     $ArgumentFile = if ($Object -match '^(nul:?|/dev/null)$') {
         Join-Path ([IO.Path]::GetTempPath()) $Suffix
     } else { $Object + $Suffix }
-    $ArgumentFile = [IO.Path]::GetFullPath($ArgumentFile).Replace('\', '/')
-    $Handshake = $ArgumentFile + '.stcxx-handshake'
-    $Ready = $ArgumentFile + '.stcxx-pipeline-ready'
+    $OldSdcc = $env:STCXX_ARDUINO_SDCC
+    $OldFrontend = $env:STCXX_CPP_TOOLS_ROOT
     try {
-        # NUL-delimited UTF-8 preserves quotes, spaces and shell metacharacters
-        # across WSL without another round of shell command parsing.
         $Payload = if ($Arguments.Count) { ($Arguments -join "`0") + "`0" } else { '' }
         [IO.File]::WriteAllBytes($ArgumentFile, [Text.Encoding]::UTF8.GetBytes($Payload))
-        $Status = 4
-        for ($Attempt = 0; $Attempt -lt 3; ++$Attempt) {
-            [IO.File]::Delete($Handshake)
-            [IO.File]::Delete($Ready)
-            $Status = Invoke-StcProcess $Wsl @('-d', $Distro, '--', 'sh', $Launcher, '--windows-host',
-                $CliLinux, $Handshake, $Ready, $Mode, $Source, $Object, $ArgumentFile)
-            # A compiler failure after preflight is final. Only retry WSL or
-            # driver startup failures, and never accept success without a marker.
-            if ([IO.File]::Exists($Ready)) { return $Status }
-            if ($Status -eq 0) { $Status = 4 }
-            if ($Attempt -lt 2) { Start-Sleep -Seconds 1 }
-        }
-        return $Status
+        $env:STCXX_ARDUINO_SDCC = $Sdcc
+        $env:STCXX_CPP_TOOLS_ROOT = $Frontend
+        return Invoke-StcProcess $Python @('-I', '-B', $Driver, $Mode, $Source, $Object, $ArgumentFile)
     } finally {
-        foreach ($Path in @($ArgumentFile, $Handshake, $Ready)) { [IO.File]::Delete($Path) }
+        [IO.File]::Delete($ArgumentFile)
+        $env:STCXX_ARDUINO_SDCC = $OldSdcc
+        $env:STCXX_CPP_TOOLS_ROOT = $OldFrontend
     }
 }
 
@@ -137,7 +139,7 @@ function Invoke-StcCompile {
             '^re2:.*\.cpp(?:\.merged)?$' { 'compile-cpp'; break }
             '^re1:.*\.c$' { 'compile-c'; break }
         }
-        if ($Mode) { return Invoke-StcCpp $Mode $Source $Object $Arguments }
+        if ($Mode) { return Invoke-StcCpp $Sdcc $Mode $Source $Object $Arguments }
     }
     if ($Arguments -ccontains '--function-sections' -or $Arguments -ccontains '--data-sections') {
         $Help = Invoke-StcProcess $Sdcc @('-mmcs251', '--help') -Capture
@@ -212,7 +214,7 @@ function Invoke-StcLink {
     if ($Arguments -ccontains '-DSTCXX_CPP_CORE=1') {
         $OutputIndex = [Array]::LastIndexOf($Arguments, '-o')
         if ($OutputIndex -lt 0 -or $OutputIndex + 1 -ge $Arguments.Count) { throw 'C++ link recipe did not provide an output path' }
-        return Invoke-StcCpp 'link' '-' $Arguments[$OutputIndex + 1] $Arguments
+        return Invoke-StcCpp $Sdcc 'link' '-' $Arguments[$OutputIndex + 1] $Arguments
     }
     $Converted = foreach ($Value in $Arguments) {
         if ($Value.EndsWith('.o')) { [IO.Path]::ChangeExtension($Value, '.rel') }
@@ -265,7 +267,7 @@ function Write-StcSize {
 }
 
 try {
-    # Single dispatch keeps all recipes on the same argument and WSL handling.
+    # Single dispatch keeps all recipes on the same argument and native-process handling.
     switch -CaseSensitive ($RecipeArguments[0]) {
         'compile' {
             if ($RecipeArguments.Count -lt 5) { throw 'compile requires compiler, source, object and probe mode' }

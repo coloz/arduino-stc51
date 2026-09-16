@@ -6,7 +6,7 @@ MCS51 芯片、板项和 C++ 适配路径已移除。旧的 `arduino-stc51:mcs51
 
 当前版本供开发和有限场景验证使用，尚未完成实板验收。产品板需验证实际时钟、接线和外设功能；编译成功不代表实板验收通过。
 
-当前维护范围为 **Windows x64 和 Apple Silicon Mac（macOS 15+）**。Windows C++ 需要 WSL Ubuntu；macOS C++ 需要 `brew install bash coreutils python`。Linux 独立宿主和 Intel Mac 不在当前支持范围内。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
+当前维护范围为 **Windows x64 和 Apple Silicon Mac（macOS 15+）**。两端的 C 和 C++ 均使用原生工具，无需 WSL。Windows 前端包自带 Python；macOS C++ 需要 `brew install bash coreutils python`。Linux 独立宿主和 Intel Mac 不在当前支持范围内。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
 
 ## 安装
 
@@ -23,9 +23,9 @@ arduino-cli core update-index --additional-urls https://raw.githubusercontent.co
 arduino-cli core install arduino-stc51:mcs251@0.0.1 --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
 ```
 
-安装资源见 [v0.0.1 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.1)。此前的 0.0.2、0.0.3 已撤下；装过旧版的用户请先卸载，再选择 0.0.1 安装，并清理原有构建缓存。
+安装资源见 [v0.0.1 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.1)。本次保持版本号 0.0.1 并替换发布包；已安装旧 0.0.1 的用户也需卸载、更新索引后重新安装，并清理构建缓存。此前的 0.0.2、0.0.3 保持撤下。
 
-Windows 的编译辅助操作使用系统自带的 Windows PowerShell 5.1，无需额外的 shell 工具包。普通 C 使用原生 SDCC；C++ 通过 WSL Ubuntu 调用已锁定的 Clang/LLVM-CBE/SDCC 工具链。macOS 使用原生工具与系统 `/bin/sh`。
+开发板管理器在两端都安装 `sdcc-mcs251` 和 `stcxx-frontend` 两项工具。Windows 使用系统 PowerShell 5.1、原生 `.exe` 工具及包内 Python；macOS 使用原生 ARM64 工具。C++ 前端负责 Clang → LLVM-CBE 转换，C 和 C++ 共用本机 SDCC。安装依赖已移除占位包 `stc51-native-macos-host`。
 
 ## 支持型号
 
@@ -51,7 +51,6 @@ STC32CL8K48／64 提供硬件 Wire、SPI、PWM 和访问加速，默认 Wire 接
 准备 Arduino CLI、PowerShell、tar，以及所需编译工具。以下命令在源码仓库根目录执行；开发板管理器安装包不包含 `scripts` 维护工具：
 
 ```powershell
-$env:STCXX_WSL_DISTRO = 'Ubuntu'
 $build = .\scripts\build-example.ps1 `
     -Fqbn 'arduino-stc51:mcs251:stc32g12k128:clock=12m' `
     -WorkDirectory D:\stc51-work `
@@ -61,7 +60,7 @@ $build.firmware
 
 脚本将当前源码打包到独立目录，校验工具包的 SHA-256，然后编译示例。`-SketchPath` 可指定含同名 `.ino` 的 sketch 目录；SDCC 构建路径应避免空格。默认 Blink 使用 P3.2，按电路修改引脚，不假设存在板载 LED。
 
-省略 `cppcore=enabled` 时使用 plain C。安装脚本不传 FQBN 时默认编译 STC32G8K64、12 MHz 的 plain C Blink，可使用固定的原生工具包。G12K128、G144K246 等完整 Flash 布局需要重建后的 SDCC 分区功能；旧原版工具包不满足时构建会明确拒绝。C++ 路径使用相邻 `stcxx` 项目的已锁定工具链，Windows 下通过 WSL 调用，默认 SDCC 为 `D:\Git\stc51\stcxx\out\bin\sdcc`。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
+省略 `cppcore=enabled` 时使用 plain C。安装脚本不传 FQBN 时默认编译 STC32G8K64、12 MHz 的 plain C Blink。C++ 配置追加 `,cppcore=enabled`，使用已锁定的本机前端包和 SDCC。G12K128、G144K246 等完整 Flash 布局依赖发布包中重建的 SDCC 分区功能；旧原版工具包不满足时构建会明确拒绝。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
 
 源码安装脚本用于维护者调试。脚本会下载并校验锁定的 SDCC 归档，也可通过 `-ToolCacheDirectory` 复用本地归档，或通过 `-ToolManifestPath` 指定已验证的工具清单。打包不会自动发布。版本变化见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
 

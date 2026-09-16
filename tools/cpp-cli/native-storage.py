@@ -7,6 +7,12 @@ The actual final provider and CODE/XDATA class are then checked in ASlink.
 """
 import argparse, hashlib, json, re, subprocess
 from pathlib import Path
+import importlib.util
+
+_archive_spec = importlib.util.spec_from_file_location('archive_members', Path(__file__).with_name('archive_members.py'))
+_archive_module = importlib.util.module_from_spec(_archive_spec)
+_archive_spec.loader.exec_module(_archive_module)
+read_member = _archive_module.read_member
 
 def sha(data): return hashlib.sha256(data).hexdigest()
 
@@ -75,7 +81,7 @@ def collect(ir, direct, archives, sdar, cpp_members):
         if excluded - set(names): raise ValueError('missing C++ excluded member: ' + str(path))
         for name in names:
             if name in excluded: continue
-            payload = subprocess.check_output([str(sdar), '-p', str(path), name])
+            payload = read_member(sdar, path, name)
             label = str(path.resolve()) + '(' + name + ')'
             members.append(dict(provider=label, sha256=sha(payload)))
             definitions += rel_objects(payload, wanted, label)
