@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "qualification": "windows-wsl-distribution-candidate-not-production-qualified",
+  "qualification": "internal-linux-reference-not-a-supported-release-host",
   "target_triple": "msp430-stc-none-eabi",
   "data_layout": "E-m:e-p:24:8-i8:8-i16:8-i32:8-i64:8-i128:8-f32:8-f64:8-f128:8-a:8-n8:16:32-S8",
   "abi_identity_symbol": "__stcxx_abi_stc_arduino_cxx_v1_mcs251_be_size4_pdiff4_ptr3_fnptr3_guard1_direct",
@@ -214,11 +214,6 @@
   "linux_frontend": {
     "archive_sha256": "8f9834106f74ff99efed7715473fb5146ee870d118e4bfc302df5961a4b1c24d",
     "manifest_sha256": "b97112af0c087635f2cfcef65e1005edfb02c58068947c61e8f4827e11734bcf"
-  },
-  "arduino_wsl_sdcc": {
-    "packager": "arduino-stc51",
-    "name": "sdcc-mcs251-wsl",
-    "version": "4.6.0-mcs251-20260804-r9"
   },
   "shared_checks": {
     "cpp-metadata": "8d8a91fb0c07e1e10a22b0a43b6b0467eb4f40ea5599646bced4088ad5534dca",
