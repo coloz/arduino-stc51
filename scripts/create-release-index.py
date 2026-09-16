@@ -28,10 +28,12 @@ def main():
         win_path, mac_path = [Path(temporary) / n for n in ('windows.json', 'macos.json')]
         candidate.create(platform, assets / f'sdcc-mcs251-windows-x86_64-{commit}-r8.zip',
                          assets / 'stcxx-frontend-20.1.8-windows-x86_64-r1.tar.bz2',
-                         sdcc_version, base, win_path, 'x86_64-mingw32')
+                         sdcc_version, base, win_path, 'x86_64-mingw32',
+                         uploader=assets / 'stc-cli-0.1.0-windows-x86_64.zip')
         candidate.create(platform, assets / f'sdcc-mcs251-macos-arm64-{commit}-r9.tar.bz2',
                          assets / 'stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2',
-                         sdcc_version, base, mac_path, 'arm64-apple-darwin')
+                         sdcc_version, base, mac_path, 'arm64-apple-darwin',
+                         uploader=assets / 'stc-cli-0.1.0-macos-arm64.tar.gz')
         package = json.loads(win_path.read_text())['packages'][0]
         mac = json.loads(mac_path.read_text())['packages'][0]
     assert package['platforms'][0]['checksum'] == mac['platforms'][0]['checksum']

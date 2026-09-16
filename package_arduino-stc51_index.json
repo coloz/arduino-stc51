@@ -16,8 +16,8 @@
           "category": "Contributed",
           "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/arduino-stc51-0.0.1.tar.bz2",
           "archiveFileName": "arduino-stc51-0.0.1.tar.bz2",
-          "checksum": "SHA-256:2ed600650af6dbf62054c1be47b1ba1131c12102f03ab1f1bfc0946f21d9cc49",
-          "size": "247162",
+          "checksum": "SHA-256:42735797647163840ef3d56fd572082bd7805a58842476a204931e955eefa61d",
+          "size": "248065",
           "boards": [
             {
               "name": "STC32G12K128"
@@ -60,6 +60,11 @@
               "packager": "arduino-stc51",
               "name": "stcxx-frontend",
               "version": "20.1.8-stc.3"
+            },
+            {
+              "packager": "arduino-stc51",
+              "name": "stc-cli",
+              "version": "0.1.0"
             }
           ]
         }
@@ -102,6 +107,26 @@
               "archiveFileName": "stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2",
               "checksum": "SHA-256:f0850765b5edf5f667a87a8910c9581510aa30febb1e297cfc036a38acf3e77a",
               "size": "54382979"
+            }
+          ]
+        },
+        {
+          "name": "stc-cli",
+          "version": "0.1.0",
+          "systems": [
+            {
+              "host": "x86_64-mingw32",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stc-cli-0.1.0-windows-x86_64.zip",
+              "archiveFileName": "stc-cli-0.1.0-windows-x86_64.zip",
+              "checksum": "SHA-256:b51b4a59a3c6dac7b12916c519c5c061d9d91e7e2ca4a907230b18a2f27d5c45",
+              "size": "605374"
+            },
+            {
+              "host": "arm64-apple-darwin",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stc-cli-0.1.0-macos-arm64.tar.gz",
+              "archiveFileName": "stc-cli-0.1.0-macos-arm64.tar.gz",
+              "checksum": "SHA-256:05bd4f17410aa7de763796fb66d3d876693b46c3e13f2fa37a579cfc68e54897",
+              "size": "610443"
             }
           ]
         }

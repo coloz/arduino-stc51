@@ -6,7 +6,7 @@ Windows x64 使用 `toolchain-lock.windows-x86_64.json`，前端包包含五个�
 
 Apple Silicon Mac 使用 `toolchain-lock.macos-arm64.json` 和 ARM64 工具包。C++ 构建需要 Bash 4.4+、GNU coreutils 和 Python 3，可运行 `brew install bash coreutils python` 安装。驱动自动发现 `/opt/homebrew/opt/bash/bin/bash`、`/opt/homebrew/opt/coreutils/libexec/gnubin` 和 `/opt/homebrew/bin`，也支持 `STCXX_BASH`、`STCXX_COREUTILS_BIN` 覆盖路径。最低系统版本为 macOS 15，本次验证使用 macOS 15.7.1 ARM64。
 
-开发板管理器只安装 `sdcc-mcs251` 和 `stcxx-frontend` 两项工具，按 `packages/<packager>/tools/<name>/<version>` 定位。源码调试可用 `STCXX_CPP_TOOLS_ROOT` 指定已解压的前端根目录，用 `STCXX_SDCC` 指定匹配的本机 SDCC；覆盖路径仍须通过锁文件中的摘要和 ABI 检查。
+编译使用开发板管理器安装的 `sdcc-mcs251` 和 `stcxx-frontend`，按 `packages/<packager>/tools/<name>/<version>` 定位；另有原生 `stc-cli` 用于 IDE 串口上传。源码调试可用 `STCXX_CPP_TOOLS_ROOT` 指定已解压的前端根目录，用 `STCXX_SDCC` 指定匹配的本机 SDCC；覆盖路径仍须通过锁文件中的摘要和 ABI 检查。
 
 前端 `bin` 目录包含 `clang`、`llvm-link`、`opt`、`llvm-dis`、`llvm-cbe`，Windows 文件带 `.exe` 后缀。归档、工具和运行库均有摘要绑定。`verify-macos-frontend.py` 保留原文件名，同时支持两个原生宿主；动态库环境覆盖 `DYLD_*`/`LD_*` 会被拒绝。
 

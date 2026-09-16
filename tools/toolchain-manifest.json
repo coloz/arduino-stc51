@@ -59,6 +59,32 @@
           "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2"
         }
       ]
+    },
+    {
+      "id": "stc-cli",
+      "packageName": "stc-cli",
+      "version": "0.1.0",
+      "purpose": "Native serial ISP uploader for Arduino IDE and CLI",
+      "upstream": "https://github.com/coloz/stc-cli",
+      "license": "MIT; see LICENSE and THIRD_PARTY_NOTICES.md in each archive",
+      "systems": [
+        {
+          "host": "x86_64-mingw32",
+          "archiveFileName": "stc-cli-0.1.0-windows-x86_64.zip",
+          "archiveRoot": "stc-cli-0.1.0-windows-x86_64",
+          "size": 605374,
+          "sha256": "b51b4a59a3c6dac7b12916c519c5c061d9d91e7e2ca4a907230b18a2f27d5c45",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stc-cli-0.1.0-windows-x86_64.zip"
+        },
+        {
+          "host": "arm64-apple-darwin",
+          "archiveFileName": "stc-cli-0.1.0-macos-arm64.tar.gz",
+          "archiveRoot": "stc-cli-0.1.0-macos-arm64",
+          "size": 610443,
+          "sha256": "05bd4f17410aa7de763796fb66d3d876693b46c3e13f2fa37a579cfc68e54897",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stc-cli-0.1.0-macos-arm64.tar.gz"
+        }
+      ]
     }
   ]
 }

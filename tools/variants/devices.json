@@ -93,7 +93,8 @@
       "max_io": 60,
       "package_dependent": true,
       "data_quality_note": "The physical 128 KiB program Flash is 0xFE0000-0xFFFFFF and reset starts at HOME 0xFF0000. The segmented_home layout retains GSINIT0 at 0xFE0000 and HOME at 0xFF0000, placing function and read-only data sections in the available intervals around HOME. maximum_code_bytes includes startup and vector bytes and equals the complete physical program Flash. This layout requires the rebuilt SDCC/ASlink toolchain with --function-sections, --data-sections and --code-window support; historical 64 KiB firmware qualification does not establish full-Flash hardware qualification.",
-      "official_url": "https://www.stcmicro.com/cn/stc/stc32g12k128.html"
+      "official_url": "https://www.stcmicro.com/cn/stc/stc32g12k128.html",
+      "upload_requires_manual_model_check": false
     },
     {
       "id": "stc32g144k246",
@@ -197,7 +198,8 @@
       ],
       "package_dependent": true,
       "data_quality_note": "The chip has 251,904 bytes of physical user Flash at 0xFC2800-0xFFFFFF. The segmented_home layout retains GSINIT0 at 0xFC2800 and reset HOME at 0xFF0000, placing function and read-only data sections in the available intervals around HOME. maximum_code_bytes includes startup and vector bytes and equals the complete physical program Flash. This layout requires the rebuilt SDCC/ASlink toolchain with --function-sections, --data-sections and --code-window support; historical 182 KiB firmware qualification does not establish full-Flash hardware qualification. The maximum package exposes 92 logical port names on 91 physical GPIO pads because P1.3 and P1.7 share one pad. P1.2 is intentionally omitted in favor of the canonical P5.4 name for its shared pad and ADC1 channel 2. Arduino analog aliases currently expose ADC1 external channels 0 through 10 only; ADC2 and the internal reference channel are outside this variant mapping. The 256-byte DATA/IDATA compatibility window is part of EDATA and is not counted a second time. The separately mapped 4 KiB executable RAM and 5,760-byte USB endpoint FIFO are reported but are not added to the normal heap. CPU options above 48 MHz remain hidden until the PLL startup path is implemented and hardware-validated.",
-      "official_url": "https://www.stcmicro.com/stc/stc32g144k246.html"
+      "official_url": "https://www.stcmicro.com/stc/stc32g144k246.html",
+      "upload_requires_manual_model_check": true
     },
     {
       "id": "stc32g8k64",
@@ -280,7 +282,8 @@
       "max_io": 45,
       "package_dependent": true,
       "data_quality_note": "The STC32G manual section 22.1.1 maps G8K48/G8K64 ADC channel 2 to P5.4; P1.2 remains a digital GPIO. The physical 64 KiB program Flash is 0xFF0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout keeps HOME, GSINIT and ordinary code in that same high-address window.",
-      "official_url": "https://www.stcmicro.com/cn/stc/stc32g8k64.html"
+      "official_url": "https://www.stcmicro.com/cn/stc/stc32g8k64.html",
+      "upload_requires_manual_model_check": false
     },
     {
       "id": "stc32cl8k64",
@@ -370,7 +373,8 @@
       ],
       "package_dependent": true,
       "data_quality_note": "The physical 64 KiB program Flash is 0xFF0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout keeps HOME, GSINIT and ordinary code in that same high-address window. The official pinout exposes 19 logical port names on 17 physical GPIO pads: P1.4/P0.2 and P1.5/P0.3 are two package-pad aliases. The variant keeps every documented logical name and records both alias groups explicitly. STC32G manual dated 2026-09-08, sections 4.3, 11, 13, 23, 25 and 26: enable classic SPI, 6-bit hardware I2C, advanced PWM, separate pull-up controls and WTST/CKCON startup. Default SPI SS uses bonded P1.2; P1.0 and P5.2 are absent on TSSOP20.",
-      "official_url": "https://www.stcmicro.com/cn/stc/stc32cl8k64.html"
+      "official_url": "https://www.stcmicro.com/cn/stc/stc32cl8k64.html",
+      "upload_requires_manual_model_check": true
     },
     {
       "id": "ai8051u_34k64",
@@ -465,7 +469,8 @@
       ],
       "package_dependent": true,
       "data_quality_note": "Only MCS251 Source mode is supported by this platform, using the physical 64 KiB Flash window at 0xFF0000-0xFFFFFF with reset HOME at 0xFF0000. The LQFP48/QFN48 pinout exposes 46 logical port names on 45 physical GPIO pads because P4.4 and P4.5 share one package pad. P5 contains P5.0-P5.3 and P5.6-P5.7; P5.4/P5.5 are not bonded in this maximum mask.",
-      "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf"
+      "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf",
+      "upload_requires_manual_model_check": true
     },
     {
       "id": "stc32g12k64",
@@ -548,7 +553,8 @@
       "max_io": 60,
       "package_dependent": true,
       "data_quality_note": "The physical 64 KiB program Flash is 0xFF0000-0xFFFFFF and reset starts at HOME 0xFF0000. The verified ASlink layout keeps HOME, GSINIT and ordinary code in that same high-address window.",
-      "official_url": "https://www.stcmicro.com/cn/stc/stc32g12k128.html"
+      "official_url": "https://www.stcmicro.com/cn/stc/stc32g12k128.html",
+      "upload_requires_manual_model_check": true
     },
     {
       "id": "stc32g8k48",
@@ -631,7 +637,8 @@
       "max_io": 45,
       "package_dependent": true,
       "data_quality_note": "The STC32G manual section 22.1.1 maps G8K48/G8K64 ADC channel 2 to P5.4; P1.2 remains a digital GPIO. Program Flash in MCS251 Source mode is 0xFF0000-0xFFBFFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. The experimental C++11 core profile is exposed at 12 MHz; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings.",
-      "official_url": "https://www.stcmicro.com/cn/stc/stc32g8k64.html"
+      "official_url": "https://www.stcmicro.com/cn/stc/stc32g8k64.html",
+      "upload_requires_manual_model_check": false
     },
     {
       "id": "stc32cl8k48",
@@ -721,7 +728,8 @@
       ],
       "package_dependent": true,
       "data_quality_note": "Program Flash in MCS251 Source mode is 0xFF0000-0xFFBFFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. The experimental C++11 core profile is exposed at 12 MHz; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings. The 19 logical port names represent 17 physical pads; P1.4/P0.2 and P1.5/P0.3 remain physical aliases. STC32G manual dated 2026-09-08, sections 4.3, 11, 13, 23, 25 and 26: enable classic SPI, 6-bit hardware I2C, advanced PWM, separate pull-up controls and WTST/CKCON startup. Default SPI SS uses bonded P1.2; P1.0 and P5.2 are absent on TSSOP20.",
-      "official_url": "https://www.stcmicro.com/cn/stc/stc32cl8k64.html"
+      "official_url": "https://www.stcmicro.com/cn/stc/stc32cl8k64.html",
+      "upload_requires_manual_model_check": true
     },
     {
       "id": "ai8051u_34k32",
@@ -811,7 +819,8 @@
       ],
       "package_dependent": true,
       "data_quality_note": "Program Flash in MCS251 Source mode is 0xFF0000-0xFF7FFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. Only MCS251 is supported. The experimental C++11 core profile is exposed at 12 MHz; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings. The 46 logical port names represent 45 physical pads; P4.4/P4.5 remain aliases. DATA/IDATA is a compatibility view of EDATA in MCS251 mode.",
-      "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf"
+      "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf",
+      "upload_requires_manual_model_check": true
     },
     {
       "id": "ai8051u_34k16",
@@ -902,7 +911,8 @@
       ],
       "package_dependent": true,
       "data_quality_note": "Program Flash in MCS251 Source mode is 0xFF0000-0xFF3FFF; reset remains at 0xFF0000. Program size must not include the remaining EEPROM region. Only MCS251 is supported. The experimental C++11 core profile is exposed at 12 MHz using the compact workload contract; exact-QEMU qualification is tracked separately. Clock options are conservatively limited to 12 and 24 MHz and must match ISP settings. The 46 logical port names represent 45 physical pads; P4.4/P4.5 remain aliases. DATA/IDATA is a compatibility view of EDATA in MCS251 mode.",
-      "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf"
+      "official_url": "https://www.stcmicro.com/datasheet/Ai8051U_Features.pdf",
+      "upload_requires_manual_model_check": true
     }
   ]
 }

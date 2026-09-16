@@ -40,6 +40,12 @@ def main():
         windows = Path(os.environ['SYSTEMROOT'])
         env['PATH'] = os.pathsep.join(str(windows / p) for p in ('System32', '', 'System32/WindowsPowerShell/v1.0'))
         env.pop('Path', None)
+        # PowerShell 7 runners export a module path that can hide Windows
+        # PowerShell 5.1's built-in Get-FileHash. Use the native system modules.
+        for key in list(env):
+            if key.upper() == 'PSMODULEPATH':
+                env.pop(key)
+        env['PSModulePath'] = str(windows / 'System32/WindowsPowerShell/v1.0/Modules')
     else:
         env['PATH'] = '/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin'
     report = {'status': 'RUNNING', 'host': args.host, 'checks': [],
@@ -70,7 +76,7 @@ def main():
     base = 'http://127.0.0.1:' + str(server.server_port)
     index = json.loads((assets / 'package_arduino-stc51_candidate_index.json').read_text(encoding='utf-8'))
     for package in index['packages']:
-        require({t['name'] for t in package['tools']} == {'sdcc-mcs251', 'stcxx-frontend'}, 'unexpected tool dependency')
+        require({t['name'] for t in package['tools']} == {'sdcc-mcs251', 'stcxx-frontend', 'stc-cli'}, 'unexpected tool dependency')
         for entry in package['platforms'] + [s for tool in package['tools'] for s in tool['systems']]:
             entry['url'] = base + '/' + entry['archiveFileName']
     local_index = assets / ('package_arduino-stc51_' + args.host + '_index.json')
@@ -90,13 +96,17 @@ def main():
         report['platform_sha256'] = hashlib.sha256(archive.read_bytes()).hexdigest()
         report['installed_files'] = len(files)
         tools = sdk.parents[2] / 'tools'
-        require({p.name for p in tools.iterdir()} == {'sdcc-mcs251', 'stcxx-frontend'}, 'installer added an unexpected tool')
+        require({p.name for p in tools.iterdir()} == {'sdcc-mcs251', 'stcxx-frontend', 'stc-cli'}, 'installer added an unexpected tool')
+        run('upload-recipes', [sys.executable, Path(__file__).with_name('check-upload.py'),
+                               '--cli', args.cli.resolve(), '--config', config, '--sdk', sdk,
+                               '--work', work / 'upload-recipes'])
         compiler = tools / 'sdcc-mcs251/4.6.0-stc.0.0.1/bin' / ('sdcc.exe' if args.host == 'windows' else 'sdcc')
         signature = compiler.read_bytes()[:4]
         require(signature[:2] == b'MZ' if args.host == 'windows' else signature == b'\xcf\xfa\xed\xfe', 'compiler is not a native image')
         cases = [('c-full', 'stc32g12k128', 'STC32G12K128', 'Blink', False),
                  ('c-small', 'ai8051u_34k16', 'AI8051U-34K16', 'Blink', False),
                  ('cpp-full', 'stc32g144k246', 'STC32G144K246', 'Blink', True),
+                 ('cpp-ai64', 'ai8051u_34k64', 'AI8051U-34K64', 'Blink', True),
                  ('cpp-wire', 'stc32g12k128', 'STC32G12K128', 'Practical/CheckedWire', True)]
         if args.all_boards:
             devices = json.loads((sdk / 'tools/variants/devices.json').read_text(encoding='utf-8'))['devices']

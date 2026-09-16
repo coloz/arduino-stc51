@@ -25,7 +25,7 @@ arduino-cli core install arduino-stc51:mcs251@0.0.1 --additional-urls https://ra
 
 安装资源见 [v0.0.1 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.1)。本次保持版本号 0.0.1 并替换发布包；已安装旧 0.0.1 的用户也需卸载、更新索引后重新安装，并清理构建缓存。此前的 0.0.2、0.0.3 保持撤下。
 
-开发板管理器在两端都安装 `sdcc-mcs251` 和 `stcxx-frontend` 两项工具。Windows 使用系统 PowerShell 5.1、原生 `.exe` 工具及包内 Python；macOS 使用原生 ARM64 工具。C++ 前端负责 Clang → LLVM-CBE 转换，C 和 C++ 共用本机 SDCC。安装依赖已移除占位包 `stc51-native-macos-host`。
+开发板管理器在两端都安装 `sdcc-mcs251`、`stcxx-frontend` 和 `stc-cli` 三项工具。Windows 使用系统 PowerShell 5.1、原生 `.exe` 工具及包内 Python；macOS 使用原生 ARM64 工具。C++ 前端负责 Clang → LLVM-CBE 转换，C 和 C++ 共用本机 SDCC，`stc-cli` 负责串口上传。安装依赖已移除占位包 `stc51-native-macos-host`。
 
 ## 支持型号
 
@@ -74,13 +74,19 @@ ABI 使用 16 位 `int`、32 位 `long`/`size_t`/`ptrdiff_t`、24 位指针，�
 
 ## 烧录
 
-从 [v0.0.1 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.1) 下载对应系统的 `stc-cli` 烧录工具，或使用相邻 `stc-cli` 项目的源码构建。先用 `validate` 检查生成的 HEX，再按实物型号和端口烧录，例如：
+Arduino IDE 中选择实际芯片型号和串口，点击“上传”即可调用开发板管理器安装的原生 `stc-cli`。出现等待连接提示后，将芯片断电再上电以进入 ISP；默认等待 60 秒。请关闭占用该串口的串口监视器或其他程序。
+
+AI8051U、STC32CL8K48/64、STC32G12K64 和 STC32G144K246 的 ISP 当前无法提供可核验的型号 ID。核对芯片丝印和 IDE 所选型号后，在“工具 → Upload model check”选择“I checked the chip marking (ISP has no model ID)”。默认保留型号校验，不会自动绕过。STC32G12K128、STC32G8K48/64 使用自动型号校验。
+
+若仍提示 `Property 'upload.tool.serial' is undefined`，说明安装的是旧平台包。由于版本仍为 0.0.1，请卸载旧开发板包、刷新索引并重新安装，然后重启 IDE。
+
+也可从 [v0.0.1 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.1) 下载独立 `stc-cli`，先检查 HEX 再手动烧录，例如：
 
 ```powershell
 $stc = '..\stc-cli\target\release\stc-cli.exe'
 & $stc validate --expect STC32G12K128 --execution-mode mcs251 --file $build.firmware
 & $stc flash --port COM5 --expect STC32G12K128 --execution-mode mcs251 `
-    --file $build.firmware --reset manual
+    --file $build.firmware --reset manual --allow-experimental
 ```
 
 不同目标所需的实验协议参数以当前 `stc-cli` 的说明为准。支持选择执行模式的芯片应先由官方 ISP 配置为 MCS251；`stc-cli --execution-mode` 用于镜像处理，不会切换芯片硬件模式。

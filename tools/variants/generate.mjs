@@ -324,6 +324,9 @@ function loadDatabase() {
     if (typeof device.experimental !== "boolean") {
       throw new Error(`experimental must be boolean for ${device.model}`);
     }
+    if (typeof device.upload_requires_manual_model_check !== "boolean") {
+      throw new Error(`upload_requires_manual_model_check must be boolean for ${device.model}`);
+    }
     if (device.target === "mcs251" && !device.experimental) {
       throw new Error(`${device.model} uses mcs251 but is not marked experimental`);
     }
@@ -577,6 +580,7 @@ function renderBoards(devices) {
     "menu.clock=CPU clock (must match ISP configuration)",
     "menu.memory=SDCC memory model",
     "menu.cppcore=Arduino core language",
+    "menu.uploadcheck=Upload model check",
     "",
   ];
   for (const device of devices) {
@@ -606,12 +610,30 @@ function renderBoards(devices) {
         device.target === "mcs251" ? device.linker : undefined,
       )}`,
       `${board}.build.cpp_target_link_flags=${renderCppTargetLinkFlags(device, defaultTarget)}`,
+      `${board}.upload.tool=stc-cli`,
+      `${board}.upload.tool.default=stc-cli`,
+      `${board}.upload.tool.serial=stc-cli`,
+      `${board}.upload.protocol=stc-isp`,
+      `${board}.upload.disable_flushing=true`,
+      `${board}.upload.model=${device.model}`,
+      `${board}.upload.speed=115200`,
+      `${board}.upload.model_check_flags=`,
       `${board}.upload.maximum_size=${device.maximum_code_bytes}`,
       `${board}.upload.maximum_idata_size=${device.idata_bytes}`,
       `${board}.upload.maximum_xdata_size=${device.xdata_bytes}`,
       `${board}.upload.maximum_edata_size=${device.edata_bytes}`,
       "",
     );
+
+    if (device.upload_requires_manual_model_check) {
+      lines.push(
+        `${board}.menu.uploadcheck.detect=Require detected model ID (default)`,
+        `${board}.menu.uploadcheck.detect.upload.model_check_flags=`,
+        `${board}.menu.uploadcheck.manual=I checked the chip marking (ISP has no model ID)`,
+        `${board}.menu.uploadcheck.manual.upload.model_check_flags=--force-unverified-target`,
+        "",
+      );
+    }
 
     if (device.cpp_core_profile === "stc-cxx11-12mhz-experimental") {
       const heapContractFlags = renderCppHeapContractFlags(device);

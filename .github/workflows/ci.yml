@@ -105,7 +105,7 @@ jobs:
             if ($Archive.EndsWith('.zip')) {
               Expand-Archive -LiteralPath $Archive -DestinationPath $Destination
             } else {
-              tar -xjf $Archive -C $Destination
+              tar -xf $Archive -C $Destination
               if ($LASTEXITCODE -ne 0) { throw "Extraction failed for $($Tool.id)" }
             }
 
@@ -394,7 +394,7 @@ jobs:
 
             $Destination = Join-Path $Extract $Tool.id
             New-Item -ItemType Directory -Force -Path $Destination | Out-Null
-            tar -xjf $Archive -C $Destination
+            tar -xf $Archive -C $Destination
             if ($LASTEXITCODE -ne 0) { throw "Extraction failed for $($Tool.id)" }
 
             $Source = Join-Path $Destination $System.archiveRoot

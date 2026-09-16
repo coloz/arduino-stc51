@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a Mac or Linux Board Manager candidate from pinned SDK/tool archives.
+"""Create a native Windows or Mac Board Manager candidate from pinned SDK/tool archives.
 
 This creates an index for installation testing; it neither publishes assets nor
 grants release qualification. The SDK archive supplies its version and tool lock.
@@ -28,8 +28,6 @@ def sha256(path):
 
 HOSTS = {'arm64-apple-darwin': ('toolchain-lock.macos-arm64.json', 'darwin-arm64',
                                'native_package_archive_sha256', 'macos_frontend'),
-         'x86_64-pc-linux-gnu': ('toolchain-lock.json', 'linux-x86_64',
-                               'distribution_archive_sha256', 'linux_frontend'),
          'x86_64-mingw32': ('toolchain-lock.windows-x86_64.json', 'windows-x86_64',
                             'windows_package_archive_sha256', 'windows_frontend')}
 
@@ -79,7 +77,7 @@ def sdk_metadata(path, host='arm64-apple-darwin'):
         return version, lock, devices
 
 
-def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64-apple-darwin'):
+def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64-apple-darwin', *, uploader=None):
     require(host in HOSTS, 'Unsupported candidate host')
     parsed = urlsplit(base_url)
     require(parsed.scheme == 'https' or (parsed.scheme == 'http' and parsed.hostname in ('127.0.0.1', 'localhost', '::1')),
@@ -87,7 +85,14 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
     require(parsed.netloc and not parsed.query and not parsed.fragment and not parsed.username and not parsed.password,
             'Invalid asset base URL')
     require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', sdcc_version), 'Invalid SDCC tool version')
-    archives = [platform, sdcc, frontend]
+    require(uploader is not None, 'A native stc-cli upload tool archive is required')
+    manifest = json.loads((Path(__file__).resolve().parents[1] / 'tools/toolchain-manifest.json').read_text(encoding='utf-8'))
+    uploader_tool = next(t for t in manifest['tools'] if t['id'] == 'stc-cli')
+    uploader_system = next(s for s in uploader_tool['systems'] if s['host'] == host)
+    require(uploader.name == uploader_system['archiveFileName'] and
+            uploader.stat().st_size == uploader_system['size'] and
+            sha256(uploader) == uploader_system['sha256'], 'Uploader differs from its pinned native archive')
+    archives = [platform, sdcc, frontend, uploader]
     require(len({p.name for p in archives}) == len(archives), 'Archive filenames must be distinct')
     require(all(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', p.name) for p in archives), 'Unsafe archive filename')
     require(not output.exists() and not output.is_symlink(), 'Output index already exists')
@@ -109,6 +114,8 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
 
     dependencies = [{'packager': 'arduino-stc51', 'name': 'sdcc-mcs251', 'version': sdcc_version}, binding]
     tool_assets = [('sdcc-mcs251', sdcc_version, sdcc), (binding['name'], binding['version'], frontend)]
+    dependencies.append({'packager': 'arduino-stc51', 'name': 'stc-cli', 'version': uploader_tool['version']})
+    tool_assets.append(('stc-cli', uploader_tool['version'], uploader))
     package = {'name': 'arduino-stc51', 'maintainer': 'arduino-stc51 contributors',
                'websiteURL': 'https://github.com/coloz/arduino-stc51', 'email': '',
                'help': {'online': 'https://github.com/coloz/arduino-stc51/issues'},
@@ -128,14 +135,15 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('platform', 'sdcc', 'frontend', 'output'):
+    for name in ('platform', 'sdcc', 'frontend', 'uploader', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--sdcc-version', required=True)
     parser.add_argument('--base-url', required=True)
     parser.add_argument('--host', choices=sorted(HOSTS), default='arm64-apple-darwin')
     args = parser.parse_args()
     try:
-        result = create(args.platform, args.sdcc, args.frontend, args.sdcc_version, args.base_url, args.output, args.host)
+        result = create(args.platform, args.sdcc, args.frontend, args.sdcc_version, args.base_url, args.output, args.host,
+                        uploader=args.uploader)
     except (ValueError, OSError, KeyError, tarfile.TarError) as error:
         parser.exit(2, str(error) + '\n')
     print(json.dumps(result))

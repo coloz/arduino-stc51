@@ -103,7 +103,7 @@ foreach ($Tool in $Manifest.tools) {
     if ($Archive.EndsWith('.zip', [StringComparison]::OrdinalIgnoreCase)) {
         Expand-Archive -LiteralPath $Archive -DestinationPath $ToolExtract
     } else {
-        & tar -xjf $Archive -C $ToolExtract
+        & tar -xf $Archive -C $ToolExtract
         Assert-ExitCode "$($Tool.id) extraction"
     }
     Copy-Item -Recurse -Force (Join-Path $ToolExtract "$($System.archiveRoot)/*") -Destination $ToolTarget

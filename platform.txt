@@ -87,5 +87,10 @@ recipe.preproc.includes="{compiler.shell.cmd}" {compiler.shell.args} {compiler.w
 preproc.macros.flags=-E -dM
 recipe.preproc.macros="{compiler.shell.cmd}" {compiler.shell.args} {compiler.wrapper.compile} "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{preprocessed_file_path}" re12 {preproc.macros.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
 
-# STC's current AiCube-ISP is intentionally not bundled or automated. Export
-# the compiled HEX and program it with the verified version in sdk/manifest.json.
+# The IDE's Upload action uses the host-native programmer installed by Boards Manager.
+tools.stc-cli.path={runtime.tools.stc-cli.path}
+tools.stc-cli.cmd.path={path}/stc-cli
+tools.stc-cli.cmd.path.windows={path}/stc-cli.exe
+tools.stc-cli.upload.params.verbose=--debug
+tools.stc-cli.upload.params.quiet=
+tools.stc-cli.upload.pattern="{cmd.path}" flash --port "{serial.port}" --expect "{upload.model}" --file "{build.path}/{build.project_name}.hex" --execution-mode mcs251 --allow-experimental {upload.model_check_flags} --reset manual --baud {upload.speed} --wait 60 {upload.verbose}
