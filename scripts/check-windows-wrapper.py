@@ -154,7 +154,12 @@ def main():
         env['STCXX_CPP_TOOLS_ROOT'] = str(frontend)
         cpp_flags = ['-DSTCXX_CPP_CORE=1', *flags]
         invoke('native C++ argv', 'compile', executable, merged, obj, 're2', *cpp_flags)
-        assert argv()[:6] == ['-I', '-B', str(driver), 'compile-cpp', str(merged), str(obj)]
+        native_argv = argv()
+        assert native_argv[:2] == ['-I', '-B'], native_argv
+        # PowerShell resolves PSScriptRoot to its long path. CI TEMP may use
+        # an equivalent 8.3 path (RUNNER~1); compare the driver's file identity.
+        assert Path(native_argv[2]).resolve() == driver.resolve(), native_argv
+        assert native_argv[3:6] == ['compile-cpp', str(merged), str(obj)], native_argv
         assert (work / 'argv.bin.payload').read_bytes().decode().split('\0')[:-1] == cpp_flags
         assert not list(work.glob('*.stcxx-arguments-*'))
         invoke('native C++ failure', 'compile', executable, merged, obj, 're2', *cpp_flags, '-DFAIL=1', status=23)
