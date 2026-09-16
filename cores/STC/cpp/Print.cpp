@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include "Print.h"
 
@@ -265,5 +264,3 @@ size_t Print::printFloat(double value, uint8_t digits)
     }
     return written;
 }
-
-#endif /* STCXX_CPP_CORE */

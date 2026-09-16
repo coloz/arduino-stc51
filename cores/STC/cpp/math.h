@@ -72,6 +72,8 @@ double ceil(double value) STCXX_MATH_FLOAT_SYMBOL(ceil);
 double fabs(double value) STCXX_MATH_FLOAT_SYMBOL(fabs);
 double floor(double value) STCXX_MATH_FLOAT_SYMBOL(floor);
 double fmod(double numerator, double denominator) STCXX_MATH_FLOAT_SYMBOL(fmod);
+double fmin(double x, double y) STCXX_MATH_FLOAT_SYMBOL(fmin);
+double fmax(double x, double y) STCXX_MATH_FLOAT_SYMBOL(fmax);
 double round(double value) STCXX_MATH_FLOAT_SYMBOL(round);
 double trunc(double value) STCXX_MATH_FLOAT_SYMBOL(trunc);
 
@@ -97,6 +99,8 @@ float ceilf(float value);
 float fabsf(float value);
 float floorf(float value);
 float fmodf(float numerator, float denominator);
+float fminf(float x, float y);
+float fmaxf(float x, float y);
 float roundf(float value);
 float truncf(float value);
 

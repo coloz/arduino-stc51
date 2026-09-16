@@ -5,7 +5,7 @@
  * explicit: without a portable pin-change interrupt across the supported STC
  * families, poll()/available()/read() must observe the start bit in time.
  */
-#include "SoftwareSerial.h"
+#include "SoftwareSerial_backend.h"
 #include "stc_sfr.h"
 
 #if defined(STC_XDATA_BYTES) && (STC_XDATA_BYTES > 0)
@@ -22,7 +22,6 @@ static uint8_t software_serial_rx_mask;
 static uint8_t software_serial_tx_mask;
 static unsigned int software_serial_bit_period_us;
 static unsigned int software_serial_half_period_us;
-static unsigned long software_serial_baud;
 static uint8_t software_serial_inverse;
 static uint8_t software_serial_started;
 static uint8_t software_serial_listening;
@@ -235,8 +234,7 @@ static uint8_t software_serial_period_for_baud(unsigned long baud,
     return 1u;
 }
 
-static void software_serial_start_validated(unsigned long baud,
-                                             unsigned int period)
+static void software_serial_start_validated(unsigned int period)
 {
     if (software_serial_started != 0u) {
         SoftwareSerial_end();
@@ -244,7 +242,6 @@ static void software_serial_start_validated(unsigned long baud,
 
     software_serial_bit_period_us = period;
     software_serial_half_period_us = (unsigned int)((period + 1u) / 2u);
-    software_serial_baud = baud;
     software_serial_rx_port = digitalPinToPort(software_serial_rx_pin);
     software_serial_tx_port = digitalPinToPort(software_serial_tx_pin);
     software_serial_rx_mask = digitalPinToBitMask(software_serial_rx_pin);
@@ -262,64 +259,6 @@ static void software_serial_start_validated(unsigned long baud,
     software_serial_reset_receive();
     software_serial_started = 1u;
     software_serial_listening = 1u;
-}
-
-bool SoftwareSerial_setPins(uint8_t receive_pin,
-                            uint8_t transmit_pin) STC_SOFTWARE_SERIAL_REENTRANT
-{
-    uint8_t restart = software_serial_started;
-    unsigned long baud = software_serial_baud;
-
-    if (software_serial_pins_are_valid(receive_pin, transmit_pin) == 0u) {
-        return false;
-    }
-    if ((receive_pin == software_serial_rx_pin) &&
-        (transmit_pin == software_serial_tx_pin)) {
-        return true;
-    }
-    if (restart != 0u) {
-        SoftwareSerial_end();
-    }
-    software_serial_rx_pin = receive_pin;
-    software_serial_tx_pin = transmit_pin;
-    if (restart != 0u) {
-        return SoftwareSerial_begin(baud);
-    }
-    return true;
-}
-
-bool SoftwareSerial_setInverseLogic(bool inverse_logic)
-{
-    uint8_t requested_inverse = inverse_logic ? 1u : 0u;
-    uint8_t restart = software_serial_started;
-    unsigned long baud = software_serial_baud;
-
-    if (requested_inverse == software_serial_inverse) {
-        return true;
-    }
-    if (restart != 0u) {
-        SoftwareSerial_end();
-    }
-    software_serial_inverse = requested_inverse;
-    if (restart != 0u) {
-        return SoftwareSerial_begin(baud);
-    }
-    return true;
-}
-
-bool SoftwareSerial_begin(unsigned long baud)
-{
-    unsigned int rounded_period;
-
-    if ((software_serial_pins_are_valid(software_serial_rx_pin,
-                                        software_serial_tx_pin) == 0u) ||
-        (software_serial_timer_ready() == 0u) ||
-        (software_serial_period_for_baud(baud, &rounded_period) == 0u)) {
-        return false;
-    }
-
-    software_serial_start_validated(baud, rounded_period);
-    return true;
 }
 
 bool SoftwareSerial_beginOnPins(uint8_t receive_pin, uint8_t transmit_pin,
@@ -341,7 +280,7 @@ bool SoftwareSerial_beginOnPins(uint8_t receive_pin, uint8_t transmit_pin,
     software_serial_rx_pin = receive_pin;
     software_serial_tx_pin = transmit_pin;
     software_serial_inverse = inverse_logic ? 1u : 0u;
-    software_serial_start_validated(baud, period);
+    software_serial_start_validated(period);
     return true;
 }
 
@@ -495,26 +434,6 @@ int SoftwareSerial_read(void)
     return (int)value;
 }
 
-size_t SoftwareSerial_readBytes(void *buffer,
-                                size_t length) STC_SOFTWARE_SERIAL_REENTRANT
-{
-    uint8_t *bytes = (uint8_t *)buffer;
-    size_t count = 0u;
-    int value;
-
-    if (buffer == NULL) {
-        return 0u;
-    }
-    while (count < length) {
-        value = SoftwareSerial_read();
-        if (value < 0) {
-            break;
-        }
-        bytes[count++] = (uint8_t)value;
-    }
-    return count;
-}
-
 size_t SoftwareSerial_write(uint8_t value)
 {
     unsigned long deadline;
@@ -553,24 +472,6 @@ size_t SoftwareSerial_write(uint8_t value)
     return 1u;
 }
 
-size_t SoftwareSerial_writeBuffer(const void *buffer,
-                                  size_t length) STC_SOFTWARE_SERIAL_REENTRANT
-{
-    const uint8_t *bytes = (const uint8_t *)buffer;
-    size_t count = 0u;
-
-    if (buffer == NULL) {
-        return 0u;
-    }
-    while (count < length) {
-        if (SoftwareSerial_write(bytes[count]) == 0u) {
-            break;
-        }
-        ++count;
-    }
-    return count;
-}
-
 void SoftwareSerial_flush(void)
 {
     /* Transmission is synchronous, so there is nothing pending to flush. */
@@ -599,53 +500,3 @@ bool SoftwareSerial_timingError(void)
     software_serial_timing_error = 0u;
     return (result != 0u);
 }
-
-size_t SoftwareSerial_print(const char *text)
-{
-    size_t count = 0u;
-
-    if (text == NULL) {
-        return 0u;
-    }
-    while (*text != '\0') {
-        if (SoftwareSerial_write((uint8_t)*text) == 0u) {
-            break;
-        }
-        ++text;
-        ++count;
-    }
-    return count;
-}
-
-size_t SoftwareSerial_println(const char *text)
-{
-    size_t count = SoftwareSerial_print(text);
-
-    count += SoftwareSerial_write((uint8_t)'\r');
-    count += SoftwareSerial_write((uint8_t)'\n');
-    return count;
-}
-
-STC_SOFTWARE_SERIAL_CODE const STCSoftwareSerialClass SoftwareSerial = {
-    SoftwareSerial_setPins,
-    SoftwareSerial_setInverseLogic,
-    SoftwareSerial_begin,
-    SoftwareSerial_end,
-    SoftwareSerial_listen,
-    SoftwareSerial_stopListening,
-    SoftwareSerial_isListening,
-    SoftwareSerial_poll,
-    SoftwareSerial_available,
-    SoftwareSerial_availableForWrite,
-    SoftwareSerial_peek,
-    SoftwareSerial_read,
-    SoftwareSerial_readBytes,
-    SoftwareSerial_write,
-    SoftwareSerial_writeBuffer,
-    SoftwareSerial_flush,
-    SoftwareSerial_overflow,
-    SoftwareSerial_framingError,
-    SoftwareSerial_timingError,
-    SoftwareSerial_print,
-    SoftwareSerial_println
-};

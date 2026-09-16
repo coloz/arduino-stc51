@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include <cpp/WireClass.h>
 #include <cpp/stc_c_hal.h>
@@ -113,5 +112,3 @@ int TwoWire::peek()
 {
     return Wire_peek();
 }
-
-#endif /* STCXX_CPP_CORE */

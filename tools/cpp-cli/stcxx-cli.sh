@@ -482,7 +482,8 @@ prepare_clang() {
     # GPIO path) and redundant function-type qualifiers visible, but do not
     # misclassify them as C++ language errors. No SDCC/ABI warning gate is
     # relaxed; peripheral timing still needs a separate behavioral test.
-    -Wno-error=cpp -Wno-error=ignored-qualifiers
+    -Wno-error=cpp -Wno-error=ignored-qualifiers -Wno-error=non-c-typedef-for-linkage
+    -Wno-error=implicit-const-int-float-conversion
   )
 }
 

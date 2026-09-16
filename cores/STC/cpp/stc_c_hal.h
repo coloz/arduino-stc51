@@ -26,7 +26,6 @@ int Serial_available(void);
 int Serial_availableForWrite(void);
 int Serial_peek(void);
 int Serial_read(void);
-size_t Serial_readBytes(void *buffer, size_t length) STCXX_HAL_REENTRANT;
 size_t Serial_write(uint8_t value);
 void Serial_flush(void);
 bool Serial_overflow(void);

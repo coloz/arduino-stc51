@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include <cpp/SPIClass.h>
 #include <cpp/stc_c_hal.h>
@@ -145,5 +144,3 @@ void SPIClass::setClockDivider(uint8_t clockDivider)
     SPI_setSettings((unsigned long)currentClock, currentBitOrder,
                     currentDataMode);
 }
-
-#endif /* STCXX_CPP_CORE */

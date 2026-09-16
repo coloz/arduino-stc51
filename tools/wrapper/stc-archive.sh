@@ -20,8 +20,7 @@ fi
 # heap.  Keep that object out of the core archive: ASlink diagnoses duplicate
 # public symbols while indexing core.lib and libsdcc.lib even when it ultimately
 # extracts only the override.  The C++ link wrapper validates this exact object
-# and places it explicitly before core.lib; plain-C links omit it and retain
-# SDCC's normal heap implementation on demand.
+# and places it explicitly before core.lib.
 case "$REL" in
     */stcxx_heap.c.rel|*\\stcxx_heap.c.rel|stcxx_heap.c.rel)
         case "$ARCHIVE" in

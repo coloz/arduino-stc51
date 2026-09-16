@@ -62,11 +62,6 @@ private:
     bool _configurationError;
 };
 
-/*
- * This is a real polymorphic C++ object.  A C++ build must omit
- * HardwareSerial_object.c, whose legacy C facade intentionally owns the same
- * source-level name in C-only profiles.
- */
 extern HardwareSerial Serial;
 
 #endif

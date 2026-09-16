@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include "IPAddress.h"
 
@@ -340,5 +339,3 @@ size_t IPAddress::printTo(Print &output) const
 
 const IPAddress IN6ADDR_ANY(IPv6);
 const IPAddress INADDR_NONE(0u, 0u, 0u, 0u);
-
-#endif

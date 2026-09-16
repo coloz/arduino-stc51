@@ -95,25 +95,6 @@ int Serial_read(void)
 #endif
 }
 
-size_t Serial_readBytes(void *buffer, size_t length) __reentrant
-{
-    uint8_t *destination = (uint8_t *)buffer;
-    size_t count = 0u;
-    int value;
-
-    if (destination == (uint8_t *)0) {
-        return 0u;
-    }
-    while (count < length) {
-        value = Serial_read();
-        if (value < 0) {
-            break;
-        }
-        destination[count++] = (uint8_t)value;
-    }
-    return count;
-}
-
 bool Serial_overflow(void)
 {
 #if STC_CORE_HAS_UART1 && STC_CORE_SERIAL_BUFFERED_RX

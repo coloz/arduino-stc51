@@ -77,61 +77,6 @@ def main():
         def argv():
             return (work / 'argv.bin').read_bytes().decode('utf-8').split('\0')[:-1]
 
-        c_source = work / 'input.c'
-        c_source.write_text('int main(void) { return 0; }\n')
-        obj = work / 'input.c.o'
-        flags = ['-c', r'-ID:\path with spaces\include', '-DNAME="quoted value"',
-                 '-DURL=scheme:value', '-DLITERAL=$(text);&|%!', r'-DTRAIL=C:\folder' + chr(92)]
-        result = invoke('argv and streams', 'compile', executable, c_source, obj, 're1', *flags)
-        assert argv() == flags + [str(c_source), '-o', str(obj)], argv()
-        assert b'fixture stdout' in result.stdout and b'fixture stderr' in result.stderr
-        assert obj.read_bytes() == obj.with_suffix('.rel').read_bytes()
-        obj.unlink()
-        obj.with_suffix('.rel').unlink()
-        invoke('compiler failure', 'compile', executable, c_source, obj, 're1', '-DFAIL=1', status=23)
-        assert not obj.exists() and not obj.with_suffix('.rel').exists()
-        invoke('removed target', 'compile', executable, c_source, obj, 're1', '-mmcs51', status=4)
-
-        merged = work / 'sketch.ino.cpp.merged'
-        merged.write_text('#include <Arduino.h>\n')
-        dependency = work / 'dependency output.d'
-        # Match Arduino's unquoted -MF behavior at the outer process boundary.
-        invoke('null output discovery', 'compile', executable, merged, 'nul', 're12', '-E', '-MMD',
-               '-MF', *str(dependency).split(' '))
-        assert dependency.read_text() == 'fixture dependency'
-        assert argv() == ['-E', '-MMD', '-x', 'c', str(merged)]
-        assert not (work / 'nul.d').exists()
-
-        rel = work / 'member.c.rel'
-        rel.write_text('member')
-        archive = work / 'core.a'
-        invoke('archive member', 'archive', executable, archive, rel.with_suffix('.o'), 'rcs')
-        assert archive.read_bytes() == archive.with_suffix('.lib').read_bytes()
-        heap = work / 'stcxx_heap.c.rel'
-        heap.write_text('heap')
-        before = archive.read_bytes()
-        invoke('heap exclusion', 'archive', executable, archive, heap.with_suffix('.o'), 'rcs')
-        assert archive.read_bytes() == before
-        invoke('wrong heap archive', 'archive', executable, work / 'other.a', heap, 'rcs', status=4)
-        invoke('missing object', 'archive', executable, archive, work / 'missing.o', 'rcs', status=4)
-        archive.with_suffix('.lib').write_text('stale cached archive')
-        firmware = work / 'output.hex'
-        invoke('cached archive refresh', 'link', executable, rel.with_suffix('.o'), archive, '-o', firmware)
-        assert archive.with_suffix('.lib').read_bytes() == before
-        assert argv() == [str(rel), str(archive.with_suffix('.lib')), '-o', str(firmware)]
-        invoke('link failure', 'link', executable, '-DFAIL=1', status=23)
-
-        memory = work / 'image.mem'
-        memory.write_text('Stack starts at: 0x20\nPAGED EXT. RAM 0x0 0x5 6\nEXTERNAL RAM 0x0 0x9 10\nROM/EPROM/FLASH 0x0 0xff 256\n')
-        result = invoke('memory size', 'size', memory)
-        assert b'\r' not in result.stdout
-        assert result.stdout.decode().splitlines() == ['STC_PROGRAM_BYTES 256', 'STC_RAM_BYTES 48']
-        memory.write_text('0x00:|R|R| |\nNo clue at where the stack begins and ends!\nROM/EPROM/FLASH 0x0 0xff 256\n')
-        result = invoke('dynamic stack', 'size', memory)
-        assert result.stdout.decode().splitlines() == ['STC_PROGRAM_BYTES 256', 'STC_RAM_BYTES 2']
-        memory.write_text('unrecognized report\n')
-        invoke('bad memory report', 'size', memory, status=4)
-
         # Verify the actual C++ dispatch uses a native process, an isolated
         # interpreter and lossless argument files, including failure cleanup.
         platform = work / 'platform'
@@ -152,7 +97,68 @@ def main():
         lock_path = driver.with_name('toolchain-lock.windows-x86_64.json')
         lock_path.write_text(json.dumps(lock))
         env['STCXX_CPP_TOOLS_ROOT'] = str(frontend)
-        cpp_flags = ['-DSTCXX_CPP_CORE=1', *flags]
+
+        c_source = work / 'input.c'
+        c_source.write_text('int main(void) { return 0; }\n')
+        obj = work / 'input.c.o'
+        flags = ['-c', r'-ID:\path with spaces\include', '-DNAME="quoted value"',
+                 '-DURL=scheme:value', '-DLITERAL=$(text);&|%!', r'-DTRAIL=C:\folder' + chr(92)]
+        result = invoke('C hardware driver dispatch', 'compile', executable, c_source, obj, 're1', *flags)
+        assert argv()[3:6] == ['compile-c', str(c_source), str(obj)], argv()
+        assert (work / 'argv.bin.payload').read_bytes().decode().split('\0')[:-1] == flags
+        assert b'fixture stdout' in result.stdout and b'fixture stderr' in result.stderr
+        invoke('compiler failure', 'compile', executable, c_source, obj, 're1', '-DFAIL=1', status=23)
+        assert not obj.exists() and not obj.with_suffix('.rel').exists()
+        invoke('removed target', 'compile', executable, c_source, obj, 're1', '-mmcs51', status=4)
+
+        merged = work / 'sketch.ino.cpp.merged'
+        merged.write_text('#include <Arduino.h>\n')
+        dependency = work / 'dependency output.d'
+        # Match Arduino's unquoted -MF behavior at the outer process boundary.
+        invoke('null output discovery', 'compile', executable, c_source, 'nul', 're12', '-E', '-MMD',
+               '-MF', *str(dependency).split(' '))
+        assert dependency.read_text() == 'fixture dependency'
+        assert argv() == ['-E', '-MMD', '-x', 'c', str(c_source)]
+        assert not (work / 'nul.d').exists()
+        invoke('replace existing dependency atomically', 'compile', executable, c_source, 'nul', 're12',
+               '-E', '-MMD', '-MF', *str(dependency).split(' '))
+        assert dependency.read_text() == 'fixture dependency'
+        invoke('failed discovery preserves existing dependency', 'compile', executable, c_source, 'nul', 're12',
+               '-E', '-DFAIL=1', '-MMD', '-MF', *str(dependency).split(' '), status=23)
+        assert dependency.read_text() == 'fixture dependency'
+        assert not list(work.glob('*.tmp-*'))
+
+        rel = work / 'member.c.rel'
+        rel.write_text('member')
+        archive = work / 'core.a'
+        invoke('archive member', 'archive', executable, archive, rel.with_suffix('.o'), 'rcs')
+        assert archive.read_bytes() == archive.with_suffix('.lib').read_bytes()
+        heap = work / 'stcxx_heap.c.rel'
+        heap.write_text('heap')
+        before = archive.read_bytes()
+        invoke('heap exclusion', 'archive', executable, archive, heap.with_suffix('.o'), 'rcs')
+        assert archive.read_bytes() == before
+        invoke('wrong heap archive', 'archive', executable, work / 'other.a', heap, 'rcs', status=4)
+        invoke('missing object', 'archive', executable, archive, work / 'missing.o', 'rcs', status=4)
+        firmware = work / 'output.hex'
+        invoke('native link dispatch', 'link', executable, rel.with_suffix('.o'), archive, '-o', firmware)
+        assert argv()[3:6] == ['link', '-', str(firmware)]
+        assert (work / 'argv.bin.payload').read_bytes().decode().split('\0')[:-1] == [str(rel.with_suffix('.o')), str(archive), '-o', str(firmware)]
+        invoke('link failure', 'link', executable, '-DFAIL=1', '-o', firmware, status=23)
+        invoke('missing link output', 'link', executable, status=4)
+
+        memory = work / 'image.mem'
+        memory.write_text('Stack starts at: 0x20\nPAGED EXT. RAM 0x0 0x5 6\nEXTERNAL RAM 0x0 0x9 10\nROM/EPROM/FLASH 0x0 0xff 256\n')
+        result = invoke('memory size', 'size', memory)
+        assert b'\r' not in result.stdout
+        assert result.stdout.decode().splitlines() == ['STC_PROGRAM_BYTES 256', 'STC_RAM_BYTES 48']
+        memory.write_text('0x00:|R|R| |\nNo clue at where the stack begins and ends!\nROM/EPROM/FLASH 0x0 0xff 256\n')
+        result = invoke('dynamic stack', 'size', memory)
+        assert result.stdout.decode().splitlines() == ['STC_PROGRAM_BYTES 256', 'STC_RAM_BYTES 2']
+        memory.write_text('unrecognized report\n')
+        invoke('bad memory report', 'size', memory, status=4)
+
+        cpp_flags = flags  # Dispatch must not depend on an optional language flag.
         invoke('native C++ argv', 'compile', executable, merged, obj, 're2', *cpp_flags)
         native_argv = argv()
         assert native_argv[:2] == ['-I', '-B'], native_argv
@@ -162,6 +168,10 @@ def main():
         assert native_argv[3:6] == ['compile-cpp', str(merged), str(obj)], native_argv
         assert (work / 'argv.bin.payload').read_bytes().decode().split('\0')[:-1] == cpp_flags
         assert not list(work.glob('*.stcxx-arguments-*'))
+        for mark, mode in [('re11', 'preprocess-deps'), ('re12', 'preprocess-macros')]:
+            invoke('C++ discovery ' + mark, 'compile', executable, merged, 'nul', mark, *cpp_flags)
+            assert argv()[3:6] == [mode, str(merged), 'nul']
+        invoke('unsupported input', 'compile', executable, work / 'input.txt', obj, 're2', status=4)
         invoke('native C++ failure', 'compile', executable, merged, obj, 're2', *cpp_flags, '-DFAIL=1', status=23)
         assert not list(work.glob('*.stcxx-arguments-*'))
         lock['windows_frontend']['bootstrap_files']['python/python.exe'] = '0' * 64

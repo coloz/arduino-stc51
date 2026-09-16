@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include <stdint.h>
 
@@ -56,6 +55,28 @@ static void stcxx_normalize_finite(uint32_t magnitude,
 }
 
 } // namespace
+
+extern "C" float fminf(float x, float y)
+{
+    const uint32_t xb = stcxx_float_bits(x);
+    const uint32_t yb = stcxx_float_bits(y);
+    if ((xb & UINT32_C(0x7fffffff)) > UINT32_C(0x7f800000)) return y;
+    if ((yb & UINT32_C(0x7fffffff)) > UINT32_C(0x7f800000)) return x;
+    if (((xb | yb) & UINT32_C(0x7fffffff)) == 0u)
+        return stcxx_float_from_bits(xb | yb); // min(+0,-0) is -0
+    return x < y ? x : y;
+}
+
+extern "C" float fmaxf(float x, float y)
+{
+    const uint32_t xb = stcxx_float_bits(x);
+    const uint32_t yb = stcxx_float_bits(y);
+    if ((xb & UINT32_C(0x7fffffff)) > UINT32_C(0x7f800000)) return y;
+    if ((yb & UINT32_C(0x7fffffff)) > UINT32_C(0x7f800000)) return x;
+    if (((xb | yb) & UINT32_C(0x7fffffff)) == 0u)
+        return stcxx_float_from_bits(xb & yb); // max(+0,-0) is +0
+    return x > y ? x : y;
+}
 
 extern "C" float fmodf(float numerator, float denominator)
 {
@@ -183,7 +204,3 @@ extern "C" float truncf(float value)
     magnitude &= ~fractional_mask;
     return stcxx_float_from_bits(sign | magnitude);
 }
-
-#else
-typedef unsigned char stcxx_math_disabled_translation_unit_t;
-#endif /* STCXX_CPP_CORE */

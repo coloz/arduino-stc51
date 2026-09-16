@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 #if !defined(__SDCC_mcs251)
 # error "The STC C++ native runtime requires SDCC MCS251"
 #endif
@@ -53,5 +52,3 @@ char *__stcxx_libc_strrchr(const char *text, int value)
   unsigned char byte = (unsigned char)value;
   return strrchr(text, byte);
 }
-
-#endif

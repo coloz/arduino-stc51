@@ -1,9 +1,7 @@
 #include "Arduino.h"
 
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
-# include "cpp/stcxx_runtime.h"
+#include "cpp/stcxx_runtime.h"
 void __stcxx_heap_init(void);
-#endif
 
 /*
  * SDCC emits the interrupt vector table from declarations visible in the
@@ -27,7 +25,6 @@ void stc_uart1_isr(void) __interrupt (4);
 
 int main(void)
 {
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
     /*
      * SDCC startup has already initialized .data/.bss before entering main.
      * Initialize the board-sized XDATA heap before constructors because a
@@ -36,7 +33,6 @@ int main(void)
      */
     __stcxx_heap_init();
     __stcxx_run_global_ctors();
-#endif
     init();
     initVariant();
     setup();

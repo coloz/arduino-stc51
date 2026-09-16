@@ -2,13 +2,11 @@
  * SPDX-License-Identifier: MIT
  *
  * Clean-room SPI SD-card and FAT16/FAT32 implementation for the
- * arduino-stc51 plain-C core. No code from Arduino's C++ SD/SdFat stack is used.
+ * arduino-stc51 C++ core. No code from Arduino's C++ SD/SdFat stack is used.
  */
-#include "SD.h"
+#include "SD_backend.h"
 
-/* Use the native SPI_* entry points below, not the C SPI function table.
- * In a mixed C/C++ build the public SPI symbol belongs to SPIClass, whose
- * object representation is not a STCSPIClass function-pointer table. */
+/* The C hardware backend calls the native SPI_* entry points. */
 
 #if defined(__SDCC)
 # define STC_SD_XDATA __xdata
@@ -2413,33 +2411,3 @@ uint8_t SD_rmdir(const char *name) STC_SD_REENTRANT
     sd_set_error(SD_ERROR_UNSUPPORTED);
     return 0u;
 }
-
-#if !defined(STCXX_CPP_CORE) || !STCXX_CPP_CORE
-STC_SD_CODE const STCSDClass SD = {
-    SD_setPins,
-    SD_begin,
-    SD_beginDefault,
-    SD_end,
-    SD_cardType,
-    SD_fatType,
-    SD_error,
-    SD_readBlock,
-    SD_writeBlock,
-    SD_exists,
-    SD_open,
-    SD_write,
-    SD_writeBytes,
-    SD_read,
-    SD_readBytes,
-    SD_peek,
-    SD_available,
-    SD_seek,
-    SD_position,
-    SD_size,
-    SD_flush,
-    SD_close,
-    SD_remove,
-    SD_mkdir,
-    SD_rmdir
-};
-#endif

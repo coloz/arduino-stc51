@@ -1,0 +1,11 @@
+{
+  "upstream": "https://github.com/adafruit/Adafruit_NeoPixel",
+  "version": "1.15.5",
+  "port_version": "1.15.5-stc.1",
+  "upstream_file_sha256": {
+    "Adafruit_NeoPixel.cpp": "96600c063012af338f0b9cd749bd2b08df19c4b298dd3f950904e3b3c0766793",
+    "Adafruit_NeoPixel.h": "25a8279dcaa27519c92726fe3dcced0e452ec7c2786c303f3e18cc82028e59f4",
+    "COPYING": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+    "keywords.txt": "371be950a33e02a8decf5ec12b33daf52270111eb7a57d15fe971b27a534d6ca"
+  }
+}

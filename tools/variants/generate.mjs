@@ -330,20 +330,14 @@ function loadDatabase() {
     if (device.target === "mcs251" && !device.experimental) {
       throw new Error(`${device.model} uses mcs251 but is not marked experimental`);
     }
-    if (device.cpp_core_profile !== undefined &&
-        (device.cpp_core_profile !== "stc-cxx11-12mhz-experimental" ||
-         !device.clock_options_hz.includes(12000000))) {
-      throw new Error(`invalid C++ core profile for ${device.model}`);
+    if (device.cpp_core_profile !== "stc-cxx11-12mhz-experimental") {
+      throw new Error(`missing or invalid C++ core profile for ${device.model}`);
     }
-    const additionalCppClock = device.id === "ai8051u_34k64" ? 40000000 :
-      device.id === "stc32g144k246" ? 48000000 : null;
-    if (device.cpp_mcs251_clock_options_hz !== undefined &&
-        (additionalCppClock === null ||
-         device.cpp_core_profile !== "stc-cxx11-12mhz-experimental" ||
-         JSON.stringify(device.cpp_mcs251_clock_options_hz) !==
-           JSON.stringify([12000000, additionalCppClock]) ||
-         !device.clock_options_hz.includes(additionalCppClock))) {
-      throw new Error(`invalid additional MCS251 C++ clocks for ${device.model}`);
+    const supportedClocks = device.id === "ai8051u_34k64" ? [12000000, 40000000] :
+      device.id === "stc32g144k246" ? [12000000, 48000000] : [12000000];
+    if (JSON.stringify(device.clock_options_hz) !== JSON.stringify(supportedClocks) ||
+        device.default_clock_hz !== 12000000) {
+      throw new Error(`invalid C++ clocks or default for ${device.model}`);
     }
     if (device.rank !== undefined) requireInteger(device, "rank", 1);
     for (const field of ["flash_bytes", "maximum_code_bytes", "idata_bytes", "xdata_bytes", "edata_bytes", "max_io", "default_clock_hz"]) {
@@ -579,7 +573,6 @@ function renderBoards(devices) {
     "",
     "menu.clock=CPU clock (must match ISP configuration)",
     "menu.memory=SDCC memory model",
-    "menu.cppcore=Arduino core language",
     "menu.uploadcheck=Upload model check",
     "menu.uploadtransport=Upload method",
     "",
@@ -652,22 +645,13 @@ function renderBoards(devices) {
       );
     }
 
-    if (device.cpp_core_profile === "stc-cxx11-12mhz-experimental") {
-      const heapContractFlags = renderCppHeapContractFlags(device);
-      const cppClocks = device.id === "stc32g144k246" ? "12/48 MHz, MCS251" :
-        device.cpp_mcs251_clock_options_hz?.includes(40000000)
-          ? "12/40 MHz, MCS251" : "12 MHz only";
-      lines.push(
-        `${board}.menu.cppcore.plain=Plain C (default)`,
-        `${board}.menu.cppcore.plain.build.cpp_core_flags=`,
-        `${board}.menu.cppcore.plain.build.cpp_link_flags=`,
-        `${board}.menu.cppcore.enabled=Experimental C++11 compile/link (${cppClocks})`,
-        `${board}.menu.cppcore.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=${device.cpp_heap_bytes}UL${heapContractFlags}`,
-        `${board}.menu.cppcore.enabled.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1${heapContractFlags}`,
-        `${board}.menu.cppcore.enabled.compiler.cache_core=false`,
-        "",
-      );
-    }
+    const heapContractFlags = renderCppHeapContractFlags(device);
+    lines.push(
+      `${board}.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=${device.cpp_heap_bytes}UL${heapContractFlags}`,
+      `${board}.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1${heapContractFlags}`,
+      `${board}.compiler.cache_core=false`,
+      "",
+    );
 
     for (const model of device.memory_models) {
       const suffix = model === device.default_memory_model ? " (default)" : "";
@@ -785,10 +769,20 @@ ${pins.join("\n")}
 # define PIN_SPI_SCK  P3_4
 # define PIN_SPI_SS   P3_5
 #endif
+#ifdef __cplusplus
+#include <stdint.h>
+// Public Arduino pin names must permit parameter names such as MOSI in libraries.
+static const uint8_t MOSI = PIN_SPI_MOSI;
+static const uint8_t MISO = PIN_SPI_MISO;
+static const uint8_t SCK  = PIN_SPI_SCK;
+static const uint8_t SS   = PIN_SPI_SS;
+#else
+// Native C drivers retain preprocessor constants for their pin configuration.
 #define MOSI PIN_SPI_MOSI
 #define MISO PIN_SPI_MISO
 #define SCK  PIN_SPI_SCK
 #define SS   PIN_SPI_SS
+#endif
 
 #ifndef digitalPinToPort
 #define digitalPinToPort(pin) STC_PIN_PORT(pin)
@@ -958,9 +952,6 @@ function renderMetadata(database, device) {
     caveat: "Verify the concrete package pinout; unavailable pins are rejected by the core masks.",
   };
   if (device.data_quality_note !== undefined) metadata.data_quality_note = device.data_quality_note;
-  if (device.cpp_mcs251_clock_options_hz !== undefined) {
-    metadata.cpp_mcs251_clock_options_hz = device.cpp_mcs251_clock_options_hz;
-  }
   return `${JSON.stringify(metadata, null, 2)}\n`;
 }
 

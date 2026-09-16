@@ -104,18 +104,18 @@ def main():
         compiler = tools / 'sdcc-mcs251' / versions['sdcc-mcs251'] / 'bin' / ('sdcc.exe' if args.host == 'windows' else 'sdcc')
         signature = compiler.read_bytes()[:4]
         require(signature[:2] == b'MZ' if args.host == 'windows' else signature == b'\xcf\xfa\xed\xfe', 'compiler is not a native image')
-        cases = [('c-full', 'stc32g12k128', 'STC32G12K128', 'Blink', False),
-                 ('c-small', 'ai8051u_34k16', 'AI8051U-34K16', 'Blink', False),
-                 ('cpp-full', 'stc32g144k246', 'STC32G144K246', 'Blink', True),
-                 ('cpp-ai64', 'ai8051u_34k64', 'AI8051U-34K64', 'Blink', True),
-                 ('cpp-wire', 'stc32g12k128', 'STC32G12K128', 'Practical/CheckedWire', True)]
+        cases = [('cpp-g12k128', 'stc32g12k128', 'STC32G12K128', 'Blink'),
+                 ('cpp-small', 'ai8051u_34k16', 'AI8051U-34K16', 'Blink'),
+                 ('cpp-full', 'stc32g144k246', 'STC32G144K246', 'Blink'),
+                 ('cpp-ai64', 'ai8051u_34k64', 'AI8051U-34K64', 'Blink'),
+                 ('cpp-wire', 'stc32g12k128', 'STC32G12K128', 'Practical/CheckedWire')]
         if args.all_boards:
             devices = json.loads((sdk / 'tools/variants/devices.json').read_text(encoding='utf-8'))['devices']
-            existing = {(board, cpp) for _, board, _, _, cpp in cases}
-            cases += [('cpp-' + d['id'], d['id'], d['model'], 'Blink', True) for d in devices if (d['id'], True) not in existing]
-        for label, board, model, example, cpp in cases:
+            existing = {board for _, board, _, _ in cases}
+            cases += [('cpp-' + d['id'], d['id'], d['model'], 'Blink') for d in devices if d['id'] not in existing]
+        for label, board, model, example in cases:
             build = work / label
-            fqbn = 'arduino-stc51:mcs251:' + board + ':clock=12m' + (',cppcore=enabled' if cpp else '')
+            fqbn = 'arduino-stc51:mcs251:' + board
             command = [*cli, 'compile', '--clean', '--fqbn', fqbn, '--build-path', build, sdk / 'examples' / example]
             text = run(label, command)
             require(not re.search(r'warning:.*(?:__has_builtin|__STDC_HOSTED__).*redefined', text),
@@ -125,9 +125,8 @@ def main():
             validation = json.loads(run(label + '-hex', [args.stc.resolve(), 'validate', '--expect', model, '--file', firmware,
                                                        '--execution-mode', 'mcs251', '--json']))
             require(validation.get('valid') is True, 'invalid firmware: ' + label)
-            if cpp:
-                manifest = json.loads((build / 'stcxx/manifest.json').read_text(encoding='utf-8'))
-                require(manifest.get('outcome') == 'pass', 'C++ link audits did not finish')
+            manifest = json.loads((build / 'stcxx/manifest.json').read_text(encoding='utf-8'))
+            require(manifest.get('outcome') == 'pass', 'C++ link audits did not finish')
             if label == 'cpp-full':
                 before = firmware.read_bytes()
                 run('cpp-cache', [value for value in command if value != '--clean'])

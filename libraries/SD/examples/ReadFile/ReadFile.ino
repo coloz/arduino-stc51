@@ -11,41 +11,41 @@ void setup(void)
 
     if (SD.setPins(MOSI, MISO, SCK, SS) == 0u || SD.begin(SS) == 0u) {
         Serial.println("SD init or FAT mount failed");
-        Serial.printNumber((long)SD.error(), DEC);
+        Serial.print((long)SD.error(), DEC);
         Serial.write((uint8_t)'\n');
         return;
     }
 
     Serial.print("card=");
-    Serial.printNumber((long)SD.cardType(), DEC);
+    Serial.print((long)SD.cardType(), DEC);
     Serial.print(" fat=");
-    Serial.printlnNumber((long)SD.fatType(), DEC);
+    Serial.println((long)SD.fatType(), DEC);
 
-    if (SD.exists("README.TXT") == 0u ||
-        SD.open("README.TXT", FILE_READ) == 0u) {
+    File file = SD.open("README.TXT", FILE_READ);
+    if (!file) {
         Serial.println("README.TXT not found");
         return;
     }
 
     Serial.print("size=");
-    Serial.printlnNumber((long)SD.size(), DEC);
-    (void)SD.peek();
-    count = SD.readBytes(chunk, sizeof(chunk));
+    Serial.println((long)file.size(), DEC);
+    (void)file.peek();
+    count = file.readBytes(chunk, sizeof(chunk));
     if (count != 0u) {
         (void)Serial.write(chunk[0]);
     }
-    (void)SD.seek(0UL);
+    (void)file.seek(0UL);
 
-    while (SD.available() != 0UL) {
-        int value = SD.read();
+    while (file.available() != 0UL) {
+        int value = file.read();
         if (value < 0) {
             break;
         }
         (void)Serial.write((uint8_t)value);
     }
     Serial.print("\nposition=");
-    Serial.printlnNumber((long)SD.position(), DEC);
-    SD.close();
+    Serial.println((long)file.position(), DEC);
+    file.close();
 }
 
 void loop(void)

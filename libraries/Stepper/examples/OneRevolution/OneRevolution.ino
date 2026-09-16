@@ -7,29 +7,23 @@
 /* Drive the motor through a suitable transistor/driver stage.  Never connect
  * a motor winding directly to an MCU pin. */
 
+Stepper motor(MOTOR_STEPS_PER_REVOLUTION, P3_0, P3_1, P3_2, P3_3);
+
 void setup(void)
 {
-    if (Stepper.setPins4(MOTOR_STEPS_PER_REVOLUTION,
-                         P3_0, P3_1, P3_2, P3_3) ==
-        STEPPER_STATUS_SUCCESS) {
-        (void)Stepper.setSpeed(30L);
-    }
+    motor.setSpeed(30L);
 }
 
 void loop(void)
 {
-    long one_revolution;
-
-    if (Stepper.isConfigured() == 0u) {
+    if (!motor) {
         delay(1000UL);
         return;
     }
-
-    one_revolution = (long)Stepper.stepsPerRevolution();
-    Stepper.step(one_revolution);
+    motor.step((int)MOTOR_STEPS_PER_REVOLUTION);
     delay(500UL);
-    Stepper.step(-one_revolution);
+    motor.step(-(int)MOTOR_STEPS_PER_REVOLUTION);
     delay(500UL);
-    Stepper.release();
+    motor.release();
     delay(1000UL);
 }

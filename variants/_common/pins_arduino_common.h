@@ -178,10 +178,20 @@
 # define PIN_SPI_SCK  P3_4
 # define PIN_SPI_SS   P3_5
 #endif
+#ifdef __cplusplus
+#include <stdint.h>
+// Public Arduino pin names must permit parameter names such as MOSI in libraries.
+static const uint8_t MOSI = PIN_SPI_MOSI;
+static const uint8_t MISO = PIN_SPI_MISO;
+static const uint8_t SCK  = PIN_SPI_SCK;
+static const uint8_t SS   = PIN_SPI_SS;
+#else
+// Native C drivers retain preprocessor constants for their pin configuration.
 #define MOSI PIN_SPI_MOSI
 #define MISO PIN_SPI_MISO
 #define SCK  PIN_SPI_SCK
 #define SS   PIN_SPI_SS
+#endif
 
 #ifndef digitalPinToPort
 #define digitalPinToPort(pin) STC_PIN_PORT(pin)

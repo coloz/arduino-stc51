@@ -6,13 +6,13 @@
 
 void setup(void)
 {
-    Serial_begin(9600UL);
+    Serial.begin(9600UL);
     Wire.begin();
     Wire.setClock(100000UL);
 
     Wire.beginTransmission(I2C_DEVICE_ADDRESS);
     Wire.write(I2C_REGISTER);
-    if (Wire.endTransmissionStop(0u) == WIRE_STATUS_SUCCESS) {
+    if (Wire.endTransmission(false) == WIRE_STATUS_SUCCESS) {
         Wire.requestFrom(I2C_DEVICE_ADDRESS, 1u);
     }
 }
@@ -22,7 +22,7 @@ void loop(void)
     int value = Wire.read();
 
     if (value >= 0) {
-        Serial_write((uint8_t)value);
+        Serial.write((uint8_t)value);
     }
     delay(1000UL);
 }

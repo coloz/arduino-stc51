@@ -6,7 +6,7 @@ MCS51 芯片、板项和 C++ 适配路径已移除。旧的 `arduino-stc51:mcs51
 
 当前版本供开发和有限场景验证使用，尚未完成实板验收。产品板需验证实际时钟、接线和外设功能；编译成功不代表实板验收通过。
 
-当前维护范围为 **Windows x64 和 Apple Silicon Mac（macOS 15+）**。两端的 C 和 C++ 均使用原生工具，无需 WSL。Windows 前端包自带 Python；macOS C++ 需要 `brew install bash coreutils python`。Linux 独立宿主和 Intel Mac 不在当前支持范围内。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
+当前维护范围为 **Windows x64 和 Apple Silicon Mac（macOS 15+）**。两端的 C++ 编译链及底层 C 驱动均使用原生工具，无需 WSL。Windows 前端包自带 Python；macOS C++ 需要 `brew install bash coreutils python`。Linux 独立宿主和 Intel Mac 不在当前支持范围内。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
 
 ## 安装
 
@@ -72,17 +72,19 @@ $build.firmware
 
 脚本将当前源码打包到独立目录，校验工具包的 SHA-256，然后编译示例。`-SketchPath` 可指定含同名 `.ino` 的 sketch 目录；SDCC 构建路径应避免空格。默认 Blink 使用 P3.2，按电路修改引脚，不假设存在板载 LED。
 
-省略 `cppcore=enabled` 时使用 plain C。安装脚本不传 FQBN 时默认编译 STC32G8K64、12 MHz 的 plain C Blink。C++ 配置追加 `,cppcore=enabled`，使用已锁定的本机前端包和 SDCC。G12K128、G144K246 等完整 Flash 布局依赖发布包中重建的 SDCC 分区功能；旧原版工具包不满足时构建会明确拒绝。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
+平台只提供 C++11 模式，所有板项默认启用 C++ 编译链，无需选择语言或附加 `cppcore` 参数。安装脚本不传 FQBN 时默认编译 STC32G8K64、12 MHz 的 C++ Blink。G12K128、G144K246 等完整 Flash 布局依赖发布包中重建的 SDCC 分区功能；旧原版工具包不满足时构建会明确拒绝。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
 
 源码安装脚本用于维护者调试。脚本会下载并校验锁定的 SDCC 归档，也可通过 `-ToolCacheDirectory` 复用本地归档，或通过 `-ToolManifestPath` 指定已验证的工具清单。打包不会自动发布。版本变化见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
 
 ## C++ 与 Arduino API
 
-C++ 使用 Clang → LLVM-CBE → SDCC，提供 `String`、`Print`、`Stream`、`HardwareSerial`、`SPIClass`、`TwoWire` 等接口。所有板项都有 12 MHz C++ 配置；AI8051U-34K64 另有 40 MHz、STC32G144K246 另有 48 MHz。编译时钟必须与芯片实际时钟一致，菜单不会替代 ISP 时钟配置。
+C++ 使用 Clang → LLVM-CBE → SDCC，提供 `String`、`Print`、`Stream`、`HardwareSerial`、`SPIClass`、`TwoWire` 等接口。所有板项默认使用 12 MHz，时钟菜单仅列出编译链支持的配置；AI8051U-34K64 另有 40 MHz、STC32G144K246 另有 48 MHz。编译时钟必须与芯片实际时钟一致，菜单不会替代 ISP 时钟配置。
 
 支持 GPIO、计时、UART1、按型号提供的 ADC/PWM/外部中断，以及 Wire、SPI、SoftwareSerial、LiquidCrystal、Stepper 和受限的 SD。接口以 [Arduino.h](cores/STC/Arduino.h) 和各库头文件为准，使用示例位于 `libraries/<库名>/examples`。总线和 GPIO 共用引脚，使用前核对型号和封装。
 
 ABI 使用 16 位 `int`、32 位 `long`/`size_t`/`ptrdiff_t`、24 位指针，大端布局，`double` 与 `float` 均为 32 位。异常、RTTI、线程和完整 STL 不在支持范围内。不要直接发送结构体内存作为外部协议；可使用 `STCByteOrder.h`。运行时配置见 [runtime-manifest.json](cores/STC/cpp/runtime-manifest.json)。
+
+平台随附 Adafruit NeoPixel `1.15.5-stc.1` 实验移植，当前支持 STC32G144K246 的 12/48 MHz、P0～P7 有效引脚与 800 kHz 模式。已有编译和指令模型检查，尚未完成实板波形验证；其他芯片、P8～PB 和 400 kHz 不在支持范围内。用法及限制见 [NeoPixel 移植说明](libraries/Adafruit_NeoPixel/README-STC.md)。
 
 ## 烧录
 

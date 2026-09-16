@@ -1,7 +1,6 @@
 /* Optional sampling/query code is selected from core.lib only when referenced.
  * Heap initialization and its first integrity snapshot still run before global
  * C++ constructors, independently of whether this member is selected. */
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 #if !defined(__SDCC_mcs251)
 # error "The STC C++ native runtime requires SDCC MCS251"
 #endif
@@ -46,5 +45,3 @@ unsigned char __stcxx_heap_read_telemetry(
     telemetry->minimum_largest_free_block_bytes = stcxx_heap_minimum_largest_free;
     return 1u;
 }
-
-#endif /* STCXX_CPP_CORE */

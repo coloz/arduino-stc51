@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include "HardwareSerial.h"
 
@@ -60,5 +59,3 @@ bool HardwareSerial::overflow()
 {
     return Serial_overflow();
 }
-
-#endif /* STCXX_CPP_CORE */

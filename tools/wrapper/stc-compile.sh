@@ -1,5 +1,5 @@
 #!/bin/sh
-# Adapt Arduino's GCC-like invocation to SDCC's plain-C frontend.
+# Dispatch Arduino compilation to the C++ driver and its C hardware backend.
 
 SDCC="$1"
 SOURCE="$2"
@@ -7,16 +7,12 @@ OBJECT="$3"
 MARK="$4"
 shift 4
 
-STCXX_CPP_PROFILE=0
 for ARGUMENT in "$@"; do
     case "$ARGUMENT" in
         -mmcs51|-DSTCXX_TARGET_MCS51=1|-DSTC_EXECUTION_MODE_MCS51|-DSTC_EXECUTION_MODE_MCS51=*|-DSTC16F40K128)
             printf 'Target support has been removed; select a current MCS251 board.\n' >&2
             exit 2 ;;
     esac
-    if [ "$ARGUMENT" = "-DSTCXX_CPP_CORE=1" ]; then
-        STCXX_CPP_PROFILE=1
-    fi
 done
 
 run_stcxx_native_cli() {
@@ -114,44 +110,30 @@ run_stcxx_native() {
     return "$STATUS"
 }
 
-if [ "$STCXX_CPP_PROFILE" -eq 1 ]; then
-    case "$MARK:$SOURCE" in
-        re11:*.cpp|re11:*.cpp.merged)
-            run_stcxx_native preprocess-deps "$@"
-            exit $?
-            ;;
-        re12:*.cpp|re12:*.cpp.merged)
-            run_stcxx_native preprocess-macros "$@"
-            exit $?
-            ;;
-        re2:*.cpp|re2:*.cpp.merged)
-            run_stcxx_native compile-cpp "$@"
-            exit $?
-            ;;
-        re1:*.c)
-            run_stcxx_native compile-c "$@"
-            exit $?
-            ;;
-    esac
-fi
+case "$MARK:$SOURCE" in
+    re11:*.cpp|re11:*.cpp.merged)
+        run_stcxx_native preprocess-deps "$@"
+        exit $?
+        ;;
+    re12:*.cpp|re12:*.cpp.merged)
+        run_stcxx_native preprocess-macros "$@"
+        exit $?
+        ;;
+    re2:*.cpp|re2:*.cpp.merged)
+        run_stcxx_native compile-cpp "$@"
+        exit $?
+        ;;
+    re1:*.c)
+        run_stcxx_native compile-c "$@"
+        exit $?
+        ;;
+esac
 
-# Older SDCC drivers only warn about unknown options.  Do not silently emit
-# an unsplit object for a board which requires the full-Flash allocator.
-for ARGUMENT in "$@"; do
-    case "$ARGUMENT" in
-        --function-sections|--data-sections)
-            STC_SECTION_HELP=$("$SDCC" -mmcs251 --help 2>&1) || exit $?
-            case "$STC_SECTION_HELP" in
-                *--function-sections*--data-sections*) ;;
-                *)
-                    printf 'Full-Flash layout requires rebuilt sdcc-c251 with --function-sections and --data-sections support.\n' >&2
-                    exit 2
-                    ;;
-            esac
-            break
-            ;;
-    esac
-done
+# The only direct SDCC calls are dependency probes for internal C sources.
+case "$MARK:$SOURCE" in
+    re11:*.c|re12:*.c) ;;
+    *) printf 'Unsupported compile input: %s %s\n' "$MARK" "$SOURCE" >&2; exit 2 ;;
+esac
 
 # Arduino captures dependency discovery from stdout and passes the host null
 # device as the nominal output path. Do not forward it to SDCC; on Windows the
@@ -161,11 +143,9 @@ if [ "$MARK" = "re11" ]; then
     exit $?
 fi
 
-# Arduino runs the macro/dependency probe for both generated sketches and
-# library C sources.  The host null device is the nominal macro output.  SDCC
+# Internal C library probes use the host null device as nominal output. SDCC
 # ignores GCC's -MF destination and, if passed "nul" via -o on Windows, leaks
-# a real repository-local file named nul.d.  Handle this before dispatching on
-# the source extension so .c, .cpp, and .cpp.merged all follow the safe path.
+# a real repository-local file named nul.d, so handle the output separately.
 if [ "$MARK" = "re12" ]; then
     case "$OBJECT" in
         [Nn][Uu][Ll]|[Nn][Uu][Ll]:|/dev/null)
@@ -189,8 +169,6 @@ if [ "$MARK" = "re12" ]; then
             SOURCE_POSIX=$(printf '%s\n' "$SOURCE" | tr '\\' '/')
             SOURCE_NAME=${SOURCE_POSIX##*/}
             case "$SOURCE_NAME" in
-                *.cpp.merged) DEPENDENCY_NAME=${SOURCE_NAME%.merged}.d ;;
-                *.cpp) DEPENDENCY_NAME=${SOURCE_NAME%.cpp}.d ;;
                 *.c) DEPENDENCY_NAME=${SOURCE_NAME%.c}.d ;;
                 *)
                     echo "Unsupported discovery source: $SOURCE" >&2
@@ -238,42 +216,4 @@ if [ "$MARK" = "re12" ]; then
     esac
 fi
 
-case "$SOURCE" in
-    *.cpp|*.cpp.merged)
-        if [ "$MARK" = "re12" ]; then
-            "$SDCC" "$@" -x c "$SOURCE" -o "$OBJECT"
-        else
-            "$SDCC" "$@" -x c --include dummy_variable_main.h "$SOURCE" -o "$OBJECT"
-        fi
-        STATUS=$?
-        ;;
-    *.c)
-        "$SDCC" "$@" "$SOURCE" -o "$OBJECT"
-        STATUS=$?
-        ;;
-    *)
-        echo "Unsupported source extension: $SOURCE" >&2
-        exit 2
-        ;;
-esac
-
-if [ "$STATUS" -ne 0 ] || [ "$MARK" = "re12" ]; then
-    exit "$STATUS"
-fi
-
-# Arduino tracks .o files; the SDCC linker and sdar traditionally use .rel.
-case "$OBJECT" in
-    *.o)
-        REL="${OBJECT%.o}.rel"
-        if [ -f "$OBJECT" ]; then
-            cp -f "$OBJECT" "$REL"
-        elif [ -f "$REL" ]; then
-            cp -f "$REL" "$OBJECT"
-        else
-            echo "SDCC produced neither $OBJECT nor $REL" >&2
-            exit 3
-        fi
-        ;;
-esac
-
-exit 0
+"$SDCC" "$@" -x c "$SOURCE" -o "$OBJECT"

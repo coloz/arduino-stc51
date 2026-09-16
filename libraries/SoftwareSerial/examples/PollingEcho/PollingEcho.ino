@@ -10,21 +10,21 @@
 #define SOFT_RX_PIN P3_2
 #define SOFT_TX_PIN P3_3
 
+SoftwareSerial softSerial(SOFT_RX_PIN, SOFT_TX_PIN);
+
 void setup(void)
 {
-    if (SoftwareSerial.setPins(SOFT_RX_PIN, SOFT_TX_PIN)) {
-        (void)SoftwareSerial.begin(9600UL);
-    }
+    softSerial.begin(9600UL);
 }
 
 void loop(void)
 {
     int value;
 
-    if (SoftwareSerial.poll() != 0u) {
-        value = SoftwareSerial.read();
+    if (softSerial.poll() != 0u) {
+        value = softSerial.read();
         if (value >= 0) {
-            (void)SoftwareSerial.write((uint8_t)value);
+            (void)softSerial.write((uint8_t)value);
         }
     }
 }

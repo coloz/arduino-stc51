@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include "stcxx_config.h"
 #include "stcxx_runtime.h"
@@ -89,7 +88,3 @@ extern "C" void __cxa_deleted_virtual(void)
 {
     stcxx_runtime_panic(STCXX_PANIC_DELETED_VIRTUAL);
 }
-
-#else
-typedef unsigned char stcxx_runtime_disabled_translation_unit_t;
-#endif /* STCXX_CPP_CORE */

@@ -132,22 +132,17 @@ function Invoke-StcCpp {
 function Invoke-StcCompile {
     param([string]$Sdcc, [string]$Source, [string]$Object, [string]$Mark, [string[]]$Arguments)
     Assert-StcTarget $Arguments
-    if ($Arguments -ccontains '-DSTCXX_CPP_CORE=1') {
-        $Mode = switch -Regex ($Mark + ':' + $Source) {
-            '^re11:.*\.cpp(?:\.merged)?$' { 'preprocess-deps'; break }
-            '^re12:.*\.cpp(?:\.merged)?$' { 'preprocess-macros'; break }
-            '^re2:.*\.cpp(?:\.merged)?$' { 'compile-cpp'; break }
-            '^re1:.*\.c$' { 'compile-c'; break }
-        }
-        if ($Mode) { return Invoke-StcCpp $Sdcc $Mode $Source $Object $Arguments }
+    $Mode = switch -Regex ($Mark + ':' + $Source) {
+        '^re11:.*\.cpp(?:\.merged)?$' { 'preprocess-deps'; break }
+        '^re12:.*\.cpp(?:\.merged)?$' { 'preprocess-macros'; break }
+        '^re2:.*\.cpp(?:\.merged)?$' { 'compile-cpp'; break }
+        '^re1:.*\.c$' { 'compile-c'; break }
     }
-    if ($Arguments -ccontains '--function-sections' -or $Arguments -ccontains '--data-sections') {
-        $Help = Invoke-StcProcess $Sdcc @('-mmcs251', '--help') -Capture
-        if ($Help.Status -ne 0) { return $Help.Status }
-        if (($Help.Output + $Help.Error) -notmatch '(?s)--function-sections.*--data-sections') {
-            throw 'Full-Flash layout requires rebuilt sdcc-c251 with --function-sections and --data-sections support.'
-        }
+    if ($Mode) { return Invoke-StcCpp $Sdcc $Mode $Source $Object $Arguments }
+    if (-not $Source.EndsWith('.c') -or $Mark -notin @('re11', 're12')) {
+        throw "Unsupported compile input: $Mark $Source"
     }
+    # Arduino also discovers dependencies in internal C hardware drivers.
     if ($Mark -ceq 're11') { return Invoke-StcProcess $Sdcc ($Arguments + @('-x', 'c', $Source)) }
     if ($Mark -ceq 're12' -and $Object -match '^(nul:?|/dev/null)$') {
         # Arduino appends an unquoted -MF path. Rejoin its fragments and keep
@@ -161,35 +156,31 @@ function Invoke-StcCompile {
             $Flags = @($Arguments | Select-Object -First $MfIndex)
         }
         $Name = [IO.Path]::GetFileName($Source)
-        if ($Name.EndsWith('.cpp.merged')) { $Dependency = $Name.Substring(0, $Name.Length - 7) + '.d' }
-        elseif ($Name.EndsWith('.cpp') -or $Name.EndsWith('.c')) { $Dependency = [IO.Path]::ChangeExtension($Name, '.d') }
-        else { throw "Unsupported discovery source: $Source" }
-        $Directory = if ($MfPath) { [IO.Path]::GetDirectoryName($MfPath) } else { [IO.Path]::GetDirectoryName($Source) }
-        $Status = Invoke-StcProcess $Sdcc ($Flags + @('-x', 'c', $Source)) $Directory
-        if ($Status -eq 0 -and $MfPath) {
-            $Generated = Join-Path $Directory $Dependency
-            if ([IO.File]::Exists($Generated)) {
-                if ([IO.Path]::GetFullPath($Generated) -ne [IO.Path]::GetFullPath($MfPath)) {
-                    [IO.File]::Copy($Generated, $MfPath, $true)
-                    [IO.File]::Delete($Generated)
-                }
-            } elseif (-not [IO.File]::Exists($MfPath)) { throw 'SDCC did not produce the Arduino dependency file' }
+        $Dependency = [IO.Path]::ChangeExtension($Name, '.d')
+        # SDCC chooses a basename for its dependency output. Isolate concurrent
+        # probes, then publish a closed file atomically: Arduino can observe
+        # the final name while other probes are still running.
+        $Directory = Join-Path ([IO.Path]::GetTempPath()) ('stc-deps-' + [guid]::NewGuid().ToString('N'))
+        [void][IO.Directory]::CreateDirectory($Directory)
+        $Generated = Join-Path $Directory $Dependency
+        $Pending = if ($MfPath) { $MfPath + '.tmp-' + [guid]::NewGuid().ToString('N').Substring(0, 8) } else { '' }
+        try {
+            $Status = Invoke-StcProcess $Sdcc ($Flags + @('-x', 'c', $Source)) $Directory
+            if ($Status -eq 0 -and $MfPath) {
+                if (-not [IO.File]::Exists($Generated)) { throw 'SDCC did not produce the Arduino dependency file' }
+                [IO.File]::Copy($Generated, $Pending)
+                if ([IO.File]::Exists($MfPath)) {
+                    [IO.File]::Replace($Pending, $MfPath, [System.Management.Automation.Language.NullString]::Value)
+                } else { [IO.File]::Move($Pending, $MfPath) }
+            }
+            return $Status
+        } finally {
+            if ($Pending -and [IO.File]::Exists($Pending)) { [IO.File]::Delete($Pending) }
+            if ([IO.File]::Exists($Generated)) { [IO.File]::Delete($Generated) }
+            [IO.Directory]::Delete($Directory)
         }
-        return $Status
     }
-    if ($Source -cmatch '\.cpp(?:\.merged)?$') {
-        $Arguments += @('-x', 'c')
-        if ($Mark -cne 're12') { $Arguments += @('--include', 'dummy_variable_main.h') }
-    } elseif (-not $Source.EndsWith('.c')) { throw "Unsupported source extension: $Source" }
-    $Status = Invoke-StcProcess $Sdcc ($Arguments + @($Source, '-o', $Object))
-    if ($Status -ne 0 -or $Mark -ceq 're12') { return $Status }
-    if ($Object.EndsWith('.o')) {
-        $Rel = [IO.Path]::ChangeExtension($Object, '.rel')
-        if ([IO.File]::Exists($Object)) { [IO.File]::Copy($Object, $Rel, $true) }
-        elseif ([IO.File]::Exists($Rel)) { [IO.File]::Copy($Rel, $Object, $true) }
-        else { throw "SDCC produced neither $Object nor $Rel" }
-    }
-    return 0
+    return Invoke-StcProcess $Sdcc ($Arguments + @('-x', 'c', $Source, '-o', $Object))
 }
 
 function Invoke-StcArchive {
@@ -211,20 +202,9 @@ function Invoke-StcArchive {
 function Invoke-StcLink {
     param([string]$Sdcc, [string[]]$Arguments)
     Assert-StcTarget $Arguments
-    if ($Arguments -ccontains '-DSTCXX_CPP_CORE=1') {
-        $OutputIndex = [Array]::LastIndexOf($Arguments, '-o')
-        if ($OutputIndex -lt 0 -or $OutputIndex + 1 -ge $Arguments.Count) { throw 'C++ link recipe did not provide an output path' }
-        return Invoke-StcCpp $Sdcc 'link' '-' $Arguments[$OutputIndex + 1] $Arguments
-    }
-    $Converted = foreach ($Value in $Arguments) {
-        if ($Value.EndsWith('.o')) { [IO.Path]::ChangeExtension($Value, '.rel') }
-        elseif ($Value.EndsWith('.a')) {
-            $Library = [IO.Path]::ChangeExtension($Value, '.lib')
-            [IO.File]::Copy($Value, $Library, $true)
-            $Library
-        } else { $Value }
-    }
-    return Invoke-StcProcess $Sdcc $Converted
+    $OutputIndex = [Array]::LastIndexOf($Arguments, '-o')
+    if ($OutputIndex -lt 0 -or $OutputIndex + 1 -ge $Arguments.Count) { throw 'C++ link recipe did not provide an output path' }
+    return Invoke-StcCpp $Sdcc 'link' '-' $Arguments[$OutputIndex + 1] $Arguments
 }
 
 function Write-StcSize {

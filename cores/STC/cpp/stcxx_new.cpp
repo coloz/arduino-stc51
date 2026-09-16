@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include "stcxx_allocator.h"
 #include "stcxx_new.h"
@@ -93,7 +92,3 @@ void operator delete[](void *memory, size_t) noexcept
     }
 }
 #endif
-
-#else
-typedef unsigned char stcxx_new_disabled_translation_unit_t;
-#endif /* STCXX_CPP_CORE */

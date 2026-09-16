@@ -4,7 +4,7 @@
  * Software fallback for targets without a common hardware SPI peripheral.
  * Chip-select remains under sketch control, matching the Arduino SPI model.
  */
-#include "SPI.h"
+#include "SPI_backend.h"
 
 /*
  * The production backend manipulates the common 8051 IE register directly.
@@ -384,21 +384,3 @@ void SPI_end(void) STC_SPI_REENTRANT
     spi_release_pins();
     spi_initialized = 0u;
 }
-
-#if !defined(STCXX_CPP_CORE) || !STCXX_CPP_CORE
-const STCSPIClass SPI = {
-    SPI_begin,
-    SPI_setPins,
-    SPI_beginTransaction,
-    SPI_transfer,
-    SPI_transferBuffer,
-    SPI_endTransaction,
-    SPI_end,
-    SPI_usingInterrupt,
-    SPI_notUsingInterrupt,
-    SPI_setSettings,
-    SPI_configurationError,
-    SPI_setPinsChecked,
-    SPI_beginTransactionChecked
-};
-#endif

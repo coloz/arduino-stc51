@@ -1,4 +1,4 @@
-# SD library for the STC plain-C and experimental C++ cores
+# SD library for the STC C++ core
 
 This clean-room MIT implementation supports SD version 1, SD version 2 and
 SDHC cards in SPI mode. It requests 100 kHz for card initialization, then
@@ -27,9 +27,7 @@ diagnostics until `end` is called.
 - no long-file names, subdirectories or directory iteration, FAT12, exFAT,
   formatting, sparse files, or power-loss-atomic metadata updates.
 
-The default plain-C profile exposes these operations through the `SD` function
-table. With the explicit `cppcore=enabled` profile, the library additionally
-exposes `SDClass SD` and a writable `File : public Stream` facade, including
+The library exposes `SDClass SD` and a writable `File : public Stream` facade, including
 `Print`/`println` inherited from `Print`. The class layer uses the same global
 backend, so it does not add concurrent cards or files. Its Arduino-shaped
 surface includes `String` overloads for `open`/`exists`; `remove` performs a

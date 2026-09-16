@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include "WString.h"
 
@@ -960,5 +959,3 @@ STCXX_STRING_SUM_OPERATOR(double)
 STCXX_STRING_SUM_OPERATOR(const __FlashStringHelper *)
 
 #undef STCXX_STRING_SUM_OPERATOR
-
-#endif /* STCXX_CPP_CORE */

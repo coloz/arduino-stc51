@@ -1272,6 +1272,208 @@ def preserve_cbe_const_byte_array_addresses(
     return rewritten, records
 
 
+def normalize_cbe_unused_bitcast_double(payload: str) -> tuple[str, int]:
+    """Drop CBE's unused binary64 union member in a binary32-only module.
+
+    The i64 member retains the union's size and alignment. A used Double
+    member, a different helper layout, or a real f64 IR operation is not
+    accepted by this rule (the IR gate runs before C adaptation).
+    """
+    shared = load_canary_adapter()
+    declaration = ('typedef union {\n  uint32_t Int32;\n  uint64_t Int64;\n'
+                   '  float Float;\n  double Double;\n} llvmBitCastUnion;')
+    masked = shared.mask_c_data(payload)
+    if masked.count(declaration) != 1 or len(re.findall(r'\bDouble\b', masked)) != 1:
+        return payload, 0
+    return shared.replace_c_token(payload, declaration, declaration.replace('  double Double;\n', '')), 1
+
+
+def normalize_cbe_cleanup_dispatches(payload: str) -> tuple[str, list[dict[str, object]]]:
+    """Thread constant cleanup selectors before SDCC's definite-use analysis.
+
+    Clang -O0 shares a destructor between early returns and normal continuation.
+    SDCC cannot correlate the stored selector with the initialized return slot.
+    Duplicate only the cleanup call, never initialize an unproven return value:
+    every incoming edge must set a constant selector immediately before its
+    goto, and both selector temporaries must have no other uses (or escapes).
+    """
+    shared = load_canary_adapter()
+    function = re.compile(r'^static [^\n;{}]+ \{\n.*?^\}', re.M | re.S)
+    dispatch = re.compile(
+        r'^(?P<label>_[0-9]+):\n'
+        r'(?P<cleanup>  [A-Za-z_]\w*\(\(&_[0-9]+\)\);\n)'
+        r'  (?P<copy>_[0-9]+) = (?P<selector>_[0-9]+);\n'
+        r'  switch \((?P=copy)\) \{\n  default:\n    goto (?P<default>_[0-9]+);\n'
+        r'(?P<cases>(?:  case [0-9]+u?:\n    goto _[0-9]+;\n)+)  \}\n', re.M)
+    records = []
+
+    def rewrite_function(match):
+        body = match.group(0)
+        for block in reversed(list(dispatch.finditer(body))):
+            label, selector, copy = block.group('label', 'selector', 'copy')
+            targets = dict(re.findall(r'  case ([0-9]+)u?:\n    goto (_[0-9]+);', block['cases']))
+            if len(targets) != block['cases'].count('  case '):
+                continue
+            incoming = re.compile(rf'^  {selector} = (?P<value>[0-9]+)u?;\n  goto {label};$', re.M)
+            edges = list(incoming.finditer(body))
+            if not edges or any(edge['value'] not in targets for edge in edges):
+                continue
+            masked = shared.mask_c_data(body)
+            # Exclude fallthrough into the shared block, indirect/address uses,
+            # additional assignments, and any unsupported CBE selector form.
+            if not body[:block.start()].rstrip().endswith(f'goto {label};'):
+                continue
+            if len(re.findall(rf'\b{label}\b', masked)) != len(edges) + 1:
+                continue
+            selector_decl = re.compile(rf'^  uint32_t {selector};[^\n]*\n', re.M)
+            copy_decl = re.compile(rf'^  uint32_t {copy};[^\n]*\n', re.M)
+            if len(selector_decl.findall(masked)) != 1 or len(copy_decl.findall(masked)) != 1:
+                continue
+            if len(re.findall(rf'\b{selector}\b', masked)) != len(edges) + 2:
+                continue
+            if len(re.findall(rf'\b{copy}\b', masked)) != 3:
+                continue
+            body = body.replace(block.group(0), '', 1)
+            body = incoming.sub(lambda edge: block['cleanup'] + f"  goto {targets[edge['value']]};", body)
+            body = selector_decl.sub('', body)
+            body = copy_decl.sub('', body)
+            records.append({'label': label, 'incoming_edges': len(edges), 'selector': selector,
+                            'cleanup': block['cleanup'].strip(), 'targets': targets})
+        return body
+
+    return shared.replace_c_code(function, rewrite_function, payload), records
+
+
+def preserve_cbe_const_byte_read_chains(payload: str) -> tuple[str, list[dict[str, object]]]:
+    """Restore const through proven byte-load helpers and local alias chains.
+
+    LLVM opaque pointers erase pointee qualifiers. Only a complete scalar load
+    helper and nonescaping, singly assigned local aliases qualify. Stores,
+    unknown calls, mutable globals and pointers returned to a caller stay out.
+    """
+    shared = load_canary_adapter()
+    function = re.compile(r'^static [^\n;{}]+ \{\n.*?^\}', re.M | re.S)
+    reader = re.compile(
+        r'^static uint8_t (?P<name>[A-Za-z_]\w*)\(void\* (?P<p>_[0-9]+)\) \{\s*'
+        r'void\* (?P<a>_[0-9]+);\s*void\* (?P<b>_[0-9]+);\s*uint8_t (?P<r>_[0-9]+);\s*'
+        r'(?P=a) = (?P=p);\s*(?P=b) = (?P=a);\s*'
+        r'(?P=r) = \*\(uint8_t\*\)(?P=b);\s*return (?P=r);\s*\}$')
+    readers = {}
+    for match in function.finditer(payload):
+        verified = reader.fullmatch(shared.mask_c_data(match.group(0)))
+        if verified:
+            readers[verified['name']] = verified.groupdict()
+    if not readers:
+        return payload, []
+    constants = set(re.findall(r'^static const struct l_array_[1-9][0-9]*_uint8_t ([A-Za-z_]\w*) =',
+                               shared.mask_c_data(payload), re.M))
+    origin = re.compile(r'^  (?P<temp>_[0-9]+) = \(+&\(&(?P<symbol>[A-Za-z_]\w*)\)->array\[[^;\n]+\]\)+;$', re.M)
+    records = []
+
+    def rewrite_function(match):
+        body = match.group(0)
+        masked = shared.mask_c_data(body)
+        for root in list(origin.finditer(masked)):
+            if root['symbol'] not in constants:
+                continue
+            aliases = {root['temp']}
+            while True:
+                more = {target for target, source in re.findall(r'^  (_[0-9]+) = (_[0-9]+);$', masked, re.M)
+                        if source in aliases}
+                if more <= aliases:
+                    break
+                aliases |= more
+            valid, reads = True, 0
+            for alias in aliases:
+                uses = [line.strip() for line in masked.splitlines() if re.search(rf'\b{alias}\b', line)]
+                if uses.count(f'void* {alias};') != 1:
+                    valid = False
+                    break
+                assignments = 0
+                for line in uses:
+                    if line == f'void* {alias};':
+                        continue
+                    if line == root.group(0).strip():
+                        assignments += 1
+                        continue
+                    assignment = re.fullmatch(r'(_[0-9]+) = (_[0-9]+);', line)
+                    if assignment and set(assignment.groups()) <= aliases:
+                        assignments += assignment[1] == alias
+                        continue
+                    call = re.fullmatch(r'_[0-9]+ = ([A-Za-z_]\w*)\((.*)\);', line)
+                    if call and call[1] in readers:
+                        arg = call[2]
+                        if arg == alias or re.fullmatch(
+                            rf'\(+&\(\(uint8_t\*\){alias}\)\[\(\(signed _BitInt\(24\)\)[0-9]+\)\]\)+', arg):
+                            reads += 1
+                            continue
+                    valid = False
+                    break
+                if assignments != 1:
+                    valid = False
+                if not valid:
+                    break
+            if not valid or not reads:
+                continue
+            for alias in aliases:
+                body = shared.replace_c_code(re.compile(rf'\bvoid\* {alias};'), lambda m: 'const ' + m[0], body)
+                body = shared.replace_c_token(body, f'((uint8_t*){alias})', f'((const uint8_t*){alias})')
+            records.append({'symbol': root['symbol'], 'aliases': sorted(aliases), 'byte_reads': reads})
+        return body
+
+    rewritten = shared.replace_c_code(function, rewrite_function, payload)
+    if not records:
+        return payload, []
+    for name, data in readers.items():
+        signature = f"static uint8_t {name}(void* {data['p']})"
+        rewritten = shared.replace_c_token(rewritten, signature, signature.replace('(void*', '(const void*'))
+        pattern = re.compile(rf'^static uint8_t {name}\(const void\* [^\n]+\{{\n.*?^\}}', re.M | re.S)
+        def qualify(match):
+            body = match[0]
+            for local in (data['a'], data['b']):
+                body = body.replace(f'void* {local};', f'const void* {local};')
+            return body.replace(f"*(uint8_t*){data['b']}", f"*(const uint8_t*){data['b']}")
+        rewritten = shared.replace_c_code(pattern, qualify, rewritten)
+    return rewritten, records
+
+
+def normalize_cbe_static_const_pointer_casts(
+    payload: str,
+) -> tuple[str, list[dict[str, str]]]:
+    """Fold CBE's redundant void-pointer cast in static initializers.
+
+    SDCC rejects ``(void*)(const void*)&object`` as a constant initializer,
+    even when the object has already been defined. A single ``(void*)&object``
+    keeps the same generic pointer value and emits its full MCS251 relocation.
+    Only the exact CBE spelling targeting a defined local const aggregate is
+    accepted. Object storage, the table type and runtime casts stay unchanged;
+    explicit address-space casts are deliberately outside this rule.
+    """
+    shared = load_canary_adapter()
+    constants = set(re.findall(
+        r"^static const struct [A-Za-z_]\w* ([A-Za-z_]\w*)\s*=",
+        shared.mask_c_data(payload), re.MULTILINE,
+    ))
+    initializer = re.compile(
+        r"^static (?:const )?struct [A-Za-z_]\w* (?P<owner>[A-Za-z_]\w*)"
+        r" = [^\n]+;$", re.MULTILINE,
+    )
+    address = re.compile(r"\(\(void\*\)\(const void\*\)&(?P<symbol>[A-Za-z_]\w*)\)")
+    records: list[dict[str, str]] = []
+
+    def rewrite_initializer(match: re.Match[str]) -> str:
+        def rewrite_address(pointer: re.Match[str]) -> str:
+            symbol = pointer.group("symbol")
+            if symbol not in constants:
+                return pointer.group(0)
+            records.append({"initializer": match.group("owner"), "symbol": symbol})
+            return f"((void*)&{symbol})"
+
+        return shared.replace_c_code(address, rewrite_address, match.group(0))
+
+    return shared.replace_c_code(initializer, rewrite_initializer, payload), records
+
+
 def normalize_cbe_unconditional_helper_initializers(
     payload: str,
 ) -> tuple[str, list[str]]:
@@ -1518,6 +1720,10 @@ def adapt_cbe(
         shared.normalize_cbe_single_block_pointer_temporaries(payload)
     )
     payload, removed_consts, zero_arrays = remove_duplicate_const_declarations(shared, payload)
+    payload, static_const_pointer_casts = normalize_cbe_static_const_pointer_casts(payload)
+    payload, const_byte_read_chains = preserve_cbe_const_byte_read_chains(payload)
+    payload, cleanup_dispatches = normalize_cbe_cleanup_dispatches(payload)
+    payload, unused_bitcast_double = normalize_cbe_unused_bitcast_double(payload)
     payload, vtable_addresses = shared.normalize_cbe_vtable_addresses(payload)
     require(
         expected_program_pointer_casts == 0
@@ -1621,6 +1827,10 @@ typedef unsigned char bool;
         "const_byte_array_address_casts_rewritten": (
             const_byte_array_address_casts_rewritten
         ),
+        "static_const_pointer_casts_normalized": static_const_pointer_casts,
+        "const_byte_read_chains_preserved": const_byte_read_chains,
+        "cleanup_dispatches_threaded": cleanup_dispatches,
+        "unused_bitcast_double_members_removed": unused_bitcast_double,
         "stateless_struct_returns_initialized": stateless_struct_returns_initialized,
         "single_block_pointer_temporaries_eliminated": single_block_pointer_temporaries_eliminated,
         "vtable_addresses_normalized": vtable_addresses,

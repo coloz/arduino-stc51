@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include "stcxx_allocator.h"
 
@@ -48,5 +47,3 @@ extern "C" uint8_t stcxx_allocator_read_telemetry(
 }
 
 #endif
-
-#endif /* STCXX_CPP_CORE */

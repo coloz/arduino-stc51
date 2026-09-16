@@ -5,7 +5,7 @@
   "qualification": "EXPERIMENTAL_MCS251_COMPILE_LINK",
   "production_status": "EXPERIMENTAL_NOT_PRODUCTION_RELEASE",
   "platform_cpp_enabled": true,
-  "platform_cpp_activation": "Explicit cppcore=enabled menu selection; plain C remains the default",
+  "platform_cpp_activation": "Always enabled for every supported board",
   "implemented_target_profiles": {
     "mcs251": {
       "target_triple": "msp430-stc-none-eabi",
@@ -65,8 +65,7 @@
       "WProgram.h": "pre-Arduino-1.0 source-compatibility include forwarding to Arduino.h"
     },
     "conditionally_routed_header": "HardwareSerial.h",
-    "activation_condition": "defined(__cplusplus) && defined(STCXX_CPP_CORE) && STCXX_CPP_CORE",
-    "plain_c_behavior": "HardwareSerial.h retains the legacy HardwareSerialClass function-table facade"
+    "activation_condition": "defined(__cplusplus)"
   },
   "sources": [
     "WString.cpp",
@@ -75,6 +74,7 @@
     "IPAddress.cpp",
     "HardwareSerial.cpp",
     "stcxx_math.cpp",
+    "stcxx_itoa.cpp",
     "stcxx_allocator.cpp",
     "stcxx_runtime.cpp",
     "stcxx_new.cpp"
@@ -85,17 +85,14 @@
     "../../../libraries/SD/src/SDClass.cpp",
     "../../../libraries/SoftwareSerial/src/SoftwareSerialClass.cpp"
   ],
-  "excluded_c_sources": [
-    "../HardwareSerial_object.c"
-  ],
   "integration_requirements": [
     "Route the C++ Arduino.h branch to cpp/ArduinoCpp.h",
     "Expose the core root as the canonical Arduino library include directory",
-    "Route the core-root HardwareSerial.h to cpp/HardwareSerial.h only in the opt-in C++ profile",
+    "Expose cpp/HardwareSerial.h through the public core-root HardwareSerial.h",
     "Give retained Wiring C declarations extern-C linkage",
     "Route bundled SPI.h and Wire.h to cpp/SPIClass.h and cpp/WireClass.h in the C++ profile",
     "Compile each bundled library class source, including SoftwareSerialClass.cpp, only when Arduino selects that library",
-    "Compile retained SPI.c and Wire.c with STCXX_CPP_CORE=1 so their legacy C table objects are suppressed"
+    "Compile SPI.c and Wire.c as internal C hardware backends; public objects are C++ classes"
   ],
   "retained_c_hal_symbols": [
     "millis",
@@ -106,7 +103,6 @@
     "Serial_availableForWrite",
     "Serial_peek",
     "Serial_read",
-    "Serial_readBytes",
     "Serial_write",
     "Serial_flush",
     "Serial_overflow",
@@ -150,9 +146,7 @@
   "arduino_source_compatibility": {
     "pulseIn_cpp_default_timeout_microseconds": 1000000,
     "pulseInLong_cpp_default_timeout_microseconds": 1000000,
-    "pulseIn_plain_c_requires_explicit_timeout": true,
     "hardware_serial_readBytes": {
-      "plain_c": "drains bytes already present in the retained HAL buffer without waiting",
       "cpp": "inherited Stream::readBytes waits until length or the configurable timeout; default 1000 ms"
     },
     "software_serial_cpp": {
@@ -228,7 +222,9 @@
     "stdio_supported": "native bounded snprintf; sprintf from SDCC; printf/puts/putchar on initialized UART1; getchar blocks for UART1 input",
     "stdio_limits": "installed SDCC format subset only; FILE, scanf, and Clang va_list entry points explicitly unavailable",
     "math_source": "stcxx_math.cpp",
-    "math_contract": "binary32 double APIs bind to native *f symbols; fmodf/roundf/truncf implemented in Core; no hosted floating exception environment or blanket native libm numeric qualification"
+    "math_contract": "binary32 double APIs bind to native *f symbols; fmodf/roundf/truncf/fminf/fmaxf implemented in Core; no hosted floating exception environment or blanket native libm numeric qualification",
+    "integer_format_source": "stcxx_itoa.cpp",
+    "integer_format_contract": "itoa/utoa/ltoa/ultoa support radix 2..36, unsigned conversion for nondecimal negatives, signed minima without overflow; invalid radix produces an empty string"
   },
   "target_backend_requirements": {
     "local_static_guard": {
@@ -278,7 +274,7 @@
     "arduino_cli_bridge_adapter": {
       "scope": "Arduino CLI whole-program LLVM IR and LLVM-CBE fail-closed target adaptation",
       "helper_path": "tools/cpp-cli/adapt.py",
-      "helper_sha256": "4bc77ccf048ce1439252f1ea4a6f94bac16837dc02a0f8cdd42420214c860c7d",
+      "helper_sha256": "48625caf4298c43a4c22dcf6d5451c73696d94b0734ff586d039eaf1c9bc5ac1",
       "audit_schema_version": 2,
       "c_abi_preservation_policy": "exact-internalize-public-api-list-file",
       "c_identifier_linkage_policy": "protect-declarations-and-noninternal-definitions",

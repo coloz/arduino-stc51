@@ -1,9 +1,9 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Write-only HD44780-compatible character LCD driver for the STC C core.
+ * Write-only HD44780-compatible character LCD driver for the STC C++ library.
  */
-#include "LiquidCrystal.h"
+#include "LiquidCrystal_backend.h"
 
 #define LCD_FLAG_CONFIGURED  0x01u
 #define LCD_FLAG_INITIALIZED 0x02u
@@ -12,15 +12,14 @@
 #define LCD_MAX_ROWS         4u
 #define LCD_DDRAM_CHARACTERS 80u
 
-static STCLiquidCrystalState lcd_default_state;
-static STCLiquidCrystalState *lcd_current = &lcd_default_state;
+static STCLiquidCrystalState *lcd_current;
 #define lcd_state (*lcd_current)
 
 STCLiquidCrystalState *LiquidCrystal_selectContext(STCLiquidCrystalState *context)
     STC_LIQUIDCRYSTAL_REENTRANT
 {
     STCLiquidCrystalState *previous = lcd_current;
-    lcd_current = context != NULL ? context : &lcd_default_state;
+    lcd_current = context;
     return previous;
 }
 
@@ -563,61 +562,3 @@ size_t LiquidCrystal_write(uint8_t value) STC_LIQUIDCRYSTAL_REENTRANT
     lcd_send(value, 1u);
     return 1u;
 }
-
-size_t LiquidCrystal_print(const char *text) STC_LIQUIDCRYSTAL_REENTRANT
-{
-    size_t count = 0u;
-
-    if (text == (const char *)0) {
-        return 0u;
-    }
-    while (*text != '\0') {
-        if (LiquidCrystal_write((uint8_t)*text) == 0u) {
-            break;
-        }
-        ++text;
-        ++count;
-    }
-    return count;
-}
-
-size_t LiquidCrystal_println(const char *text) STC_LIQUIDCRYSTAL_REENTRANT
-{
-    size_t count = LiquidCrystal_print(text);
-
-    count += LiquidCrystal_write((uint8_t)'\r');
-    count += LiquidCrystal_write((uint8_t)'\n');
-    return count;
-}
-
-STC_LIQUID_CRYSTAL_CODE const STCLiquidCrystalClass LiquidCrystal = {
-    LiquidCrystal_setPins,
-    LiquidCrystal_setPinsRW,
-    LiquidCrystal_setPins8,
-    LiquidCrystal_setPins8RW,
-    LiquidCrystal_begin,
-    LiquidCrystal_beginWithCharSize,
-    LiquidCrystal_clear,
-    LiquidCrystal_home,
-    LiquidCrystal_setCursor,
-    LiquidCrystal_display,
-    LiquidCrystal_noDisplay,
-    LiquidCrystal_cursor,
-    LiquidCrystal_noCursor,
-    LiquidCrystal_blink,
-    LiquidCrystal_noBlink,
-    LiquidCrystal_scrollLeft,
-    LiquidCrystal_scrollRight,
-    LiquidCrystal_scrollDisplayLeft,
-    LiquidCrystal_scrollDisplayRight,
-    LiquidCrystal_leftToRight,
-    LiquidCrystal_rightToLeft,
-    LiquidCrystal_autoscroll,
-    LiquidCrystal_noAutoscroll,
-    LiquidCrystal_createChar,
-    LiquidCrystal_command,
-    LiquidCrystal_write,
-    LiquidCrystal_print,
-    LiquidCrystal_println,
-    LiquidCrystal_setRowOffsets
-};

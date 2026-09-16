@@ -4,7 +4,7 @@
  * Software fallback for targets without a common hardware I2C peripheral.
  * Timing is approximate because it uses the core delayMicroseconds() API.
  */
-#include "Wire.h"
+#include "Wire_backend.h"
 #if defined(__SDCC)
 # include "stc_sfr.h"
 #endif
@@ -336,7 +336,6 @@ void Wire_begin(void) STC_WIRE_REENTRANT
     wire_initialized = 1u;
 }
 
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 void Wire_end(void) STC_WIRE_REENTRANT
 {
     if (wire_initialized == 0u) {
@@ -358,7 +357,6 @@ void Wire_end(void) STC_WIRE_REENTRANT
     wire_rx_length = 0u;
     wire_initialized = 0u;
 }
-#endif
 
 void Wire_setPins(uint8_t sda_pin, uint8_t scl_pin) STC_WIRE_REENTRANT
 {
@@ -636,28 +634,3 @@ int Wire_read(void) STC_WIRE_REENTRANT
     }
     return (int)wire_rx_buffer[wire_rx_index++];
 }
-
-#if !defined(STCXX_CPP_CORE) || !STCXX_CPP_CORE
-const STCWireClass Wire = {
-    Wire_begin,
-    Wire_setPins,
-    Wire_setClock,
-    Wire_setClockStretchTimeout,
-    Wire_beginTransmission,
-    Wire_write,
-    Wire_endTransmission,
-    Wire_requestFrom,
-    Wire_available,
-    Wire_peek,
-    Wire_read,
-    Wire_endTransmissionStop,
-    Wire_requestFromStop,
-    Wire_setWireTimeout,
-    Wire_getWireTimeoutFlag,
-    Wire_clearWireTimeoutFlag,
-    Wire_requestFromInternal,
-    Wire_setPinsChecked,
-    Wire_configurationError,
-    Wire_lastError
-};
-#endif

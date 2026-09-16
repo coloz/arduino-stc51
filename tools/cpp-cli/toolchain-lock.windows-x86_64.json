@@ -142,7 +142,7 @@
     },
     "arduino_cli_adapter": {
       "path": "tools/cpp-cli/adapt.py",
-      "sha256": "4bc77ccf048ce1439252f1ea4a6f94bac16837dc02a0f8cdd42420214c860c7d"
+      "sha256": "48625caf4298c43a4c22dcf6d5451c73696d94b0734ff586d039eaf1c9bc5ac1"
     },
     "member_function_aligner": {
       "path": "tools/cpp-cli/align-member-functions.py",
@@ -150,7 +150,7 @@
     },
     "arduino_cli_driver": {
       "path": "tools/cpp-cli/stcxx-cli.py",
-      "sha256": "ef889d21c8699fcadb1b2d8d62e6547fcb52b7aca4723b40ccd7a7cd1a5644a1"
+      "sha256": "6a8ab2ae743b2a8dd21b06a6bc18b7b81f24d2ad0abd79c3e7be18422cd65c61"
     },
     "native_storage": {
       "path": "tools/cpp-cli/native-storage.py",
@@ -170,7 +170,7 @@
     },
     "function_archive_builder": {
       "path": "tools/cpp-cli/build-function-split-archive.py",
-      "sha256": "f350371afb48b3a8a04ddad531e5171b0465214d67bdf2935bc0c527f2edf31a"
+      "sha256": "5339872ce07f0472d8c2e17b3d2d08aeac39ada5ee5beb65241f4cee138e5b86"
     },
     "macos_frontend_verifier": {
       "path": "tools/cpp-cli/verify-macos-frontend.py",
@@ -182,7 +182,7 @@
     },
     "windows_cli_driver": {
       "path": "tools/cpp-cli/stcxx-cli.py",
-      "sha256": "ef889d21c8699fcadb1b2d8d62e6547fcb52b7aca4723b40ccd7a7cd1a5644a1"
+      "sha256": "6a8ab2ae743b2a8dd21b06a6bc18b7b81f24d2ad0abd79c3e7be18422cd65c61"
     },
     "archive_member_reader": {
       "path": "tools/cpp-cli/archive_members.py",

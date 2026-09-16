@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include "Stream.h"
 
@@ -266,5 +265,3 @@ String Stream::readStringUntil(char terminator)
         }
     }
 }
-
-#endif /* STCXX_CPP_CORE */

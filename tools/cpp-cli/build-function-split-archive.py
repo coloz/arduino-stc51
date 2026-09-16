@@ -333,6 +333,24 @@ def trim_direct_members(members: list[Member], arguments, work: Path,
     arguments.audit.resolve().write_text(json.dumps(audit, indent=2) + '\n', encoding='utf-8', newline='\n')
 
 
+def expand_arguments(argv: list[str]) -> list[str]:
+    """Lossless argument transport, without Windows' CreateProcess limit.
+
+    This is a JSON array of argv strings, not shell syntax or a nested response
+    file. The ordinary parser still validates every flag and every input.
+    """
+    if not argv or argv[0] != '--arguments-json':
+        return argv
+    if len(argv) != 2:
+        fail('--arguments-json must be the only option')
+    values = json.loads(Path(argv[1]).read_text(encoding='utf-8'))
+    if not isinstance(values, list) or not all(isinstance(v, str) and '\0' not in v for v in values):
+        fail('argument file must contain an array of NUL-free strings')
+    if '--arguments-json' in values:
+        fail('nested argument files are not supported')
+    return values
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--member", action="append", nargs=2, required=True, metavar=("META", "ACTUAL_REL"))
@@ -347,7 +365,7 @@ def main() -> None:
     parser.add_argument("--output-rel-list", type=Path,
                         help="Trim direct objects and write input/output REL pairs, preserving every input")
     parser.add_argument("--audit", type=Path, required=True)
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(expand_arguments(sys.argv[1:]))
     if arguments.code_limit <= 0 or arguments.xram_limit <= 0:
         fail("code and XRAM limits must be positive")
     splitter = arguments.splitter.resolve()
@@ -471,7 +489,9 @@ def main() -> None:
         fail("deterministic archive member alias exceeds the SDLD display limit")
     if output_archive.exists():
         output_archive.unlink()
-    run([str(sdar), "-rc", str(output_archive), *map(str, aliased_members)])
+    # All aliases are local, short names. Do not put hundreds of absolute
+    # paths on a Windows command line a second time when invoking SDAR.
+    run([str(sdar), "-rc", str(output_archive), *names], cwd=alias_dir)
     listing = run([str(sdar), "-t", str(output_archive)]).decode("utf-8").splitlines()
     if listing != names:
         fail("SDAR output member order/identity differs from the selected closure")

@@ -1,4 +1,3 @@
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 
 #include "SDClass.h"
 
@@ -378,5 +377,3 @@ bool SDClass::rmdir(const char *name)
 #endif
     return SD_rmdir(name) != 0u;
 }
-
-#endif

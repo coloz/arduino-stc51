@@ -105,7 +105,7 @@ def main(argv=None):
     platform = Path(args.platform).resolve()
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    report = {'host': args.host, 'scope': 'plain-C Blink compile/link, HEX integrity/capacity, offline programmer validation; no hardware or C++ qualification',
+    report = {'host': args.host, 'scope': 'C++ Blink compile/link, HEX integrity/capacity, offline programmer validation; no hardware qualification',
               'status': 'RUNNING', 'results': [],
               'started_utc': datetime.now(timezone.utc).isoformat()}
     # Replace stale success even when input loading or the first tool fails.
@@ -181,6 +181,11 @@ def qualify(args, platform, output, report):
                 parsed[key] = value.strip()
         require(parsed.get('build.f_cpu', '').rstrip('Ll') == str(clock),
                 f'{label}: selected clock does not match the device profile')
+        require('-DSTCXX_CPP_CORE=1' in parsed.get('build.cpp_core_flags', '') and
+                '-DSTCXX_CPP_CORE=1' in parsed.get('build.cpp_link_flags', ''),
+                f'{label}: default build did not enable the C++ compiler and linker')
+        require(not any('cppcore' in key for key in parsed),
+                f'{label}: removed language menu is still exposed')
         relevant = {key: value for key, value in parsed.items()
                     if key.startswith('runtime.tools.') or key in
                     ('compiler.path', 'compiler.ar.path', 'compiler.c.cmd', 'compiler.cpp.cmd',
@@ -192,6 +197,8 @@ def qualify(args, platform, output, report):
         else:
             require(relevant == tool_properties, f'{label}: selected toolchain changed')
         run(command, label + '-compile.log')
+        manifest = json.loads((build / 'stcxx/manifest.json').read_text(encoding='utf-8'))
+        require(manifest.get('outcome') == 'pass', f'{label}: C++ link audits did not finish')
         hexes = list(build.glob('*.hex'))
         require(len(hexes) == 1, (label, 'expected one HEX'))
         firmware = hexes[0]

@@ -90,18 +90,6 @@ typedef uint8_t BitOrder;
 
 #define STC_PIN(port, bit) ((((uint8_t)(port)) << 4) | ((uint8_t)(bit)))
 
-/* The plain-C profile has one address space at the API surface.  The genuine
- * C++ profile owns these macros in cpp/pgmspace.h so a code pointer can never
- * be silently degraded to an ordinary data pointer. */
-#if !defined(__cplusplus) || !defined(STCXX_CPP_CORE) || !STCXX_CPP_CORE
-# ifndef PROGMEM
-#  define PROGMEM
-# endif
-# ifndef F
-#  define F(value) (value)
-# endif
-#endif
-
 typedef uint8_t byte;
 typedef bool boolean;
 typedef unsigned int word;
@@ -258,17 +246,11 @@ inline word makeWord(byte high, byte low)
     ((word)((((word)(uint8_t)(high)) << 8) | (word)(uint8_t)(low)))
 #endif
 
-/*
- * Plain C remains the default compatibility profile.  An explicit
- * cppcore=enabled board selection routes genuine C++ translation units
- * through the locked MCS251 frontend and runtime.  In that profile
- * Serial is the real HardwareSerial C++ object; the legacy C facade remains
- * selected everywhere else.
- */
-#if defined(__cplusplus) && defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
+/* C++ Arduino API and internal C hardware declarations. */
+#if defined(__cplusplus)
 # include "cpp/ArduinoCpp.h"
 #else
-# include "HardwareSerial.h"
+# include "HardwareSerial_backend.h"
 #endif
 
 #endif

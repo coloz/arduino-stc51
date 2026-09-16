@@ -1,5 +1,11 @@
 # 0.0.1（2026-09-16）
 
+平台现仅提供 C++11 模式，已移除语言菜单和纯 C 兼容接口。旧 FQBN 中的 `cppcore=enabled` / `cppcore=plain` 参数需删除。所有板项默认 12 MHz，AI8051U-34K64 可选 40 MHz、STC32G144K246 可选 48 MHz；实际芯片时钟须与所选配置一致。
+
+- 修复 U8g2 在 Windows 长路径下的函数归档命令超长，以及并行依赖扫描时的临时文件冲突；无需缩短构建路径或强制单线程。
+- 修复 DHT 的清理分支返回值分析和 RTClib 常量字节读取链，保留 SDCC 告警审计。
+- 补齐 `fminf/fmaxf`、`itoa/utoa/ltoa/ultoa`；将合法 C++ 的匿名 typedef 兼容性提示、整数字面量到浮点的舍入提示保留为警告，TFT_eSPI 可使用通用 SPI 路径。
+- 随附 Adafruit NeoPixel `1.15.5-stc.1` 实验移植：目前仅 STC32G144K246、12/48 MHz、P0～P7 有效引脚、800 kHz。编译与指令模型验证不代替实板时序验收，详见 [移植说明](libraries/Adafruit_NeoPixel/README-STC.md)。
 - 以 0.0.1 重新发布 Windows x64 和 Apple Silicon Mac（macOS 15+）安装包及独立 `stc-cli` 烧录工具。
 - 修复编译过程反复出现的 `__has_builtin`、`__STDC_HOSTED__` 重复定义警告；Windows、macOS 工具包同时包含修复，保留真正的源码警告和错误。
 - 修复 Arduino IDE 上传时报 `Property 'upload.tool.serial' is undefined`：开发板管理器自动安装原生 `stc-cli`，所有型号均配置上传配方。无法返回型号 ID 的 UART 协议默认允许上传；可核验的型号 ID 仍执行匹配检查。

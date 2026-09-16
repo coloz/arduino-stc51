@@ -3,7 +3,6 @@
  * Only the C++ stdio facade selects these prefixed symbols. UART operations
  * require the sketch to initialize Serial; no FILE/filesystem is implied.
  */
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -95,4 +94,3 @@ int __stcxx_getchar(void)
     } while (result < 0);
     return result;
 }
-#endif

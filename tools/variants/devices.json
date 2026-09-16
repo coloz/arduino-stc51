@@ -69,11 +69,9 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
-        12000000,
-        24000000,
-        48000000
+        12000000
       ],
       "linker": {
         "layout": "segmented_home",
@@ -105,10 +103,6 @@
       "target": "mcs251",
       "experimental": true,
       "cpp_core_profile": "stc-cxx11-12mhz-experimental",
-      "cpp_mcs251_clock_options_hz": [
-        12000000,
-        48000000
-      ],
       "cpp_heap_bytes": 32768,
       "capabilities": {
         "memory_timing_layout": 2,
@@ -163,10 +157,9 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
         12000000,
-        24000000,
         48000000
       ],
       "linker": {
@@ -259,11 +252,9 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
-        12000000,
-        24000000,
-        48000000
+        12000000
       ],
       "linker": {
         "layout": "post_home_contiguous",
@@ -339,11 +330,9 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
-        12000000,
-        24000000,
-        42000000
+        12000000
       ],
       "linker": {
         "layout": "post_home_contiguous",
@@ -385,10 +374,6 @@
       "target": "mcs251",
       "experimental": true,
       "cpp_core_profile": "stc-cxx11-12mhz-experimental",
-      "cpp_mcs251_clock_options_hz": [
-        12000000,
-        40000000
-      ],
       "cpp_heap_bytes": 16384,
       "capabilities": {
         "memory_timing_layout": 1,
@@ -438,12 +423,10 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
         12000000,
-        24000000,
-        40000000,
-        48000000
+        40000000
       ],
       "linker": {
         "layout": "post_home_contiguous",
@@ -530,11 +513,9 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
-        12000000,
-        24000000,
-        36000000
+        12000000
       ],
       "linker": {
         "layout": "post_home_contiguous",
@@ -614,10 +595,9 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
-        12000000,
-        24000000
+        12000000
       ],
       "linker": {
         "layout": "post_home_contiguous",
@@ -694,10 +674,9 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
-        12000000,
-        24000000
+        12000000
       ],
       "linker": {
         "layout": "post_home_contiguous",
@@ -789,10 +768,9 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
-        12000000,
-        24000000
+        12000000
       ],
       "linker": {
         "layout": "post_home_contiguous",
@@ -881,10 +859,9 @@
         "large"
       ],
       "default_memory_model": "large",
-      "default_clock_hz": 24000000,
+      "default_clock_hz": 12000000,
       "clock_options_hz": [
-        12000000,
-        24000000
+        12000000
       ],
       "linker": {
         "layout": "post_home_contiguous",

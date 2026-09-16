@@ -1,16 +1,15 @@
 /*
  * SPDX-License-Identifier: MIT
  *
- * Blocking, software-timed stepper motor control for the STC plain-C core.
+ * Blocking, software-timed stepper motor control for the STC C++ library.
  */
-#include "Stepper.h"
+#include "Stepper_backend.h"
 
 #define STEPPER_MICROSECONDS_PER_MINUTE 60000000UL
 #define STEPPER_MAX_STEPS_PER_REVOLUTION 65535UL
 #define STEPPER_WAIT_CHUNK_US 60000u
 
-static STCStepperState stepper_default_state;
-static STCStepperState *stepper_current = &stepper_default_state;
+static STCStepperState *stepper_current;
 #define stepper_pins (stepper_current->pins)
 #define stepper_pin_count (stepper_current->pin_count)
 #define stepper_phase (stepper_current->phase)
@@ -22,7 +21,7 @@ STCStepperState *Stepper_selectContext(STCStepperState *context)
     STC_STEPPER_REENTRANT
 {
     STCStepperState *previous = stepper_current;
-    stepper_current = context != NULL ? context : &stepper_default_state;
+    stepper_current = context;
     return previous;
 }
 
@@ -286,30 +285,3 @@ void Stepper_release(void) STC_STEPPER_REENTRANT
         digitalWrite(state->pins[index], LOW);
     }
 }
-
-unsigned long Stepper_stepsPerRevolution(void) STC_STEPPER_REENTRANT
-{
-    return (unsigned long)stepper_steps_per_revolution;
-}
-
-uint8_t Stepper_pinCount(void) STC_STEPPER_REENTRANT
-{
-    return stepper_pin_count;
-}
-
-uint8_t Stepper_isConfigured(void) STC_STEPPER_REENTRANT
-{
-    return (stepper_pin_count == STEPPER_PIN_COUNT_NONE) ? 0u : 1u;
-}
-
-STC_STEPPER_CODE const STCStepperClass Stepper = {
-    Stepper_setPins2,
-    Stepper_setPins4,
-    Stepper_setPins5,
-    Stepper_setSpeed,
-    Stepper_step,
-    Stepper_release,
-    Stepper_stepsPerRevolution,
-    Stepper_pinCount,
-    Stepper_isConfigured
-};

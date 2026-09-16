@@ -8,7 +8,6 @@
  * main.c.  Defining the two SDCC heap symbols before libc is scanned prevents
  * the archive's _heap.rel fallback from being selected.
  */
-#if defined(STCXX_CPP_CORE) && STCXX_CPP_CORE
 #if !defined(__SDCC_mcs251)
 # error "The STC C++ native runtime requires SDCC MCS251"
 #endif
@@ -153,5 +152,3 @@ void __stcxx_heap_init(void)
     stcxx_heap_minimum_total_free = total_free;
     stcxx_heap_minimum_largest_free = largest_free;
 }
-
-#endif /* STCXX_CPP_CORE */

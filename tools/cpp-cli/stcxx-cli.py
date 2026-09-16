@@ -242,7 +242,9 @@ class Driver:
                            '-fno-c++-static-destructors', '-fno-unwind-tables', '-fno-asynchronous-unwind-tables',
                            '-Xclang', '-mno-constructor-aliases', '-Xclang', '-disable-O0-optnone',
                            '-nostdinc', '-I' + str(self.cpp_headers), '-isystem' + str(self.resource / 'include'),
-                           '-Werror', '-Wno-error=cpp', '-Wno-error=ignored-qualifiers']
+                           '-Werror', '-Wno-error=cpp', '-Wno-error=ignored-qualifiers',
+                           '-Wno-error=non-c-typedef-for-linkage',
+                           '-Wno-error=implicit-const-int-float-conversion']
 
     def compile(self):
         self.verify()
@@ -574,7 +576,9 @@ class Driver:
             for path, metadata in members.items():
                 options += ['--member', metadata, path]
             add_roots(options, members)
-            helper('build-function-split-archive', *options)
+            option_file = group_work / 'arguments.json'
+            write(option_file, json.dumps(list(map(str, options)), ensure_ascii=False) + '\n')
+            helper('build-function-split-archive', '--arguments-json', option_file)
             audit_paths.append(str(audit))
             grouped, inserted = [], False
             for arg in arguments:
@@ -597,7 +601,9 @@ class Driver:
                 if arg in trim:
                     options += ['--member', trim[arg], arg]
             add_roots(options, trim)
-            helper('build-function-split-archive', *options)
+            option_file = trim_work / 'arguments.json'
+            write(option_file, json.dumps(list(map(str, options)), ensure_ascii=False) + '\n')
+            helper('build-function-split-archive', '--arguments-json', option_file)
             pairs = pairs_file.read_text(encoding='utf-8').splitlines()
             require(len(pairs) == len(trim) * 2, 'invalid direct function replacement count')
             replacements = {}
