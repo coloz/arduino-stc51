@@ -6,7 +6,7 @@
     {
       "id": "sdcc-mcs251",
       "packageName": "sdcc-mcs251",
-      "version": "4.6.0-stc.0.0.1",
+      "version": "4.6.0-stc.0.0.1-r1",
       "purpose": "Compiler, assembler and linker for the MCS251 Arduino platform (-mmcs251)",
       "upstream": "https://github.com/gevico/sdcc-c251",
       "sourceTag": "v4.6.0-mcs251-20260804",
@@ -15,23 +15,25 @@
       "systems": [
         {
           "host": "x86_64-mingw32",
-          "archiveFileName": "sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.zip",
+          "archiveFileName": "sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.zip",
           "archiveRoot": "sdcc-mcs251",
-          "size": 14570039,
-          "sha256": "09e649c72e66387dc48b888d9fc1ecb753ac22ac466288db4edd559d29ec78e3",
+          "size": 14817947,
+          "sha256": "8ff65fb3e4522a0276891e0bc9091266969a3dffc443bdcebdf8ae00f3abd72e",
           "sourcePatchSha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
-          "buildHost": "Windows x64 cross build r8",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r8.zip"
+          "buildHost": "Windows x64 cross build r9",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.zip",
+          "preprocessorPatchSha256": "4d8bd5eb8e12b55a0f47f79a3ff76a1e09c1871675cbcb291607bd51b72fbe46"
         },
         {
           "host": "arm64-apple-darwin",
-          "archiveFileName": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2",
+          "archiveFileName": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r10.tar.bz2",
           "archiveRoot": "sdcc-mcs251",
-          "size": 4387332,
-          "sha256": "9c8c5bafa339e4cd72c513be673f15e3fdf36d51acbb89f029864035a38d97cf",
+          "size": 4388490,
+          "sha256": "1d07d4e246cd99fbcb55220959423401b8e07cfd5da7db78e1daeccadb20375a",
           "sourcePatchSha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
-          "buildHost": "Native macOS ARM64 r9",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.tar.bz2"
+          "buildHost": "Native macOS ARM64 r10",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r10.tar.bz2",
+          "preprocessorPatchSha256": "4d8bd5eb8e12b55a0f47f79a3ff76a1e09c1871675cbcb291607bd51b72fbe46"
         }
       ]
     },
@@ -63,28 +65,29 @@
     {
       "id": "stc-cli",
       "packageName": "stc-cli",
-      "version": "0.1.0",
-      "purpose": "Native serial ISP uploader for Arduino IDE and CLI",
+      "version": "0.1.0-stc.1",
+      "purpose": "Native UART and USB ISP uploader with acknowledged programming progress",
       "upstream": "https://github.com/coloz/stc-cli",
       "license": "MIT; see LICENSE and THIRD_PARTY_NOTICES.md in each archive",
       "systems": [
         {
           "host": "x86_64-mingw32",
-          "archiveFileName": "stc-cli-0.1.0-windows-x86_64.zip",
-          "archiveRoot": "stc-cli-0.1.0-windows-x86_64",
-          "size": 605374,
-          "sha256": "b51b4a59a3c6dac7b12916c519c5c061d9d91e7e2ca4a907230b18a2f27d5c45",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stc-cli-0.1.0-windows-x86_64.zip"
+          "archiveFileName": "stc-cli-0.1.0-windows-x86_64-r1.zip",
+          "archiveRoot": "stc-cli-0.1.0-windows-x86_64-r1",
+          "size": 612567,
+          "sha256": "6fe37af8e97a5534ed64171165fc7275ac1dbc5d05125d3c1ed2ba03ba961e55",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stc-cli-0.1.0-windows-x86_64-r1.zip"
         },
         {
           "host": "arm64-apple-darwin",
-          "archiveFileName": "stc-cli-0.1.0-macos-arm64.tar.gz",
-          "archiveRoot": "stc-cli-0.1.0-macos-arm64",
-          "size": 610443,
-          "sha256": "05bd4f17410aa7de763796fb66d3d876693b46c3e13f2fa37a579cfc68e54897",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stc-cli-0.1.0-macos-arm64.tar.gz"
+          "archiveFileName": "stc-cli-0.1.0-macos-arm64-r1.tar.gz",
+          "archiveRoot": "stc-cli-0.1.0-macos-arm64-r1",
+          "size": 612925,
+          "sha256": "5bd130c696ffa9c0d6092d81263394f781726e7f08d021b80e855c217bfdf2d6",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.1/stc-cli-0.1.0-macos-arm64-r1.tar.gz"
         }
-      ]
+      ],
+      "sourceCommit": "43b4a410513abbe0e1bf6dd0dd778cca54f0cf89"
     }
   ]
 }

@@ -46,9 +46,11 @@ fi
 TAG=v4.6.0-mcs251-20260804
 COMMIT=b09075b6a93e6afe10645181e3aeff041ea37f87
 SOURCE_REPOSITORY=${SDCC_SOURCE_REPOSITORY:-https://github.com/gevico/sdcc-c251.git}
-PACKAGE_REVISION=9
+PACKAGE_REVISION=10
 PATCH_PATH="$REPOSITORY_ROOT/tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch"
 PATCH_SHA256=310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d
+PREPROCESSOR_PATCH_PATH="$REPOSITORY_ROOT/tools/toolchain-patches/sdcc-target-preprocessor.patch"
+PREPROCESSOR_PATCH_SHA256=4d8bd5eb8e12b55a0f47f79a3ff76a1e09c1871675cbcb291607bd51b72fbe46
 PATCHED_GEN_BLOB=d115d7f822ba71308dcdc11570302d0321d7996a
 ARCHIVE_NAME="sdcc-mcs251-linux-$ARCH-$COMMIT-r$PACKAGE_REVISION.tar.bz2"
 METADATA_SCRIPT="$SCRIPT_DIRECTORY/finalize-linux-toolchain.py"
@@ -73,6 +75,11 @@ fi
 ACTUAL_PATCH_SHA256=$(sha256sum "$PATCH_PATH" | awk '{print $1}')
 if [ "$ACTUAL_PATCH_SHA256" != "$PATCH_SHA256" ]; then
     echo "MCS251 patch SHA-256 mismatch: $ACTUAL_PATCH_SHA256" >&2
+    exit 3
+fi
+
+if [ "$(sha256sum "$PREPROCESSOR_PATCH_PATH" | awk '{print $1}')" != "$PREPROCESSOR_PATCH_SHA256" ]; then
+    echo "Target preprocessor patch SHA-256 mismatch" >&2
     exit 3
 fi
 
@@ -120,6 +127,9 @@ fi
 git -C "$WORK_DIRECTORY/source" apply --check "$PATCH_PATH"
 git -C "$WORK_DIRECTORY/source" apply "$PATCH_PATH"
 git -C "$WORK_DIRECTORY/source" apply --reverse --check "$PATCH_PATH"
+git -C "$WORK_DIRECTORY/source" apply --check "$PREPROCESSOR_PATCH_PATH"
+git -C "$WORK_DIRECTORY/source" apply "$PREPROCESSOR_PATCH_PATH"
+git -C "$WORK_DIRECTORY/source" apply --reverse --check "$PREPROCESSOR_PATCH_PATH"
 git -C "$WORK_DIRECTORY/source" diff --check
 ACTUAL_PATCHED_GEN_BLOB=$(git -C "$WORK_DIRECTORY/source" hash-object src/mcs251/gen.c)
 if [ "$ACTUAL_PATCHED_GEN_BLOB" != "$PATCHED_GEN_BLOB" ]; then
@@ -238,7 +248,7 @@ echo "compatibility=GLIBC_${MAX_GLIBC:-none},GLIBCXX_${MAX_GLIBCXX:-none}"
 
 python3 "$METADATA_SCRIPT" --source "$WORK_DIRECTORY/source" \
     --build "$WORK_DIRECTORY/build" --package "$PACKAGE_ROOT" \
-    --builder "$SCRIPT_DIRECTORY/build-linux-toolchain.sh" --patch "$PATCH_PATH" --commit "$COMMIT" --tag "$TAG" \
+    --builder "$SCRIPT_DIRECTORY/build-linux-toolchain.sh" --patch "$PATCH_PATH" --preprocessor-patch "$PREPROCESSOR_PATCH_PATH" --commit "$COMMIT" --tag "$TAG" \
     --epoch "$SOURCE_DATE_EPOCH"
 
 mkdir -p "$OUTPUT_DIRECTORY"

@@ -100,7 +100,8 @@ def main():
         run('upload-recipes', [sys.executable, Path(__file__).with_name('check-upload.py'),
                                '--cli', args.cli.resolve(), '--config', config, '--sdk', sdk,
                                '--work', work / 'upload-recipes'])
-        compiler = tools / 'sdcc-mcs251/4.6.0-stc.0.0.1/bin' / ('sdcc.exe' if args.host == 'windows' else 'sdcc')
+        versions = {tool['name']: tool['version'] for tool in index['packages'][0]['tools']}
+        compiler = tools / 'sdcc-mcs251' / versions['sdcc-mcs251'] / 'bin' / ('sdcc.exe' if args.host == 'windows' else 'sdcc')
         signature = compiler.read_bytes()[:4]
         require(signature[:2] == b'MZ' if args.host == 'windows' else signature == b'\xcf\xfa\xed\xfe', 'compiler is not a native image')
         cases = [('c-full', 'stc32g12k128', 'STC32G12K128', 'Blink', False),
@@ -117,6 +118,8 @@ def main():
             fqbn = 'arduino-stc51:mcs251:' + board + ':clock=12m' + (',cppcore=enabled' if cpp else '')
             command = [*cli, 'compile', '--clean', '--fqbn', fqbn, '--build-path', build, sdk / 'examples' / example]
             text = run(label, command)
+            require(not re.search(r'warning:.*(?:__has_builtin|__STDC_HOSTED__).*redefined', text),
+                    'target macro redefinition warning returned')
             require(re.search(r'Sketch uses [1-9][0-9]* bytes', text), 'compiler did not report nonempty firmware')
             firmware = next(build.glob('*.hex'))
             validation = json.loads(run(label + '-hex', [args.stc.resolve(), 'validate', '--expect', model, '--file', firmware,

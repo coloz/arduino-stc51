@@ -77,7 +77,7 @@ def package_owner(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('source', 'build', 'package', 'builder', 'patch'):
+    for name in ('source', 'build', 'package', 'builder', 'patch', 'preprocessor-patch'):
         parser.add_argument('--' + name, required=True, type=Path)
     for name in ('commit', 'tag', 'epoch'):
         parser.add_argument('--' + name, required=True)
@@ -91,11 +91,13 @@ def main():
     if run(['git', '-C', source, 'rev-parse', 'HEAD']) != args.commit:
         parser.error('source commit mismatch')
     run(['git', '-C', source, 'apply', '--reverse', '--check', args.patch.resolve()])
+    run(['git', '-C', source, 'apply', '--reverse', '--check', args.preprocessor_patch.resolve()])
     initial = inventory(package)
     inputs = {
         'build-inputs/build-linux-toolchain.sh': args.builder.resolve(),
         'build-inputs/finalize-linux-toolchain.py': Path(__file__).resolve(),
         'build-inputs/sdcc-mcs251-arduino-cpp.patch': args.patch.resolve(),
+        'build-inputs/sdcc-target-preprocessor.patch': args.preprocessor_patch.resolve(),
     }
     for name in ('COPYING', 'COPYING3', 'COPYING.LIB', 'COPYING3.LIB'):
         inputs['licenses/binutils/' + name] = source / 'support/sdbinutils' / name
@@ -138,7 +140,8 @@ def main():
     metadata = {'schema_version': 1, 'scope': 'Linux package provenance; runtime and corresponding-source distribution gates remain separate',
                 'production_qualified': False, 'source_tag': args.tag, 'source_commit': args.commit,
                 'source_date_epoch': int(args.epoch), 'source_repository': 'https://github.com/gevico/sdcc-c251.git',
-                'source_patch_sha256': sha256(args.patch), 'inputs': hashes, 'payload_before_metadata': initial,
+                'source_patch_sha256': sha256(args.patch),
+                'preprocessor_patch_sha256': sha256(args.preprocessor_patch), 'inputs': hashes, 'payload_before_metadata': initial,
                 'dynamic_dependencies': dynamic_dependencies,
                 'dependency_packages': {owner: run(['dpkg-query', '-W', '-f=${Version}', owner]) for owner in sorted(dependencies)},
                 'build_packages': [dict(zip(('package', 'version', 'architecture'), line.split('\t'))) for line in packages.splitlines()],

@@ -37,7 +37,7 @@ def system_dependencies(listing):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('source', 'build', 'package', 'builder', 'patch', 'boost-license'):
+    for name in ('source', 'build', 'package', 'builder', 'patch', 'preprocessor-patch', 'boost-license'):
         parser.add_argument('--' + name, required=True, type=Path)
     for name in ('commit', 'tag', 'epoch', 'arch', 'minimum-macos'):
         parser.add_argument('--' + name, required=True)
@@ -56,6 +56,7 @@ def main():
     run(['git', '-C', source, 'apply', '--reverse', '--check', args.patch.resolve()])
     if sha256(args.boost_license) != 'c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566':
         parser.error('Boost license differs from the verified upstream text')
+    run(['git', '-C', source, 'apply', '--reverse', '--check', args.preprocessor_patch.resolve()])
     initial = inventory(package)
     boost = Path(run(['brew', '--prefix', 'boost'])).resolve()
     inputs = {
@@ -63,6 +64,7 @@ def main():
         'build-inputs/finalize-macos-toolchain.py': Path(__file__).resolve(),
         'build-inputs/finalize-linux-toolchain.py': shared_path.resolve(),
         'build-inputs/sdcc-mcs251-arduino-cpp.patch': args.patch.resolve(),
+        'build-inputs/sdcc-target-preprocessor.patch': args.preprocessor_patch.resolve(),
         'licenses/boost/LICENSE_1_0.txt': args.boost_license.resolve(),
         'build-inputs/boost-version.hpp': boost / 'include/boost/version.hpp',
     }
@@ -98,7 +100,8 @@ def main():
     metadata = {'schema_version': 1, 'scope': __doc__, 'production_qualified': False,
                 'source_repository': 'https://github.com/gevico/sdcc-c251.git',
                 'source_tag': args.tag, 'source_commit': args.commit, 'source_date_epoch': int(args.epoch),
-                'source_patch_sha256': sha256(args.patch), 'inputs': hashes, 'payload_before_metadata': initial,
+                'source_patch_sha256': sha256(args.patch),
+                'preprocessor_patch_sha256': sha256(args.preprocessor_patch), 'inputs': hashes, 'payload_before_metadata': initial,
                 'macho_files': native, 'build_tools': tools,
                 'host': {'version': run(['sw_vers', '-productVersion']), 'build': run(['sw_vers', '-buildVersion']),
                          'machine': run(['uname', '-m'])},

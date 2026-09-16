@@ -104,7 +104,10 @@
       "patch_sha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
       "sha256": "d0d88b0d94f1ac74a709c57115c67f89afe65e96e64c9b51efd83ddc40928cd6",
       "elf_sha256": "993d42f5909fe1e32a6b05dc06ea15bdc2cb13649fb1eefd7deb13892319fd22",
-      "source_project_posix": "/mnt/d/Git/stc51/stcxx"
+      "source_project_posix": "/mnt/d/Git/stc51/stcxx",
+      "preprocessor_patch_file": "tools/toolchain-patches/sdcc-target-preprocessor.patch",
+      "preprocessor_patch_sha256": "4d8bd5eb8e12b55a0f47f79a3ff76a1e09c1871675cbcb291607bd51b72fbe46",
+      "preprocessor_source_commit": "85d39a6c8058a5fee00f794396afe5669abd0009"
     },
     "sdar": {
       "sha256": "11ff1c60f9173ae51de587661e09cfc1d38957f5f5f6b9f16d2c0375626f40c3"

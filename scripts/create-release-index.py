@@ -21,19 +21,23 @@ def main():
     spec = importlib.util.spec_from_file_location('candidate', Path(__file__).with_name('create-macos-candidate-index.py'))
     candidate = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(candidate)
-    commit = 'b09075b6a93e6afe10645181e3aeff041ea37f87'
-    sdcc_version = '4.6.0-stc.' + args.version
+    manifest = json.loads((Path(__file__).resolve().parents[1] / 'tools/toolchain-manifest.json').read_text(encoding='utf-8'))
+    tools = {tool['id']: tool for tool in manifest['tools']}
+
+    def archive(name, host):
+        system = next(system for system in tools[name]['systems'] if system['host'] == host)
+        path = assets / system['archiveFileName']
+        candidate.require(path.stat().st_size == system['size'] and candidate.sha256(path) == system['sha256'],
+                          'Archive differs from release manifest: ' + path.name)
+        return path
+
+    sdcc_version = tools['sdcc-mcs251']['version']
     platform = assets / ('arduino-stc51-' + args.version + '.tar.bz2')
     with tempfile.TemporaryDirectory() as temporary:
         win_path, mac_path = [Path(temporary) / n for n in ('windows.json', 'macos.json')]
-        candidate.create(platform, assets / f'sdcc-mcs251-windows-x86_64-{commit}-r8.zip',
-                         assets / 'stcxx-frontend-20.1.8-windows-x86_64-r1.tar.bz2',
-                         sdcc_version, base, win_path, 'x86_64-mingw32',
-                         uploader=assets / 'stc-cli-0.1.0-windows-x86_64.zip')
-        candidate.create(platform, assets / f'sdcc-mcs251-macos-arm64-{commit}-r9.tar.bz2',
-                         assets / 'stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2',
-                         sdcc_version, base, mac_path, 'arm64-apple-darwin',
-                         uploader=assets / 'stc-cli-0.1.0-macos-arm64.tar.gz')
+        for host, output in [('x86_64-mingw32', win_path), ('arm64-apple-darwin', mac_path)]:
+            candidate.create(platform, archive('sdcc-mcs251', host), archive('stcxx-frontend', host),
+                             sdcc_version, base, output, host, uploader=archive('stc-cli', host))
         package = json.loads(win_path.read_text())['packages'][0]
         mac = json.loads(mac_path.read_text())['packages'][0]
     assert package['platforms'][0]['checksum'] == mac['platforms'][0]['checksum']

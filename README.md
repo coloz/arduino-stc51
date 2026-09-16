@@ -25,7 +25,7 @@ arduino-cli core install arduino-stc51:mcs251@0.0.1 --additional-urls https://ra
 
 安装资源见 [v0.0.1 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.1)。本次保持版本号 0.0.1 并替换发布包；已安装旧 0.0.1 的用户也需卸载、更新索引后重新安装，并清理构建缓存。此前的 0.0.2、0.0.3 保持撤下。
 
-开发板管理器在两端都安装 `sdcc-mcs251`、`stcxx-frontend` 和 `stc-cli` 三项工具。Windows 使用系统 PowerShell 5.1、原生 `.exe` 工具及包内 Python；macOS 使用原生 ARM64 工具。C++ 前端负责 Clang → LLVM-CBE 转换，C 和 C++ 共用本机 SDCC，`stc-cli` 负责串口上传。安装依赖已移除占位包 `stc51-native-macos-host`。
+开发板管理器在两端都安装 `sdcc-mcs251`、`stcxx-frontend` 和 `stc-cli` 三项工具。Windows 使用系统 PowerShell 5.1、原生 `.exe` 工具及包内 Python；macOS 使用原生 ARM64 工具。C++ 前端负责 Clang → LLVM-CBE 转换，C 和 C++ 共用本机 SDCC，`stc-cli` 负责 UART 和原生 USB 上传。安装依赖已移除占位包 `stc51-native-macos-host`。本次 SDCC 和上传器分别采用新的工具依赖版本 `4.6.0-stc.0.0.1-r1`、`0.1.0-stc.1`，重新安装平台时会下载修复后的工具。
 
 ## 支持型号
 

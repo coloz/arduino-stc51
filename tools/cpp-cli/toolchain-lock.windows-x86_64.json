@@ -66,8 +66,8 @@
       "version_prefix": "SDCC : mcs51/mcs251 TD- 4.6.0",
       "source_project_windows": "D:\\Git\\stc51\\stcxx",
       "source_project_branch": "arduino-cpp-core",
-      "source_project_commit": "f16b00a71e3da804b52b796b332ff5696db4280a",
-      "source_project_state": "worktree-source-candidate; exact compiler sources are bound by patch_sha256",
+      "source_project_commit": "85d39a6c8058a5fee00f794396afe5669abd0009",
+      "source_project_state": "committed compiler sources; base and preprocessor patches included in release build inputs",
       "previous_qualified_source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
       "source_project_patch_file": "arduino/patches/sdcc-mcs251-arduino-cpp.patch",
       "malloc_abi_source_file": "device/lib/malloc.c",
@@ -92,11 +92,14 @@
       "standalone_bridge_regression_sha256": "8d4ab2140b002754a56b7cbec2d32b3bb610fe1aa92cd9ac08baeea46e8b417d",
       "patch_file": "tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch",
       "patch_sha256": "310d5d53f3cf246ea34b18bad44a868cb7dcd8f55faab317f5505da30747ef2d",
-      "sha256": "119a31c3211cca5907864f1b2f854f4f1767d97741339ff91696179d473730f8",
-      "elf_sha256": "119a31c3211cca5907864f1b2f854f4f1767d97741339ff91696179d473730f8",
-      "native_package_manifest_sha256": "2d381473a5313af69bb8d434ed0fea8938862d6cd5d0fa2d7326409d5efbc6f1",
+      "sha256": "af4d47e1eba86a775ce1685be471e4c2505a1ddd052f4a4208e31f15456ce4a8",
+      "elf_sha256": "af4d47e1eba86a775ce1685be471e4c2505a1ddd052f4a4208e31f15456ce4a8",
+      "native_package_manifest_sha256": "03b428a1d7ce3d9415b42559f76cdd1efba8f5a3b021506087a968a467d40545",
       "source_project_posix": "/mnt/d/Git/stc51/stcxx",
-      "windows_package_archive_sha256": "09e649c72e66387dc48b888d9fc1ecb753ac22ac466288db4edd559d29ec78e3"
+      "windows_package_archive_sha256": "8ff65fb3e4522a0276891e0bc9091266969a3dffc443bdcebdf8ae00f3abd72e",
+      "preprocessor_patch_file": "tools/toolchain-patches/sdcc-target-preprocessor.patch",
+      "preprocessor_patch_sha256": "4d8bd5eb8e12b55a0f47f79a3ff76a1e09c1871675cbcb291607bd51b72fbe46",
+      "preprocessor_source_commit": "85d39a6c8058a5fee00f794396afe5669abd0009"
     },
     "sdar": {
       "sha256": "a6ca9d7b29d45d88a5aff3dd5aebddbe0f72c5e8fa2f06069b72eb11a7e73504"
@@ -111,7 +114,7 @@
       "sha256": "408572216844551dbda07dc1801b6215d8ab1da1af98208cd0653f5487544523"
     },
     "sdcpp": {
-      "sha256": "88bee54f1ac13813b44ce37427ad74b5ceac8294f81b01319605c0e81f5c05c2"
+      "sha256": "b3f2df376e93d02dc71ae1725b507a92e966f9698ad03fcc8dba8285697ad5cb"
     },
     "sdcc_inputs": {
       "libsdcc_sha256": "8aee6a772406c64add18a58dbd8936c1c57e4966671bb80df925339a1043917b",
@@ -224,8 +227,8 @@
     "bin/sdar.exe": "a6ca9d7b29d45d88a5aff3dd5aebddbe0f72c5e8fa2f06069b72eb11a7e73504",
     "bin/sdas251.exe": "e29eadad71ce25472e76080d926d84faf6a176bf9311bef9fdb486c2a5951a24",
     "bin/sdas8051.exe": "6c0f9ce576777c5533b0fe4e8a08402b7cb668522122eb59dc94ed7733d8c1d6",
-    "bin/sdcc.exe": "119a31c3211cca5907864f1b2f854f4f1767d97741339ff91696179d473730f8",
-    "bin/sdcpp.exe": "88bee54f1ac13813b44ce37427ad74b5ceac8294f81b01319605c0e81f5c05c2",
+    "bin/sdcc.exe": "af4d47e1eba86a775ce1685be471e4c2505a1ddd052f4a4208e31f15456ce4a8",
+    "bin/sdcpp.exe": "b3f2df376e93d02dc71ae1725b507a92e966f9698ad03fcc8dba8285697ad5cb",
     "bin/sdld.exe": "408572216844551dbda07dc1801b6215d8ab1da1af98208cd0653f5487544523",
     "bin/sdldmcs251.exe": "408572216844551dbda07dc1801b6215d8ab1da1af98208cd0653f5487544523",
     "bin/sdnm.exe": "1a7424379727570b9ded5cd17a229a2cd371f61e9e2ef818ee559ce784b3e909",

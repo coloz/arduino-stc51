@@ -13,7 +13,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILDERS = ('build-linux-toolchain.sh', 'build-macos-toolchain.sh')
-FIELDS = ('TAG', 'COMMIT', 'PACKAGE_REVISION', 'PATCH_SHA256', 'PATCHED_GEN_BLOB')
+FIELDS = ('TAG', 'COMMIT', 'PACKAGE_REVISION', 'PATCH_SHA256', 'PREPROCESSOR_PATCH_SHA256', 'PATCHED_GEN_BLOB')
 
 
 def require(condition, message):
@@ -94,12 +94,17 @@ def check(root, compiler_root=None):
     patch = root / 'tools/toolchain-patches/sdcc-mcs251-arduino-cpp.patch'
     patch_sha = digest(patch)
     require(patch_sha == lock['patch_sha256'], 'SDK patch differs from the C++ toolchain lock')
-    expected = {'TAG': upstream['sourceTag'], 'COMMIT': lock['upstream_base_commit'], 'PATCH_SHA256': patch_sha}
-    inputs = [lock_path, manifest_path, patch]
+    preprocessor_patch = root / lock['preprocessor_patch_file']
+    preprocessor_sha = digest(preprocessor_patch)
+    require(preprocessor_sha == lock['preprocessor_patch_sha256'], 'Preprocessor patch differs from its lock')
+    expected = {'TAG': upstream['sourceTag'], 'COMMIT': lock['upstream_base_commit'],
+                'PATCH_SHA256': patch_sha, 'PREPROCESSOR_PATCH_SHA256': preprocessor_sha}
+    inputs = [lock_path, manifest_path, patch, preprocessor_patch]
     for name in ('toolchain-lock.windows-x86_64.json', 'toolchain-lock.macos-arm64.json'):
         path = root / 'tools/cpp-cli' / name
         distributed = json.loads(path.read_text(encoding='utf-8'))['tools']['sdcc']
         require(distributed['patch_sha256'] == patch_sha and
+                distributed['preprocessor_patch_sha256'] == preprocessor_sha and
                 distributed['upstream_base_commit'] == lock['upstream_base_commit'],
                 'distribution compiler sources differ: ' + name)
         inputs.append(path)

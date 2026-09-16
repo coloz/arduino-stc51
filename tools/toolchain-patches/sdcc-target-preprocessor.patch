@@ -1,0 +1,57 @@
+diff --git a/src/SDCCmain.c b/src/SDCCmain.c
+index b399be423c74460dbed8ed5acd27604c42b032d5..bd58243455a2e4f02f073c4215d80d46fb89f5e1 100644
+--- a/src/SDCCmain.c
++++ b/src/SDCCmain.c
+@@ -2456,6 +2456,8 @@ preProcess (char **envp)
+       /* sdcpp is a host program. Do not expose its host ABI as target
+          predefined macros. */
+       addSet (&preArgvSet, Safe_strdup ("-undef"));
++      /* Let sdcpp define __STDC_HOSTED__ for the target environment. */
++      addSet (&preArgvSet, Safe_strdup ("-ffreestanding"));
+       addSet (&preArgvSet,
+               Safe_strdup ("-Wno-builtin-macro-redefined"));
+       addSet (&preArgvSet,
+@@ -2779,7 +2781,6 @@ preProcess (char **envp)
+       addSet (&preArgvSet, Safe_strdup ("-D__STDC_ISO_10646__=201409L")); // wchar_t is UTF-32
+ 
+       /* Target data model. Never inherit these values from the host cpp. */
+-      addSet (&preArgvSet, Safe_strdup ("-D__STDC_HOSTED__=0"));
+       addPreprocessorUIntDefine ("__CHAR_BIT__", port->s.char_size * 8);
+       addPreprocessorUIntDefine ("__SIZEOF_CHAR__", port->s.char_size);
+       addPreprocessorUIntDefine ("__SIZEOF_SHORT__", port->s.short_size);
+diff --git a/support/cpp/gcc/c-family/c-ppoutput.cc b/support/cpp/gcc/c-family/c-ppoutput.cc
+index 96aad3b22861e7b4642ac07f508366400d627d9c..336eb2928b0f5e3a7d3272a4a29bc811bec2d06a 100644
+--- a/support/cpp/gcc/c-family/c-ppoutput.cc
++++ b/support/cpp/gcc/c-family/c-ppoutput.cc
+@@ -164,7 +164,9 @@ init_pp_output (FILE *out_stream)
+     }
+ 
+   cb->has_attribute = c_common_has_attribute;
+-  cb->has_builtin = c_common_has_builtin;
++  /* SDCC uses -undef and supplies its own target/frontend builtin query.
++     Do not install the host query before those command-line definitions. */
++  cb->has_builtin = flag_undef ? NULL : c_common_has_builtin;
+   cb->get_source_date_epoch = cb_get_source_date_epoch;
+   cb->remap_filename = remap_macro_filename;
+ 
+diff --git a/support/cpp/libcpp/init.cc b/support/cpp/libcpp/init.cc
+index f270e88411e75fb2a89b02fc508bb0212472cf71..6f5e270acb1919e1f44b8ccac911e1dc1a7c2f13 100644
+--- a/support/cpp/libcpp/init.cc
++++ b/support/cpp/libcpp/init.cc
+@@ -515,11 +515,14 @@ cpp_init_special_builtins (cpp_reader *pfile)
+   for (b = builtin_array; b < builtin_array + n; b++)
+     {
+       if ((b->value == BT_HAS_ATTRIBUTE
+-	   || b->value == BT_HAS_STD_ATTRIBUTE
+-	   || b->value == BT_HAS_BUILTIN)
++	   || b->value == BT_HAS_STD_ATTRIBUTE)
+ 	  && (CPP_OPTION (pfile, lang) == CLK_ASM
+ 	      || pfile->cb.has_attribute == NULL))
+ 	continue;
++      if (b->value == BT_HAS_BUILTIN
++	  && (CPP_OPTION (pfile, lang) == CLK_ASM
++	      || pfile->cb.has_builtin == NULL))
++	continue;
+       cpp_hashnode *hp = cpp_lookup (pfile, b->name, b->len);
+       hp->type = NT_BUILTIN_MACRO;
+       if (b->always_warn_if_redefined)

@@ -252,11 +252,11 @@ jobs:
         include:
           - os: windows-latest
             host: windows
-            programmer: stc-cli-0.1.0-windows-x86_64.zip
+            programmer: stc-cli-0.1.0-windows-x86_64-r1.zip
             executable: stc-cli.exe
           - os: macos-15
             host: macos
-            programmer: stc-cli-0.1.0-macos-arm64.tar.gz
+            programmer: stc-cli-0.1.0-macos-arm64-r1.tar.gz
             executable: stc-cli
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
