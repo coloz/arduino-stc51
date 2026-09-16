@@ -100,7 +100,7 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
     version, lock, devices = sdk_metadata(platform, host)
     binding = lock.get('arduino_frontend')
     require(isinstance(binding, dict) and set(binding) == {'packager', 'name', 'version'} and
-            binding['packager'] == 'arduino-stc51' and binding['name'] == 'stcxx-frontend' and
+            binding['packager'] == 'stc' and binding['name'] == 'stcxx-frontend' and
             isinstance(binding['version'], str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', binding['version']),
             'SDK must bind its exact Arduino frontend dependency')
     _, lock_host, sdcc_archive_key, frontend_key = HOSTS[host]
@@ -112,11 +112,11 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
         return {'url': base_url.rstrip('/') + '/' + path.name, 'archiveFileName': path.name,
                 'checksum': 'SHA-256:' + before[str(path)], 'size': str(path.stat().st_size)}
 
-    dependencies = [{'packager': 'arduino-stc51', 'name': 'sdcc-mcs251', 'version': sdcc_version}, binding]
+    dependencies = [{'packager': 'stc', 'name': 'sdcc-mcs251', 'version': sdcc_version}, binding]
     tool_assets = [('sdcc-mcs251', sdcc_version, sdcc), (binding['name'], binding['version'], frontend)]
-    dependencies.append({'packager': 'arduino-stc51', 'name': 'stc-cli', 'version': uploader_tool['version']})
+    dependencies.append({'packager': 'stc', 'name': 'stc-cli', 'version': uploader_tool['version']})
     tool_assets.append(('stc-cli', uploader_tool['version'], uploader))
-    package = {'name': 'arduino-stc51', 'maintainer': 'arduino-stc51 contributors',
+    package = {'name': 'stc', 'maintainer': 'arduino-stc51 contributors',
                'websiteURL': 'https://github.com/coloz/arduino-stc51', 'email': '',
                'help': {'online': 'https://github.com/coloz/arduino-stc51/issues'},
                'platforms': [{'name': 'arduino-stc51', 'architecture': 'mcs251', 'version': version,

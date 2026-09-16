@@ -208,7 +208,7 @@
   },
   "host": "windows-x86_64",
   "arduino_frontend": {
-    "packager": "arduino-stc51",
+    "packager": "stc",
     "name": "stcxx-frontend",
     "version": "20.1.8-stc.3"
   },

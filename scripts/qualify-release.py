@@ -76,7 +76,7 @@ def execution_profiles(devices, all_clocks):
                 require(isinstance(clock, int) and clock > 0 and clock % 1000000 == 0,
                         f'unsupported clock menu encoding: {clock}')
             label = device['id'] + '-mcs251'
-            fqbn = 'arduino-stc51:mcs251:' + device['id']
+            fqbn = 'stc:mcs251:' + device['id']
             if clock is not None:
                 label += f'-{clock // 1000000}m'
                 fqbn += f':clock={clock // 1000000}m'

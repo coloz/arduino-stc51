@@ -1,8 +1,10 @@
 # arduino-stc51
 
-面向 STC **MCS251** 芯片的 Arduino core。当前版本 **0.0.2**，仅维护 10 个型号；所有型号固定使用 `-mmcs251`，Arduino 架构标识为 `mcs251`。
+面向 STC **MCS251** 芯片的 Arduino core。当前版本 **0.0.3**，仅维护 10 个型号；所有型号固定使用 `-mmcs251`，Arduino 架构标识为 `mcs251`。
 
 MCS51 芯片、板项和 C++ 适配路径已移除。旧的 `arduino-stc51:mcs51:…` FQBN 不再适用，需要重新安装当前源码并选择新板项。工程名仍为 `arduino-stc51`。
+
+FQBN 统一为 `stc:mcs251:<variants>`，其中 `<variants>` 是 `boards.txt` 中的板卡 ID（对应 `devices.json` 的 `id`），例如 `stc:mcs251:stc32g8k64`、`stc:mcs251:ai8051u_34k64`。时钟等菜单参数仍可附加在末尾，例如 `stc:mcs251:ai8051u_34k64:clock=40m`。包标识为 `stc`，开发板管理器中的显示名称仍为 `arduino-stc51`。
 
 当前版本供开发和有限场景验证使用，尚未完成实板验收。产品板需验证实际时钟、接线和外设功能；编译成功不代表实板验收通过。
 
@@ -16,16 +18,18 @@ MCS51 芯片、板项和 C++ 适配路径已移除。旧的 `arduino-stc51:mcs51
 https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
 ```
 
-在开发板管理器中安装 **arduino-stc51 0.0.2**，然后选择对应型号。Arduino CLI 可使用：
+在开发板管理器中安装 **arduino-stc51 0.0.3**，然后选择对应型号。Arduino CLI 可使用：
 
 ```powershell
 arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
-arduino-cli core install arduino-stc51:mcs251@0.0.2 --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
+arduino-cli core install stc:mcs251@0.0.3 --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
 ```
 
-安装资源见 [v0.0.2 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.2)。已安装 0.0.1 的用户刷新开发板索引后升级至 0.0.2，并重新编译项目。0.0.1 Release 保留供历史版本下载。
+安装资源见 [v0.0.3 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.3)。已安装 0.0.1 或 0.0.2 的用户刷新开发板索引后安装新包，并重新编译项目。历史 Release 保留供下载。
 
-开发板管理器在两端都安装 `sdcc-mcs251`、`stcxx-frontend` 和 `stc-cli` 三项工具。Windows 使用系统 PowerShell 5.1、原生 `.exe` 工具及包内 Python；macOS 使用原生 ARM64 工具。C++ 前端负责 Clang → LLVM-CBE 转换，C 和 C++ 共用本机 SDCC，`stc-cli` 负责 UART 和原生 USB 上传。安装依赖已移除占位包 `stc51-native-macos-host`。0.0.2 沿用已验证的 SDCC `4.6.0-stc.0.0.1-r1`、前端 `20.1.8-stc.3` 和上传器 `0.1.0-stc.1`，已有相同工具版本可直接复用。
+从旧包标识 `arduino-stc51` 迁移时，需安装 `stc:mcs251` 并重新选择板卡，将项目和脚本中的旧 FQBN 前缀改为 `stc:mcs251:`；旧包的版本升级不会自动完成迁移。确认新包可用后，可卸载旧包。手动安装源码时，平台目录应为 `<sketchbook>/hardware/stc/mcs251`；开发板管理器安装路径为 `packages/stc/hardware/mcs251/<version>`。
+
+开发板管理器在两端都安装 `sdcc-mcs251`、`stcxx-frontend` 和 `stc-cli` 三项工具。Windows 使用系统 PowerShell 5.1、原生 `.exe` 工具及包内 Python；macOS 使用原生 ARM64 工具。C++ 前端负责 Clang → LLVM-CBE 转换，C 和 C++ 共用本机 SDCC，`stc-cli` 负责 UART 和原生 USB 上传。安装依赖已移除占位包 `stc51-native-macos-host`。0.0.3 沿用已验证的 SDCC `4.6.0-stc.0.0.1-r1`、前端 `20.1.8-stc.3` 和上传器 `0.1.0-stc.1`，工具归档与 0.0.2 相同，安装在新的 `stc` 包目录下。
 
 ## 支持型号
 
@@ -64,7 +68,7 @@ STC32G144K246 的 `工具 → Upload method` 默认为 `Automatic (USB CDC or UA
 
 ```powershell
 $build = .\scripts\build-example.ps1 `
-    -Fqbn 'arduino-stc51:mcs251:stc32g12k128:clock=12m' `
+    -Fqbn 'stc:mcs251:stc32g12k128:clock=12m' `
     -WorkDirectory D:\stc51-work `
     -ToolCacheDirectory D:\stc51-tools
 $build.firmware
@@ -92,9 +96,9 @@ Arduino IDE 中选择实际芯片型号和串口，点击“上传”即可调�
 
 AI8051U、STC32CL8K48/64、STC32G12K64 和 STC32G144K246 的 ISP 当前无法提供可核验的型号 ID。核对芯片丝印和 IDE 所选型号后，在“工具 → Upload model check”选择“I checked the chip marking (ISP has no model ID)”。默认保留型号校验，不会自动绕过。STC32G12K128、STC32G8K48/64 使用自动型号校验。
 
-若仍提示 `Property 'upload.tool.serial' is undefined`，请刷新索引、确认平台已升级到 0.0.2，然后重启 IDE。
+若仍提示 `Property 'upload.tool.serial' is undefined`，请刷新索引、确认已安装 0.0.3 并选择 `stc:mcs251` 下的板卡，然后重启 IDE。
 
-也可从 [v0.0.2 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.2) 下载独立 `stc-cli`，先检查 HEX 再手动烧录，例如：
+也可从 [v0.0.3 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.3) 下载独立 `stc-cli`，先检查 HEX 再手动烧录，例如：
 
 ```powershell
 $stc = '..\stc-cli\target\release\stc-cli.exe'

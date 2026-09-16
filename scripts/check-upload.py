@@ -39,7 +39,7 @@ def main():
         for options in variants:
             label = board + '-' + (options.lstrip(':').replace('uploadcheck=', '').replace('uploadtransport=', '').replace(',', '-') if options else 'default')
             command = [str(args.cli.resolve()), '--config-file', str(args.config.resolve()), 'upload',
-                       '--fqbn', 'arduino-stc51:mcs251:' + board + options,
+                       '--fqbn', 'stc:mcs251:' + board + options,
                        '--port', 'STC_NONEXISTENT_UPLOAD_TEST', '--input-file', str(firmware), '--verbose']
             result = subprocess.run([*command, '--dry-run'], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30)
             output = result.stdout.decode(errors='replace')
@@ -67,7 +67,7 @@ def main():
             checks.append(label)
         if board == 'stc32g144k246':
             no_port = [str(args.cli.resolve()), '--config-file', str(args.config.resolve()), 'upload',
-                       '--fqbn', 'arduino-stc51:mcs251:' + board + ':uploadtransport=usb',
+                       '--fqbn', 'stc:mcs251:' + board + ':uploadtransport=usb',
                        '--input-file', str(firmware), '--verbose']
             for dry in [True, False]:
                 result = subprocess.run(no_port + (['--dry-run'] if dry else []), stdout=subprocess.PIPE,

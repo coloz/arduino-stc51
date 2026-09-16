@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$ArduinoCli = 'arduino-cli',
-    [string]$Fqbn = 'arduino-stc51:mcs251:stc32g8k64:clock=12m',
+    [string]$Fqbn = 'stc:mcs251:stc32g8k64:clock=12m',
     [string]$SketchPath,
     [string]$WorkDirectory,
     [string]$ToolCacheDirectory,
@@ -34,7 +34,7 @@ if ($WorkDirectory -match '\s' -or $SketchPath -match '\s') {
 }
 $Devices = (Get-Content -Raw -Encoding UTF8 (Join-Path $RepoRoot 'tools/variants/devices.json') | ConvertFrom-Json).devices
 $FqbnParts = $Fqbn.Split(':')
-if ($FqbnParts.Count -lt 3 -or $FqbnParts[0] -ne 'arduino-stc51' -or
+if ($FqbnParts.Count -lt 3 -or $FqbnParts[0] -ne 'stc' -or
     $FqbnParts[1] -ne 'mcs251' -or $FqbnParts[2] -notin @($Devices.id)) {
     throw "Unknown arduino-stc51 board: $Fqbn"
 }
@@ -61,7 +61,7 @@ New-Item -ItemType Directory -Force -Path $RunRoot,$Data,$Extract,$Build,$ToolCa
 $VersionLine = Select-String -LiteralPath (Join-Path $RepoRoot 'platform.txt') -Pattern '^version=(.+)$'
 $Version = $VersionLine.Matches[0].Groups[1].Value
 $Package = & (Join-Path $PSScriptRoot 'package-platform.ps1') -Version $Version -OutputDirectory (Join-Path $RunRoot 'package')
-$Platform = Join-Path $Data "packages/arduino-stc51/hardware/mcs251/$Version"
+$Platform = Join-Path $Data "packages/stc/hardware/mcs251/$Version"
 New-Item -ItemType Directory -Force -Path $Platform | Out-Null
 & tar -xjf $Package.path -C $Extract
 Assert-ExitCode 'Platform extraction'
@@ -98,7 +98,7 @@ foreach ($Tool in $Manifest.tools) {
     }
     Assert-Archive -System $System -Archive $Archive
     $ToolExtract = Join-Path $Extract $Tool.id
-    $ToolTarget = Join-Path $Data "packages/arduino-stc51/tools/$($Tool.packageName)/$($Tool.version)"
+    $ToolTarget = Join-Path $Data "packages/stc/tools/$($Tool.packageName)/$($Tool.version)"
     New-Item -ItemType Directory -Force -Path $ToolExtract,$ToolTarget | Out-Null
     if ($Archive.EndsWith('.zip', [StringComparison]::OrdinalIgnoreCase)) {
         Expand-Archive -LiteralPath $Archive -DestinationPath $ToolExtract

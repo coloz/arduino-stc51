@@ -217,7 +217,7 @@
     "signature": "ad-hoc; no Developer ID or notarization"
   },
   "arduino_frontend": {
-    "packager": "arduino-stc51",
+    "packager": "stc",
     "name": "stcxx-frontend",
     "version": "20.1.8-stc.3"
   },

@@ -4,7 +4,7 @@ This example targets the Seekfree AI8051U-34K64 core board configured for
 MCS251 execution and a 40 MHz system clock. Build with:
 
 ```text
-arduino-stc51:mcs251:ai8051u_34k64:clock=40m
+stc:mcs251:ai8051u_34k64:clock=40m
 ```
 
 The clock menu does not configure the physical oscillator or execution mode.

@@ -91,10 +91,10 @@ def main():
     config.write_text(json.dumps({'directories': {name: str(work / name) for name in ('data', 'downloads', 'user')},
                                  'board_manager': {'additional_urls': [args.index_url or base + '/' + local_index.name]}}), encoding='utf-8')
     cli = [args.cli.resolve(), '--config-file', config]
-    sdk = work / 'data/packages/arduino-stc51/hardware/mcs251' / version
+    sdk = work / 'data/packages/stc/hardware/mcs251' / version
     try:
         run('update-index', [*cli, 'core', 'update-index'])
-        run('install', [*cli, 'core', 'install', 'arduino-stc51:mcs251@' + version])
+        run('install', [*cli, 'core', 'install', 'stc:mcs251@' + version])
         archive = assets / platform['archiveFileName']
         with tarfile.open(archive) as stream:
             files = {m.name.split('/', 1)[1]: stream.extractfile(m).read() for m in stream if m.isfile()}
@@ -121,7 +121,7 @@ def main():
             cases += [('cpp-' + d['id'], d['id'], d['model'], 'Blink') for d in devices if d['id'] not in existing]
         for label, board, model, example in cases:
             build = work / label
-            fqbn = 'arduino-stc51:mcs251:' + board
+            fqbn = 'stc:mcs251:' + board
             command = [*cli, 'compile', '--clean', '--fqbn', fqbn, '--build-path', build, sdk / 'examples' / example]
             text = run(label, command)
             require(not re.search(r'warning:.*(?:__has_builtin|__STDC_HOSTED__).*redefined', text),
