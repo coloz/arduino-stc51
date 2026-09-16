@@ -46,6 +46,18 @@ arduino-cli core install arduino-stc51:mcs251@0.0.1 --additional-urls https://ra
 
 STC32CL8K48／64 提供硬件 Wire、SPI、PWM 和访问加速，默认 Wire 接线为 SDA=P3.3、SCL=P3.2。各型号外设能力和引脚配置见对应的 `variants/<型号>/pins_arduino.h`。
 
+## 上传
+
+Arduino 上传时，AI8051U 等 ISP 不提供型号 ID 的板项默认使用 IDE 中选择的型号，不再要求手动打开额外确认开关。`工具 → Upload model check` 可切换到 `Require detected model ID`；该严格模式会拒绝无法提供 ID 的协议。具有可识别 ID 的型号继续核对实物与所选型号是否匹配。
+
+正常上传在输出窗口显示等待上电提示和 `Writing... 0%` 至 `100%` 的进度，按芯片确认接收的数据量更新。普通信息和进度使用正常文字颜色，真正的错误保留红色及失败状态。IDE 的“详细上传输出”不会开启原始 ISP 报文；需要排查协议时可单独运行 `stc-cli flash ... --debug`。
+
+STC32G144K246 的 `工具 → Upload method` 默认为 `Automatic (USB CDC or UART)`。所选端口为 STC 原生 USB CDC（`34BF:FF02`）时，通过 `@STCISP#` 切换到工厂 HID 下载；USB 转串口或普通串口使用 UART ISP。`UART ISP` 可显式指定串口下载。芯片已经处于工厂 HID 模式、应用 COM 口不再存在时，选择 `Native USB`，并且只连接一个待下载的 STC HID 设备。USB 路径具有可验证的型号 ID，保留对应的检查。
+
+自动进入 USB 下载要求当前运行的固件支持 `@STCISP#`。普通 Blink 草图没有 USB CDC，烧录后原 COM 口会消失；再次下载时需按开发板方式进入 USB 下载模式并选择 `Native USB`。USB 上传也显示百分比，不修改芯片已有的时钟及硬件选项。
+
+本地替换平台文件后，如果新菜单没有出现，在 IDE 中执行 `工具 → Reload Board Data（重新加载开发板数据）`。IDE 会持久化板型菜单，普通重启未必更新已有缓存；重新加载后检查所选时钟等板型参数。
+
 ## 从源码构建
 
 准备 Arduino CLI、PowerShell、tar，以及所需编译工具。以下命令在源码仓库根目录执行；开发板管理器安装包不包含 `scripts` 维护工具：

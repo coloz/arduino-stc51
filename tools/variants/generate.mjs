@@ -581,6 +581,7 @@ function renderBoards(devices) {
     "menu.memory=SDCC memory model",
     "menu.cppcore=Arduino core language",
     "menu.uploadcheck=Upload model check",
+    "menu.uploadtransport=Upload method",
     "",
   ];
   for (const device of devices) {
@@ -617,7 +618,8 @@ function renderBoards(devices) {
       `${board}.upload.disable_flushing=true`,
       `${board}.upload.model=${device.model}`,
       `${board}.upload.speed=115200`,
-      `${board}.upload.model_check_flags=`,
+      `${board}.upload.transport=${device.id === "stc32g144k246" ? "auto" : "uart"}`,
+      `${board}.upload.model_check_flags=${device.upload_requires_manual_model_check ? "--force-unverified-target" : ""}`,
       `${board}.upload.maximum_size=${device.maximum_code_bytes}`,
       `${board}.upload.maximum_idata_size=${device.idata_bytes}`,
       `${board}.upload.maximum_xdata_size=${device.xdata_bytes}`,
@@ -625,12 +627,27 @@ function renderBoards(devices) {
       "",
     );
 
+    if (device.id === "stc32g144k246") {
+      lines.push(
+        `${board}.menu.uploadtransport.auto=Automatic (USB CDC or UART)`,
+        `${board}.menu.uploadtransport.auto.upload.transport=auto`,
+        `${board}.menu.uploadtransport.uart=UART ISP`,
+        `${board}.menu.uploadtransport.uart.upload.transport=uart`,
+        `${board}.menu.uploadtransport.usb=Native USB`,
+        `${board}.menu.uploadtransport.usb.upload.transport=usb`,
+        `${board}.menu.uploadtransport.usb.upload.tool=stc-cli-usb`,
+        `${board}.menu.uploadtransport.usb.upload.tool.default=stc-cli-usb`,
+        `${board}.menu.uploadtransport.usb.upload.tool.serial=stc-cli-usb`,
+        "",
+      );
+    }
+
     if (device.upload_requires_manual_model_check) {
       lines.push(
-        `${board}.menu.uploadcheck.detect=Require detected model ID (default)`,
-        `${board}.menu.uploadcheck.detect.upload.model_check_flags=`,
-        `${board}.menu.uploadcheck.manual=I checked the chip marking (ISP has no model ID)`,
+        `${board}.menu.uploadcheck.manual=Use selected model, skip unavailable ID (default)`,
         `${board}.menu.uploadcheck.manual.upload.model_check_flags=--force-unverified-target`,
+        `${board}.menu.uploadcheck.detect=Require detected model ID`,
+        `${board}.menu.uploadcheck.detect.upload.model_check_flags=`,
         "",
       );
     }
