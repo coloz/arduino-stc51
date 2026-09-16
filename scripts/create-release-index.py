@@ -2,12 +2,14 @@
 """Create the Windows/Apple Silicon release index from locked local archives.
 
 This verifies archive bindings before writing the index; it does not publish.
+Tool download URLs stay pinned to the manifest, independently of platform releases.
 """
 import argparse
 import importlib.util
 import json
 from pathlib import Path
 import tempfile
+from urllib.parse import urlsplit
 
 
 def main():
@@ -50,6 +52,17 @@ def main():
         by_name[tool['name']]['systems'].extend(tool['systems'])
     for tool in package['tools']:
         assert {s['host'] for s in tool['systems']} == {'x86_64-mingw32', 'arm64-apple-darwin'}
+        locked_tool = tools[tool['name']]
+        candidate.require(tool['version'] == locked_tool['version'], 'Tool version differs from release manifest')
+        for system in tool['systems']:
+            locked_system = next(s for s in locked_tool['systems'] if s['host'] == system['host'])
+            url = locked_system.get('url', '')
+            parsed = urlsplit(url)
+            candidate.require(parsed.scheme == 'https' and parsed.netloc and
+                              not parsed.username and not parsed.password and not parsed.query and not parsed.fragment,
+                              'Tool requires a pinned HTTPS download URL: ' + tool['name'])
+            # Reuse published tools instead of uploading identical archives for each platform release.
+            system['url'] = url
     args.output.write_text(json.dumps({'packages': [package]}, indent=2) + '\n', encoding='utf-8', newline='\n')
     print('PASS: Windows x64 and Apple Silicon index; all compiler/frontend archives match SDK locks')
 
