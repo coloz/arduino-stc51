@@ -75,6 +75,12 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = 'http://127.0.0.1:' + str(server.server_port)
     index = json.loads((assets / 'package_arduino-stc51_candidate_index.json').read_text(encoding='utf-8'))
+    require(len(index['packages']) == 1 and len(index['packages'][0]['platforms']) == 1,
+            'expected one candidate platform')
+    platform = index['packages'][0]['platforms'][0]
+    version = platform['version']
+    require(re.fullmatch(r'\d+\.\d+\.\d+', version), 'invalid candidate platform version')
+    report['platform_version'] = version
     for package in index['packages']:
         require({t['name'] for t in package['tools']} == {'sdcc-mcs251', 'stcxx-frontend', 'stc-cli'}, 'unexpected tool dependency')
         for entry in package['platforms'] + [s for tool in package['tools'] for s in tool['systems']]:
@@ -85,11 +91,11 @@ def main():
     config.write_text(json.dumps({'directories': {name: str(work / name) for name in ('data', 'downloads', 'user')},
                                  'board_manager': {'additional_urls': [args.index_url or base + '/' + local_index.name]}}), encoding='utf-8')
     cli = [args.cli.resolve(), '--config-file', config]
-    sdk = work / 'data/packages/arduino-stc51/hardware/mcs251/0.0.1'
+    sdk = work / 'data/packages/arduino-stc51/hardware/mcs251' / version
     try:
         run('update-index', [*cli, 'core', 'update-index'])
-        run('install', [*cli, 'core', 'install', 'arduino-stc51:mcs251@0.0.1'])
-        archive = assets / 'arduino-stc51-0.0.1.tar.bz2'
+        run('install', [*cli, 'core', 'install', 'arduino-stc51:mcs251@' + version])
+        archive = assets / platform['archiveFileName']
         with tarfile.open(archive) as stream:
             files = {m.name.split('/', 1)[1]: stream.extractfile(m).read() for m in stream if m.isfile()}
         require(all((sdk / name).read_bytes() == value for name, value in files.items()), 'installed platform differs from archive')

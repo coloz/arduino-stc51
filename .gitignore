@@ -11,9 +11,5 @@ tmp/
 *.part
 /.hardware-test/
 
-# Downloaded vendor sources and tool archives are local caches.
-/sdk/downloads/*
-!/sdk/downloads/.gitignore
-
 # Release binaries are generated locally or downloaded from GitHub Releases.
 /dist/

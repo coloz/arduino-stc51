@@ -23,7 +23,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $SketchPath "$SketchName.ino") -Path
     throw "SketchPath must contain $SketchName.ino."
 }
 if (-not $WorkDirectory) { $WorkDirectory = Join-Path $RepoRoot '.build/example' }
-if (-not $ToolCacheDirectory) { $ToolCacheDirectory = Join-Path $RepoRoot 'sdk/downloads/toolchain' }
+if (-not $ToolCacheDirectory) { $ToolCacheDirectory = Join-Path $RepoRoot 'dist/toolchain-cache' }
 if (-not $ToolManifestPath) { $ToolManifestPath = Join-Path $RepoRoot 'tools/toolchain-manifest.json' }
 $ToolManifestPath = (Resolve-Path -LiteralPath $ToolManifestPath).Path
 $ToolManifestHash = (Get-FileHash -LiteralPath $ToolManifestPath -Algorithm SHA256).Hash.ToLowerInvariant()

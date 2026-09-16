@@ -1,13 +1,14 @@
 [CmdletBinding()]
 param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '0.0.1',
+    [string]$Version,
     [string]$OutputDirectory
 )
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $PlatformVersion = (Select-String -LiteralPath (Join-Path $RepoRoot 'platform.txt') -Pattern '^version=(.+)$').Matches[0].Groups[1].Value
+if (-not $Version) { $Version = $PlatformVersion }
 if ($Version -ne $PlatformVersion) {
     throw "Package version $Version does not match platform.txt version $PlatformVersion."
 }
@@ -131,11 +132,6 @@ try {
     $ToolchainLicensesTarget = New-Item -ItemType Directory -Force -Path (Join-Path $ToolsTarget 'toolchain-licenses')
     Copy-Item -LiteralPath (Join-Path $RepoRoot 'tools/toolchain-licenses/boost-LICENSE_1_0.txt') -Destination $ToolchainLicensesTarget
 
-    # Keep only auditable SDK metadata in the platform package.  Downloaded
-    # vendor archives and extracted sources stay in the ignored local cache.
-    $SdkTarget = New-Item -ItemType Directory -Force -Path (Join-Path $PackageRoot 'sdk')
-    Copy-Item -Force (Join-Path $RepoRoot 'sdk/README.md'),(Join-Path $RepoRoot 'sdk/manifest.json') -Destination $SdkTarget
-
     $VariantsTarget = New-Item -ItemType Directory -Force -Path (Join-Path $PackageRoot 'variants')
     Copy-Item -Recurse -Force (Join-Path $RepoRoot 'variants/_common') -Destination $VariantsTarget
     $Devices = (Get-Content -Raw -Encoding UTF8 (Join-Path $RepoRoot 'tools/variants/devices.json') | ConvertFrom-Json).devices
@@ -188,7 +184,7 @@ try {
     }
     # Keep repository maintenance resources out of the installed platform.
     foreach ($SourceOnlyPath in @(
-        'scripts', 'tests', '.github', 'tools/toolchain-patches',
+        'scripts', 'tests', '.github', 'sdk', 'tools/toolchain-patches',
         'tools/clang-stc-target', 'tools/llvm-cbe-stc',
         'tools/variants/generate.mjs', 'tools/toolchain-manifest.json'
     )) {
@@ -244,7 +240,7 @@ try {
     }
     $ForbiddenArchiveEntries = @($ArchiveContents | Where-Object {
         $_ -match '(^|/)(__pycache__|\.build-[^/]*)(/|$)' -or
-        $_ -match '(^|/)(scripts|tests|\.github)(/|$)' -or
+        $_ -match '(^|/)(scripts|tests|\.github|sdk)(/|$)' -or
         $_ -match '/tools/(toolchain-patches|clang-stc-target|llvm-cbe-stc)(/|$)' -or
         $_ -match '/tools/(variants/generate\.mjs|toolchain-manifest\.json)$' -or
         $_ -match '(^|/)\.adapter-regression\.json$' -or

@@ -14,8 +14,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--assets', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--version', default='0.0.1')
+    parser.add_argument('--version', help='platform version; defaults to platform.txt')
     args = parser.parse_args()
+    if args.version is None:
+        properties = (Path(__file__).resolve().parents[1] / 'platform.txt').read_text(encoding='utf-8')
+        args.version = next(line.split('=', 1)[1] for line in properties.splitlines() if line.startswith('version='))
     base = 'https://github.com/coloz/arduino-stc51/releases/download/v' + args.version
     assets = args.assets.resolve()
     spec = importlib.util.spec_from_file_location('candidate', Path(__file__).with_name('create-macos-candidate-index.py'))
