@@ -53,6 +53,8 @@
     "pwm_layout": 2,
     "memory_timing_layout": 1,
     "bus_layout": 0,
+    "usb_layout": 1,
+    "can_layout": 0,
     "wire_layout": 0,
     "uart1": true,
     "uart1_buffered_rx": true,

@@ -36,7 +36,9 @@
           7
         ],
         "port_mode": true,
-        "timer1_1t": true
+        "timer1_1t": true,
+        "usb_layout": 1,
+        "can_layout": 1
       },
       "adc": {
         "layout": "modern_bc_adccfg",
@@ -126,7 +128,9 @@
         "port_mode": true,
         "separate_pullup": true,
         "timer0_clock_divider": 12,
-        "timer1_1t": true
+        "timer1_1t": true,
+        "usb_layout": 2,
+        "can_layout": 2
       },
       "adc": {
         "layout": "modern_bc_adccfg",
@@ -219,7 +223,9 @@
           7
         ],
         "port_mode": true,
-        "timer1_1t": true
+        "timer1_1t": true,
+        "usb_layout": 0,
+        "can_layout": 1
       },
       "adc": {
         "layout": "modern_bc_adccfg",
@@ -302,7 +308,9 @@
         "timer1_1t": true,
         "memory_timing_layout": 1,
         "bus_layout": 1,
-        "separate_pullup": true
+        "separate_pullup": true,
+        "usb_layout": 0,
+        "can_layout": 1
       },
       "adc": {
         "layout": "modern_bc_adccfg",
@@ -390,7 +398,9 @@
           7
         ],
         "port_mode": true,
-        "timer1_1t": true
+        "timer1_1t": true,
+        "usb_layout": 1,
+        "can_layout": 0
       },
       "adc": {
         "layout": "modern_bc_adccfg",
@@ -480,7 +490,9 @@
           7
         ],
         "port_mode": true,
-        "timer1_1t": true
+        "timer1_1t": true,
+        "usb_layout": 1,
+        "can_layout": 1
       },
       "adc": {
         "layout": "modern_bc_adccfg",
@@ -562,7 +574,9 @@
           7
         ],
         "port_mode": true,
-        "timer1_1t": true
+        "timer1_1t": true,
+        "usb_layout": 0,
+        "can_layout": 1
       },
       "adc": {
         "layout": "modern_bc_adccfg",
@@ -646,7 +660,9 @@
         "timer1_1t": true,
         "memory_timing_layout": 1,
         "bus_layout": 1,
-        "separate_pullup": true
+        "separate_pullup": true,
+        "usb_layout": 0,
+        "can_layout": 1
       },
       "adc": {
         "layout": "modern_bc_adccfg",
@@ -735,7 +751,9 @@
           7
         ],
         "port_mode": true,
-        "timer1_1t": true
+        "timer1_1t": true,
+        "usb_layout": 1,
+        "can_layout": 0
       },
       "adc": {
         "layout": "modern_bc_adccfg",
@@ -826,7 +844,9 @@
           7
         ],
         "port_mode": true,
-        "timer1_1t": true
+        "timer1_1t": true,
+        "usb_layout": 1,
+        "can_layout": 0
       },
       "adc": {
         "layout": "modern_bc_adccfg",

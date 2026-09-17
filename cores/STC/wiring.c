@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "stc_isr_context.h"
 #include "stc_sfr.h"
+#include "stc_usb_service.h"
 
 /*
  * Timer0 supplies the Arduino time base. All
@@ -100,6 +101,7 @@ void init(void)
 
 void yield(void)
 {
+    if (stc_usb_service) stc_usb_service();
 }
 
 void interrupts(void)

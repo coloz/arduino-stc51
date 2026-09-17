@@ -154,6 +154,8 @@ function renderCoreFlags(device) {
   flags.push(`-DSTC_CORE_PWM_LAYOUT=${device.capabilities.pwm_layout ?? 0}`);
   flags.push(`-DSTC_CORE_MEMORY_TIMING_LAYOUT=${device.capabilities.memory_timing_layout ?? 0}`);
   flags.push(`-DSTC_CORE_BUS_LAYOUT=${device.capabilities.bus_layout ?? 0}`);
+  flags.push(`-DSTC_CORE_USB_LAYOUT=${device.capabilities.usb_layout ?? 0}`);
+  flags.push(`-DSTC_CORE_CAN_LAYOUT=${device.capabilities.can_layout ?? 0}`);
   flags.push(`-DSTC_CORE_WIRE_LAYOUT=${device.capabilities.wire_layout ?? device.capabilities.bus_layout ?? 0}`);
   flags.push(`-DSTC_CORE_HAS_SEPARATE_PULLUP=${device.capabilities.separate_pullup === true ? 1 : 0}`);
   flags.push(`-DSTC_CORE_TIMER1_IS_1T=${device.capabilities.timer1_1t ? 1 : 0}`);
@@ -442,6 +444,10 @@ function loadDatabase() {
          ![0, 1, 2, 3].includes(device.capabilities.memory_timing_layout)) ||
         (device.capabilities.bus_layout !== undefined &&
          ![0, 1].includes(device.capabilities.bus_layout)) ||
+        (device.capabilities.usb_layout !== undefined &&
+         ![0, 1, 2].includes(device.capabilities.usb_layout)) ||
+        (device.capabilities.can_layout !== undefined &&
+         ![0, 1, 2].includes(device.capabilities.can_layout)) ||
         (device.capabilities.wire_layout !== undefined &&
          ![0, 1, 2, 3].includes(device.capabilities.wire_layout)) ||
         (device.capabilities.separate_pullup !== undefined &&
@@ -941,6 +947,8 @@ function renderMetadata(database, device) {
       pwm_layout: device.capabilities.pwm_layout ?? 0,
       memory_timing_layout: device.capabilities.memory_timing_layout ?? 0,
       bus_layout: device.capabilities.bus_layout ?? 0,
+      usb_layout: device.capabilities.usb_layout ?? 0,
+      can_layout: device.capabilities.can_layout ?? 0,
       wire_layout: device.capabilities.wire_layout ?? device.capabilities.bus_layout ?? 0,
       uart1: device.capabilities.uart1 !== false,
       uart1_buffered_rx:

@@ -2,6 +2,17 @@
 #define STC_CORE_FAMILY_H
 
 #define STC_ADC_LAYOUT_NONE                    0
+/* USB SIE: 1=STC32G12K/AI8051U, 2=G144. CAN: 1=classic, 2=G144 FD. */
+#ifndef STC_CORE_USB_LAYOUT
+# define STC_CORE_USB_LAYOUT 0
+#endif
+#ifndef STC_CORE_CAN_LAYOUT
+# define STC_CORE_CAN_LAYOUT 0
+#endif
+#if STC_CORE_USB_LAYOUT < 0 || STC_CORE_USB_LAYOUT > 2 || \
+    STC_CORE_CAN_LAYOUT < 0 || STC_CORE_CAN_LAYOUT > 2
+# error "Unsupported USB/CAN register layout"
+#endif
 /* 1: STC32G/AI8051U E9/EA; 2: G144. */
 #ifndef STC_CORE_MEMORY_TIMING_LAYOUT
 # define STC_CORE_MEMORY_TIMING_LAYOUT 0

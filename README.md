@@ -86,6 +86,8 @@ C++ 使用 Clang → LLVM-CBE → SDCC，提供 `String`、`Print`、`Stream`、
 
 支持 GPIO、计时、UART1、按型号提供的 ADC/PWM/外部中断，以及 Wire、SPI、SoftwareSerial、LiquidCrystal、Stepper 和受限的 SD。接口以 [Arduino.h](cores/STC/Arduino.h) 和各库头文件为准，使用示例位于 `libraries/<库名>/examples`。总线和 GPIO 共用引脚，使用前核对型号和封装。
 
+当前源码新增 [USB HID](libraries/HID/README.md)、[Keyboard](libraries/Keyboard/README.md)、[Mouse](libraries/Mouse/README.md) 和 [CAN](libraries/CAN/README.md) 通信库，尚未发布到开发板管理器。键鼠 API 移植自 Arduino 官方库；CAN 提供 `HardwareCAN` / `CanMsg` 风格接口和独立的分包适配器。HID 按型号支持 G12、G144、AI8051U，CAN 支持 G12、G8、CL、G144；AI8051U-34K16 当前只能容纳较小的自定义 HID 示例，键鼠示例超出 Flash。各库说明包含支持型号、接线和示例索引。
+
 ABI 使用 16 位 `int`、32 位 `long`/`size_t`/`ptrdiff_t`、24 位指针，大端布局，`double` 与 `float` 均为 32 位。异常、RTTI、线程和完整 STL 不在支持范围内。不要直接发送结构体内存作为外部协议；可使用 `STCByteOrder.h`。运行时配置见 [runtime-manifest.json](cores/STC/cpp/runtime-manifest.json)。
 
 平台随附 Adafruit NeoPixel `1.15.5-stc.1` 实验移植，当前支持 STC32G144K246 的 12/48 MHz、P0～P7 有效引脚与 800 kHz 模式。已有编译和指令模型检查，尚未完成实板波形验证；其他芯片、P8～PB 和 400 kHz 不在支持范围内。用法及限制见 [NeoPixel 移植说明](libraries/Adafruit_NeoPixel/README-STC.md)。

@@ -1,3 +1,10 @@
+# 未发布
+
+- 新增原生 USB HID、自定义报告收发及 Arduino 官方 Keyboard/Mouse 移植，支持键盘指示灯和键鼠组合；通过 `yield()` / 主循环服务 USB。
+- 新增双路原生 CAN，适配经典 CAN 和 G144 CAN-FD 控制器的经典帧收发；提供官方 `HardwareCAN` / `CanMsg` 风格 API 和独立 `CANPacketClass`。
+- 补充 15 个 CAN/USB 示例，覆盖独立收发、过滤、扩展帧、远程帧、双路 CAN、键盘文字/组合键/指示灯、串口转键盘、按钮/摇杆鼠标、滚轮、媒体键和 HID 游戏手柄；各库 README 提供示例索引与接线说明。
+- 按型号生成 USB/CAN 能力标志，补充芯片支持说明和上游许可证。
+
 # 0.0.3（2026-09-17）
 
 - 包标识改为 `stc`，FQBN 统一为 `stc:mcs251:<variants>`；板卡 ID 和菜单参数保持不变。
