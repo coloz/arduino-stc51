@@ -36,13 +36,12 @@ def main():
                           'Archive differs from release manifest: ' + path.name)
         return path
 
-    sdcc_version = tools['sdcc-mcs251']['version']
     platform = assets / ('arduino-stc51-' + args.version + '.tar.bz2')
     with tempfile.TemporaryDirectory() as temporary:
         win_path, mac_path = [Path(temporary) / n for n in ('windows.json', 'macos.json')]
         for host, output in [('x86_64-mingw32', win_path), ('arm64-apple-darwin', mac_path)]:
-            candidate.create(platform, archive('sdcc-mcs251', host), archive('stcxx-frontend', host),
-                             sdcc_version, base, output, host, uploader=archive('stc-cli', host))
+            candidate.create(platform, archive('stcxx-toolchain', host),
+                             base, output, host, uploader=archive('stc-cli', host))
         package = json.loads(win_path.read_text())['packages'][0]
         mac = json.loads(mac_path.read_text())['packages'][0]
     assert package['platforms'][0]['checksum'] == mac['platforms'][0]['checksum']
@@ -64,7 +63,7 @@ def main():
             # Reuse published tools instead of uploading identical archives for each platform release.
             system['url'] = url
     args.output.write_text(json.dumps({'packages': [package]}, indent=2) + '\n', encoding='utf-8', newline='\n')
-    print('PASS: Windows x64 and Apple Silicon index; all compiler/frontend archives match SDK locks')
+    print('PASS: Windows x64 and Apple Silicon index; unified toolchain archives match SDK locks')
 
 
 if __name__ == '__main__':

@@ -131,7 +131,7 @@
   "pipeline_helpers": {
     "toolchain_paths": {
       "path": "tools/cpp-cli/toolchain-paths.sh",
-      "sha256": "1571dcd4a11c719556a6a02a1a7c9cc1dab7ab05ec49306eb7821c7bf50ba50e"
+      "sha256": "23a9a0ab293cc7838c9b6d4b0156e3a5f6c679ed4b72af5f1898b1519cf73900"
     },
     "cpp_archive_selector": {
       "path": "tools/cpp-cli/select-cpp-archive-sidecars.py",
@@ -155,7 +155,7 @@
     },
     "arduino_cli_driver": {
       "path": "tools/cpp-cli/stcxx-cli.sh",
-      "sha256": "47f1d256a4ea5e299aaa6e6f37a3c8bae62d028e7111fef2a71dd93f82c957d5"
+      "sha256": "58c6d6d1f625630463e0578545c358c3846f48a6bc1c64251c4a7654708514fb"
     },
     "native_storage": {
       "path": "tools/cpp-cli/native-storage.py",
@@ -216,11 +216,6 @@
     "tested_macos": "15.7.1",
     "signature": "ad-hoc; no Developer ID or notarization"
   },
-  "arduino_frontend": {
-    "packager": "stc",
-    "name": "stcxx-frontend",
-    "version": "20.1.8-stc.3"
-  },
   "shared_checks": {
     "cpp-metadata": "8d8a91fb0c07e1e10a22b0a43b6b0467eb4f40ea5599646bced4088ad5534dca",
     "c-metadata": "0eb5f258beae050051e7f41d52b0cb2e52e24882a86de6f5d778c540304a77ee",
@@ -229,5 +224,14 @@
     "audit-bridge-warnings": "010d03e2b03be1ef12d6baa65899f286b173dfb8e8c78bcb3795acfda0c01daf",
     "audit-heap-link": "43a18853a459d75715305637042bc0aee8bf7359900de3b2ecbd5ae49f54ddfe",
     "write-link-manifest": "745de8542283e8cb2fb332b10d3125fa66301c12f3e779f24d890d4a04362b1e"
+  },
+  "arduino_toolchain": {
+    "packager": "stc",
+    "name": "stcxx-toolchain",
+    "version": "0.1.0"
+  },
+  "toolchain_package": {
+    "archive_sha256": "58eb071c094f51231099958fc450ff2b890e40fdb1f46dd70b808362a1993a91",
+    "manifest_sha256": "feb9357cc58a5d27305a65b324000f7238d849660b72dad5cb7a4cea4a96184d"
   }
 }

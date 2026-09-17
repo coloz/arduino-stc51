@@ -360,8 +360,7 @@ for argument in "${original_args[@]}"; do
       # Arduino appends the SDCC C include directories to every recipe. They
       # define C-only wchar_t/bool/size_t types and must never shadow the
       # custom Clang target resource headers.
-      if [[ "${normalized}" != *"/tools/sdcc-mcs251/"* &&
-            "${normalized}" != "-I${sdcc_canonical_include}" &&
+      if [[ "${normalized}" != "-I${sdcc_canonical_include}" &&
             "${normalized}" != "-I${sdcc_canonical_include}/"* ]]; then
         clang_user_args+=("${normalized}")
       fi

@@ -12,12 +12,12 @@
         {
           "name": "arduino-stc51",
           "architecture": "mcs251",
-          "version": "0.0.4",
+          "version": "0.0.5",
           "category": "Contributed",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.4/arduino-stc51-0.0.4.tar.bz2",
-          "archiveFileName": "arduino-stc51-0.0.4.tar.bz2",
-          "checksum": "SHA-256:db2e96324bdebd42726b21d77d242a380769a6312b26962bf35fb01b8e9cb254",
-          "size": "330298",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.5/arduino-stc51-0.0.5.tar.bz2",
+          "archiveFileName": "arduino-stc51-0.0.5.tar.bz2",
+          "checksum": "SHA-256:ab33d91ef64d862395bc8b6865e6cb123dd54dfa3e7eb2251d89dd5e2f704b3d",
+          "size": "330861",
           "boards": [
             {
               "name": "STC32G12K128"
@@ -53,13 +53,8 @@
           "toolsDependencies": [
             {
               "packager": "stc",
-              "name": "sdcc-mcs251",
-              "version": "4.6.0-stc.0.0.1-r1"
-            },
-            {
-              "packager": "stc",
-              "name": "stcxx-frontend",
-              "version": "20.1.8-stc.3"
+              "name": "stcxx-toolchain",
+              "version": "0.1.0"
             },
             {
               "packager": "stc",
@@ -71,42 +66,22 @@
       ],
       "tools": [
         {
-          "name": "sdcc-mcs251",
-          "version": "4.6.0-stc.0.0.1-r1",
+          "name": "stcxx-toolchain",
+          "version": "0.1.0",
           "systems": [
             {
               "host": "x86_64-mingw32",
-              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.zip",
-              "archiveFileName": "sdcc-mcs251-windows-x86_64-b09075b6a93e6afe10645181e3aeff041ea37f87-r9.zip",
-              "checksum": "SHA-256:8ff65fb3e4522a0276891e0bc9091266969a3dffc443bdcebdf8ae00f3abd72e",
-              "size": "14817947"
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.5/stcxx-toolchain-0.1.0-windows-x86_64.tar.bz2",
+              "archiveFileName": "stcxx-toolchain-0.1.0-windows-x86_64.tar.bz2",
+              "checksum": "SHA-256:a0eef5a51f555cb88cc7dfc6d7caf8cccfe0be053d18973064f9b4f2d07788ef",
+              "size": "100200757"
             },
             {
               "host": "arm64-apple-darwin",
-              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r10.tar.bz2",
-              "archiveFileName": "sdcc-mcs251-macos-arm64-b09075b6a93e6afe10645181e3aeff041ea37f87-r10.tar.bz2",
-              "checksum": "SHA-256:1d07d4e246cd99fbcb55220959423401b8e07cfd5da7db78e1daeccadb20375a",
-              "size": "4388490"
-            }
-          ]
-        },
-        {
-          "name": "stcxx-frontend",
-          "version": "20.1.8-stc.3",
-          "systems": [
-            {
-              "host": "x86_64-mingw32",
-              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stcxx-frontend-20.1.8-windows-x86_64-r1.tar.bz2",
-              "archiveFileName": "stcxx-frontend-20.1.8-windows-x86_64-r1.tar.bz2",
-              "checksum": "SHA-256:42103860d1ac311e4c60b4f1f144c301cc1dca9aa4a922ff2aa221c14fdad056",
-              "size": "86686769"
-            },
-            {
-              "host": "arm64-apple-darwin",
-              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2",
-              "archiveFileName": "stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2",
-              "checksum": "SHA-256:f0850765b5edf5f667a87a8910c9581510aa30febb1e297cfc036a38acf3e77a",
-              "size": "54382979"
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.5/stcxx-toolchain-0.1.0-macos-arm64.tar.bz2",
+              "archiveFileName": "stcxx-toolchain-0.1.0-macos-arm64.tar.bz2",
+              "checksum": "SHA-256:58eb071c094f51231099958fc450ff2b890e40fdb1f46dd70b808362a1993a91",
+              "size": "58720503"
             }
           ]
         },

@@ -81,17 +81,20 @@ function Invoke-StcCpp {
     $Lock = Get-Content -Raw -Encoding UTF8 -LiteralPath $LockPath | ConvertFrom-Json
     if ($Lock.host -cne 'windows-x86_64') { throw 'Expected a native Windows toolchain lock.' }
     $Frontend = $env:STCXX_CPP_TOOLS_ROOT
+    if (-not $Frontend -and $env:STCXX_TOOLS_ROOT) {
+        $Frontend = Join-Path $env:STCXX_TOOLS_ROOT 'frontend'
+    }
     if (-not $Frontend) {
         $Parent = [IO.Directory]::GetParent($Platform)
         if ($Parent.Name -cne 'mcs251' -or $Parent.Parent.Name -cne 'hardware' -or
             $Parent.Parent.Parent.Parent.Name -cne 'packages') {
-            throw 'Set STCXX_CPP_TOOLS_ROOT when compiling from a source checkout.'
+            throw 'Set STCXX_TOOLS_ROOT when compiling from a source checkout.'
         }
-        $Binding = $Lock.arduino_frontend
+        $Binding = $Lock.arduino_toolchain
         foreach ($Value in @($Binding.packager, $Binding.name, $Binding.version)) {
-            if ($Value -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._+-]*$') { throw 'Invalid native frontend binding.' }
+            if ($Value -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._+-]*$') { throw 'Invalid native toolchain binding.' }
         }
-        $Frontend = Join-Path $Parent.Parent.Parent.Parent.FullName "$($Binding.packager)/tools/$($Binding.name)/$($Binding.version)"
+        $Frontend = Join-Path $Parent.Parent.Parent.Parent.FullName "$($Binding.packager)/tools/$($Binding.name)/$($Binding.version)/frontend"
     }
     $Frontend = [IO.Path]::GetFullPath($Frontend)
     # Verify the complete embedded Python bootstrap before loading its DLLs.

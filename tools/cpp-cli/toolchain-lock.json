@@ -134,7 +134,7 @@
   "pipeline_helpers": {
     "toolchain_paths": {
       "path": "tools/cpp-cli/toolchain-paths.sh",
-      "sha256": "1571dcd4a11c719556a6a02a1a7c9cc1dab7ab05ec49306eb7821c7bf50ba50e"
+      "sha256": "23a9a0ab293cc7838c9b6d4b0156e3a5f6c679ed4b72af5f1898b1519cf73900"
     },
     "cpp_archive_selector": {
       "path": "tools/cpp-cli/select-cpp-archive-sidecars.py",
@@ -158,7 +158,7 @@
     },
     "arduino_cli_driver": {
       "path": "tools/cpp-cli/stcxx-cli.sh",
-      "sha256": "47f1d256a4ea5e299aaa6e6f37a3c8bae62d028e7111fef2a71dd93f82c957d5"
+      "sha256": "58c6d6d1f625630463e0578545c358c3846f48a6bc1c64251c4a7654708514fb"
     },
     "native_storage": {
       "path": "tools/cpp-cli/native-storage.py",

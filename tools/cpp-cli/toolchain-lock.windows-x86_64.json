@@ -126,7 +126,7 @@
   "pipeline_helpers": {
     "toolchain_paths": {
       "path": "tools/cpp-cli/toolchain-paths.sh",
-      "sha256": "1571dcd4a11c719556a6a02a1a7c9cc1dab7ab05ec49306eb7821c7bf50ba50e"
+      "sha256": "23a9a0ab293cc7838c9b6d4b0156e3a5f6c679ed4b72af5f1898b1519cf73900"
     },
     "cpp_archive_selector": {
       "path": "tools/cpp-cli/select-cpp-archive-sidecars.py",
@@ -150,7 +150,7 @@
     },
     "arduino_cli_driver": {
       "path": "tools/cpp-cli/stcxx-cli.py",
-      "sha256": "6a8ab2ae743b2a8dd21b06a6bc18b7b81f24d2ad0abd79c3e7be18422cd65c61"
+      "sha256": "44019fecee277a64a164d597e357f413abaa29f36dbbf831c0fd766e2b2d7df5"
     },
     "native_storage": {
       "path": "tools/cpp-cli/native-storage.py",
@@ -182,7 +182,7 @@
     },
     "windows_cli_driver": {
       "path": "tools/cpp-cli/stcxx-cli.py",
-      "sha256": "6a8ab2ae743b2a8dd21b06a6bc18b7b81f24d2ad0abd79c3e7be18422cd65c61"
+      "sha256": "44019fecee277a64a164d597e357f413abaa29f36dbbf831c0fd766e2b2d7df5"
     },
     "archive_member_reader": {
       "path": "tools/cpp-cli/archive_members.py",
@@ -207,11 +207,6 @@
     }
   },
   "host": "windows-x86_64",
-  "arduino_frontend": {
-    "packager": "stc",
-    "name": "stcxx-frontend",
-    "version": "20.1.8-stc.3"
-  },
   "shared_checks": {
     "cpp-metadata": "8d8a91fb0c07e1e10a22b0a43b6b0467eb4f40ea5599646bced4088ad5534dca",
     "c-metadata": "0eb5f258beae050051e7f41d52b0cb2e52e24882a86de6f5d778c540304a77ee",
@@ -275,5 +270,14 @@
       "python/vcruntime140_1.dll": "6a99bc0128e0c7d6cbbf615fcc26909565e17d4ca3451b97f8987f9c6acbc6c8",
       "python/winsound.pyd": "100e8d676777603c7258daf9b2f23ef001f09f1596d8708de359326fff72bddd"
     }
+  },
+  "arduino_toolchain": {
+    "packager": "stc",
+    "name": "stcxx-toolchain",
+    "version": "0.1.0"
+  },
+  "toolchain_package": {
+    "archive_sha256": "a0eef5a51f555cb88cc7dfc6d7caf8cccfe0be053d18973064f9b4f2d07788ef",
+    "manifest_sha256": "e6d9b2368ebade9706d8fc8ee97e2dd31b0cc3e881e7bb8e91a76c71879cf6eb"
   }
 }

@@ -1,8 +1,62 @@
 {
-  "schemaVersion": 2,
-  "asOf": "2026-09-16",
+  "schemaVersion": 3,
+  "asOf": "2026-09-17",
   "hostSupport": "Native Windows x64 and Apple Silicon macOS 15+; no WSL dependency",
   "tools": [
+    {
+      "id": "stcxx-toolchain",
+      "packageName": "stcxx-toolchain",
+      "version": "0.1.0",
+      "purpose": "STC C/C++ toolchain: Clang/LLVM-CBE, SDCC, assembler, linker and runtime libraries",
+      "license": "Component licenses are preserved under frontend/ and sdcc/",
+      "systems": [
+        {
+          "host": "x86_64-mingw32",
+          "archiveFileName": "stcxx-toolchain-0.1.0-windows-x86_64.tar.bz2",
+          "archiveRoot": "stcxx-toolchain",
+          "size": 100200757,
+          "sha256": "a0eef5a51f555cb88cc7dfc6d7caf8cccfe0be053d18973064f9b4f2d07788ef",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.5/stcxx-toolchain-0.1.0-windows-x86_64.tar.bz2"
+        },
+        {
+          "host": "arm64-apple-darwin",
+          "archiveFileName": "stcxx-toolchain-0.1.0-macos-arm64.tar.bz2",
+          "archiveRoot": "stcxx-toolchain",
+          "size": 58720503,
+          "sha256": "58eb071c094f51231099958fc450ff2b890e40fdb1f46dd70b808362a1993a91",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.5/stcxx-toolchain-0.1.0-macos-arm64.tar.bz2"
+        }
+      ]
+    },
+    {
+      "id": "stc-cli",
+      "packageName": "stc-cli",
+      "version": "0.1.0-stc.1",
+      "purpose": "Native UART and USB ISP uploader with acknowledged programming progress",
+      "upstream": "https://github.com/coloz/stc-cli",
+      "license": "MIT; see LICENSE and THIRD_PARTY_NOTICES.md in each archive",
+      "systems": [
+        {
+          "host": "x86_64-mingw32",
+          "archiveFileName": "stc-cli-0.1.0-windows-x86_64-r1.zip",
+          "archiveRoot": "stc-cli-0.1.0-windows-x86_64-r1",
+          "size": 612567,
+          "sha256": "6fe37af8e97a5534ed64171165fc7275ac1dbc5d05125d3c1ed2ba03ba961e55",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stc-cli-0.1.0-windows-x86_64-r1.zip"
+        },
+        {
+          "host": "arm64-apple-darwin",
+          "archiveFileName": "stc-cli-0.1.0-macos-arm64-r1.tar.gz",
+          "archiveRoot": "stc-cli-0.1.0-macos-arm64-r1",
+          "size": 612925,
+          "sha256": "5bd130c696ffa9c0d6092d81263394f781726e7f08d021b80e855c217bfdf2d6",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stc-cli-0.1.0-macos-arm64-r1.tar.gz"
+        }
+      ],
+      "sourceCommit": "43b4a410513abbe0e1bf6dd0dd778cca54f0cf89"
+    }
+  ],
+  "components": [
     {
       "id": "sdcc-mcs251",
       "packageName": "sdcc-mcs251",
@@ -61,33 +115,6 @@
           "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stcxx-frontend-20.1.8-macos-arm64-r1.tar.bz2"
         }
       ]
-    },
-    {
-      "id": "stc-cli",
-      "packageName": "stc-cli",
-      "version": "0.1.0-stc.1",
-      "purpose": "Native UART and USB ISP uploader with acknowledged programming progress",
-      "upstream": "https://github.com/coloz/stc-cli",
-      "license": "MIT; see LICENSE and THIRD_PARTY_NOTICES.md in each archive",
-      "systems": [
-        {
-          "host": "x86_64-mingw32",
-          "archiveFileName": "stc-cli-0.1.0-windows-x86_64-r1.zip",
-          "archiveRoot": "stc-cli-0.1.0-windows-x86_64-r1",
-          "size": 612567,
-          "sha256": "6fe37af8e97a5534ed64171165fc7275ac1dbc5d05125d3c1ed2ba03ba961e55",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stc-cli-0.1.0-windows-x86_64-r1.zip"
-        },
-        {
-          "host": "arm64-apple-darwin",
-          "archiveFileName": "stc-cli-0.1.0-macos-arm64-r1.tar.gz",
-          "archiveRoot": "stc-cli-0.1.0-macos-arm64-r1",
-          "size": 612925,
-          "sha256": "5bd130c696ffa9c0d6092d81263394f781726e7f08d021b80e855c217bfdf2d6",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.2/stc-cli-0.1.0-macos-arm64-r1.tar.gz"
-        }
-      ],
-      "sourceCommit": "43b4a410513abbe0e1bf6dd0dd778cca54f0cf89"
     }
   ]
 }

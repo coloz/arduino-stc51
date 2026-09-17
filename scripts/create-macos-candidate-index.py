@@ -63,7 +63,7 @@ def sdk_metadata(path, host='arm64-apple-darwin'):
         require(re.fullmatch(r'\d+\.\d+\.\d+', version), 'Invalid platform version')
         require(root == 'arduino-stc51-' + version, 'Archive root/version differ')
         if host == 'x86_64-mingw32':
-            require(properties.get('compiler.ar.path.windows') == '{runtime.tools.sdcc-mcs251.path}/bin',
+            require(properties.get('compiler.ar.path.windows') == '{runtime.tools.stcxx-toolchain.path}/sdcc/bin',
                     'Windows distribution must select the current SDCC archive helper')
             require(properties.get('compiler.shell.cmd.windows') == 'powershell.exe' and
                     properties.get('compiler.wrapper.compile.windows') ==
@@ -77,14 +77,13 @@ def sdk_metadata(path, host='arm64-apple-darwin'):
         return version, lock, devices
 
 
-def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64-apple-darwin', *, uploader=None):
+def create(platform, toolchain, base_url, output, host='arm64-apple-darwin', *, uploader=None):
     require(host in HOSTS, 'Unsupported candidate host')
     parsed = urlsplit(base_url)
     require(parsed.scheme == 'https' or (parsed.scheme == 'http' and parsed.hostname in ('127.0.0.1', 'localhost', '::1')),
             'Use HTTPS or a loopback HTTP URL for local installation tests')
     require(parsed.netloc and not parsed.query and not parsed.fragment and not parsed.username and not parsed.password,
             'Invalid asset base URL')
-    require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', sdcc_version), 'Invalid SDCC tool version')
     require(uploader is not None, 'A native stc-cli upload tool archive is required')
     manifest = json.loads((Path(__file__).resolve().parents[1] / 'tools/toolchain-manifest.json').read_text(encoding='utf-8'))
     uploader_tool = next(t for t in manifest['tools'] if t['id'] == 'stc-cli')
@@ -92,28 +91,27 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
     require(uploader.name == uploader_system['archiveFileName'] and
             uploader.stat().st_size == uploader_system['size'] and
             sha256(uploader) == uploader_system['sha256'], 'Uploader differs from its pinned native archive')
-    archives = [platform, sdcc, frontend, uploader]
+    archives = [platform, toolchain, uploader]
     require(len({p.name for p in archives}) == len(archives), 'Archive filenames must be distinct')
     require(all(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', p.name) for p in archives), 'Unsafe archive filename')
     require(not output.exists() and not output.is_symlink(), 'Output index already exists')
     before = {str(p): sha256(p) for p in archives}
     version, lock, devices = sdk_metadata(platform, host)
-    binding = lock.get('arduino_frontend')
+    binding = lock.get('arduino_toolchain')
     require(isinstance(binding, dict) and set(binding) == {'packager', 'name', 'version'} and
-            binding['packager'] == 'stc' and binding['name'] == 'stcxx-frontend' and
+            binding['packager'] == 'stc' and binding['name'] == 'stcxx-toolchain' and
             isinstance(binding['version'], str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', binding['version']),
-            'SDK must bind its exact Arduino frontend dependency')
-    _, lock_host, sdcc_archive_key, frontend_key = HOSTS[host]
+            'SDK must bind its exact Arduino toolchain dependency')
+    _, lock_host, _, _ = HOSTS[host]
     require(lock.get('host') == lock_host, 'SDK lock is not for ' + host)
-    require(before[str(sdcc)] == lock['tools']['sdcc'][sdcc_archive_key], 'SDCC archive differs from SDK lock')
-    require(before[str(frontend)] == lock[frontend_key]['archive_sha256'], 'Frontend archive differs from SDK lock')
+    require(before[str(toolchain)] == lock['toolchain_package']['archive_sha256'], 'Toolchain archive differs from SDK lock')
 
     def asset(path):
         return {'url': base_url.rstrip('/') + '/' + path.name, 'archiveFileName': path.name,
                 'checksum': 'SHA-256:' + before[str(path)], 'size': str(path.stat().st_size)}
 
-    dependencies = [{'packager': 'stc', 'name': 'sdcc-mcs251', 'version': sdcc_version}, binding]
-    tool_assets = [('sdcc-mcs251', sdcc_version, sdcc), (binding['name'], binding['version'], frontend)]
+    dependencies = [binding]
+    tool_assets = [(binding['name'], binding['version'], toolchain)]
     dependencies.append({'packager': 'stc', 'name': 'stc-cli', 'version': uploader_tool['version']})
     tool_assets.append(('stc-cli', uploader_tool['version'], uploader))
     package = {'name': 'stc', 'maintainer': 'arduino-stc51 contributors',
@@ -135,14 +133,13 @@ def create(platform, sdcc, frontend, sdcc_version, base_url, output, host='arm64
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ('platform', 'sdcc', 'frontend', 'uploader', 'output'):
+    for name in ('platform', 'toolchain', 'uploader', 'output'):
         parser.add_argument('--' + name, type=Path, required=True)
-    parser.add_argument('--sdcc-version', required=True)
     parser.add_argument('--base-url', required=True)
     parser.add_argument('--host', choices=sorted(HOSTS), default='arm64-apple-darwin')
     args = parser.parse_args()
     try:
-        result = create(args.platform, args.sdcc, args.frontend, args.sdcc_version, args.base_url, args.output, args.host,
+        result = create(args.platform, args.toolchain, args.base_url, args.output, args.host,
                         uploader=args.uploader)
     except (ValueError, OSError, KeyError, tarfile.TarError) as error:
         parser.exit(2, str(error) + '\n')

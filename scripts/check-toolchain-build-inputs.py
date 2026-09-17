@@ -86,7 +86,7 @@ def check(root, compiler_root=None):
     lock_path = root / 'tools/cpp-cli/toolchain-lock.json'
     manifest_path = root / 'tools/toolchain-manifest.json'
     lock = json.loads(lock_path.read_text(encoding='utf-8'))['tools']['sdcc']
-    tools = json.loads(manifest_path.read_text(encoding='utf-8'))['tools']
+    tools = json.loads(manifest_path.read_text(encoding='utf-8'))['components']
     source_entries = [tool for tool in tools if tool['id'] == 'sdcc-mcs251']
     require(len(source_entries) == 1, 'missing or duplicate compiler source identity')
     upstream = source_entries[0]

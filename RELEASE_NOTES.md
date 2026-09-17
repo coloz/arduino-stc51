@@ -1,3 +1,10 @@
+# 0.0.5（2026-09-17）
+
+- 将 `sdcc-mcs251` 和 `stcxx-frontend` 合并为 `stcxx-toolchain` `0.1.0`，Windows x64 和 Apple Silicon 共用相同的内部目录布局。
+- Arduino 编译、归档和前端发现均使用统一工具依赖；新增 `STCXX_TOOLS_ROOT`，可一次指定完整工具包。
+- 保留组件二进制、运行库、许可证、macOS 内部链接及原有哈希校验；添加统一包清单和确定性打包入口。
+- 平台和工具链使用新版本，升级时不会覆盖旧包；`stc-cli` 上传器和 FQBN 保持不变。
+
 # 0.0.4（2026-09-17）
 
 - 新增原生 USB HID、自定义报告收发及 Arduino 官方 Keyboard/Mouse 移植，支持键盘指示灯和键鼠组合；通过 `yield()` / 主循环服务 USB。

@@ -82,7 +82,7 @@ def main():
     require(re.fullmatch(r'\d+\.\d+\.\d+', version), 'invalid candidate platform version')
     report['platform_version'] = version
     for package in index['packages']:
-        require({t['name'] for t in package['tools']} == {'sdcc-mcs251', 'stcxx-frontend', 'stc-cli'}, 'unexpected tool dependency')
+        require({t['name'] for t in package['tools']} == {'stcxx-toolchain', 'stc-cli'}, 'unexpected tool dependency')
         for entry in package['platforms'] + [s for tool in package['tools'] for s in tool['systems']]:
             entry['url'] = base + '/' + entry['archiveFileName']
     local_index = assets / ('package_arduino-stc51_' + args.host + '_index.json')
@@ -102,12 +102,12 @@ def main():
         report['platform_sha256'] = hashlib.sha256(archive.read_bytes()).hexdigest()
         report['installed_files'] = len(files)
         tools = sdk.parents[2] / 'tools'
-        require({p.name for p in tools.iterdir()} == {'sdcc-mcs251', 'stcxx-frontend', 'stc-cli'}, 'installer added an unexpected tool')
+        require({p.name for p in tools.iterdir()} == {'stcxx-toolchain', 'stc-cli'}, 'installer added an unexpected tool')
         run('upload-recipes', [sys.executable, Path(__file__).with_name('check-upload.py'),
                                '--cli', args.cli.resolve(), '--config', config, '--sdk', sdk,
                                '--work', work / 'upload-recipes'])
         versions = {tool['name']: tool['version'] for tool in index['packages'][0]['tools']}
-        compiler = tools / 'sdcc-mcs251' / versions['sdcc-mcs251'] / 'bin' / ('sdcc.exe' if args.host == 'windows' else 'sdcc')
+        compiler = tools / 'stcxx-toolchain' / versions['stcxx-toolchain'] / 'sdcc/bin' / ('sdcc.exe' if args.host == 'windows' else 'sdcc')
         signature = compiler.read_bytes()[:4]
         require(signature[:2] == b'MZ' if args.host == 'windows' else signature == b'\xcf\xfa\xed\xfe', 'compiler is not a native image')
         cases = [('cpp-g12k128', 'stc32g12k128', 'STC32G12K128', 'Blink'),

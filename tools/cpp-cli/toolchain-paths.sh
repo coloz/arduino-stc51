@@ -3,7 +3,8 @@
 # locked executable hash before asking ldd to resolve its implementation.
 
 stcxx_installed_frontend_root() {
-    stcxx_installed_tool_root "$1" "$2" arduino_frontend frontend
+    stcxx_package_root=$(stcxx_installed_tool_root "$1" "$2" arduino_toolchain toolchain) || return $?
+    if [ -n "$stcxx_package_root" ]; then printf '%s/frontend\n' "$stcxx_package_root"; fi
 }
 
 stcxx_installed_tool_root() {
@@ -27,7 +28,7 @@ try:
         raise ValueError('invalid locked Arduino ' + label + ' dependency')
     if (len(platform.parents) < 4 or platform.parent.name != 'mcs251' or
             platform.parents[1].name != 'hardware' or platform.parents[3].name != 'packages'):
-        raise ValueError(label + ' discovery requires an Arduino package installation; set STCXX_CPP_TOOLS_ROOT / STCXX_SDCC for a development checkout')
+        raise ValueError(label + ' discovery requires an Arduino package installation; set STCXX_TOOLS_ROOT for a development checkout')
     tools = platform.parents[3] / binding['packager'] / 'tools' / binding['name']
     selected = tools / binding['version']
     if not selected.is_dir():
@@ -40,6 +41,10 @@ PY
 }
 
 stcxx_resolve_tools() {
+    if [ -n "${STCXX_TOOLS_ROOT:-}" ]; then
+        STCXX_CPP_TOOLS_ROOT=${STCXX_CPP_TOOLS_ROOT:-$STCXX_TOOLS_ROOT/frontend}
+        export STCXX_CPP_TOOLS_ROOT
+    fi
     if [ -z "${STCXX_CPP_TOOLS_ROOT:-}" ] && [ "$#" -ge 3 ]; then
         STCXX_CPP_TOOLS_ROOT=$(stcxx_installed_frontend_root "$2" "$3") || return $?
         if [ -n "$STCXX_CPP_TOOLS_ROOT" ]; then export STCXX_CPP_TOOLS_ROOT; fi
@@ -59,6 +64,8 @@ stcxx_resolve_tools() {
     fi
     if [ -n "${STCXX_SDCC:-}" ]; then
         sdcc=$STCXX_SDCC
+    elif [ -n "${STCXX_TOOLS_ROOT:-}" ]; then
+        sdcc=$STCXX_TOOLS_ROOT/sdcc/bin/sdcc
     elif [ -n "${STCXX_TOOLCHAIN_ROOT:-}" ]; then
         sdcc=$STCXX_TOOLCHAIN_ROOT/out/bin/sdcc
     else

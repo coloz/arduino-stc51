@@ -2,7 +2,7 @@
 # See README.md and tools/cpp-cli/README.md for compiler usage and support boundaries.
 
 name=arduino-stc51
-version=0.0.4
+version=0.0.5
 
 compiler.warning_flags=--less-pedantic
 compiler.warning_flags.none=--less-pedantic
@@ -10,7 +10,7 @@ compiler.warning_flags.default=--less-pedantic
 compiler.warning_flags.more=--less-pedantic -Wp-Wall
 compiler.warning_flags.all=--less-pedantic -Wp-Wall -V
 
-compiler.path={runtime.tools.sdcc-mcs251.path}/bin
+compiler.path={runtime.tools.stcxx-toolchain.path}/sdcc/bin
 compiler.shell.cmd=sh
 compiler.shell.cmd.macosx=/bin/sh
 compiler.shell.cmd.windows=powershell.exe
@@ -41,12 +41,12 @@ compiler.cpp.wrapper=sdcc.sh
 compiler.cpp.flags={compiler.c.flags}
 
 compiler.S.flags=-c -g -x assembler-with-cpp
-compiler.ar.path={runtime.tools.sdcc-mcs251.path}/bin
-compiler.ar.path.windows={runtime.tools.sdcc-mcs251.path}/bin
+compiler.ar.path={runtime.tools.stcxx-toolchain.path}/sdcc/bin
+compiler.ar.path.windows={runtime.tools.stcxx-toolchain.path}/sdcc/bin
 compiler.ar.cmd=sdar
 compiler.ar.wrapper=sdar.sh
 compiler.ar.flags=rcs
-compiler.systemincludes="-I{runtime.tools.sdcc-mcs251.path}/include" "-I{runtime.tools.sdcc-mcs251.path}/include/mcs51"
+compiler.systemincludes="-I{runtime.tools.stcxx-toolchain.path}/sdcc/include" "-I{runtime.tools.stcxx-toolchain.path}/sdcc/include/mcs51"
 
 build.extra_flags=
 build.link_flags=

@@ -91,7 +91,7 @@ def installed_tool(binding):
             all(isinstance(v, str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', v)
                 for v in binding.values()), 'invalid Arduino tool binding')
     require(PLATFORM.parent.name == 'mcs251' and PLATFORM.parents[1].name == 'hardware' and
-            PLATFORM.parents[3].name == 'packages', 'set STCXX_CPP_TOOLS_ROOT for a source checkout')
+            PLATFORM.parents[3].name == 'packages', 'set STCXX_TOOLS_ROOT for a source checkout')
     return PLATFORM.parents[3] / binding['packager'] / 'tools' / binding['name'] / binding['version']
 
 
@@ -108,9 +108,13 @@ class Driver:
         self.arguments = payload.decode('utf-8').split('\0')[:-1]
         require(mode == 'link' or self.source.is_file(), 'missing compile input: ' + str(self.source))
         root = os.environ.get('STCXX_CPP_TOOLS_ROOT')
-        self.frontend = absolute(root) if root else installed_tool(self.lock['arduino_frontend']).resolve()
+        package_root = os.environ.get('STCXX_TOOLS_ROOT')
+        self.frontend = (absolute(root) if root else
+                         (absolute(package_root) if package_root else installed_tool(self.lock['arduino_toolchain']).resolve()) / 'frontend')
         self.tools = {n: self.frontend / 'bin' / (n + '.exe') for n in ('clang', 'llvm-link', 'opt', 'llvm-dis', 'llvm-cbe')}
         sdcc = os.environ.get('STCXX_SDCC') or os.environ.get('STCXX_ARDUINO_SDCC')
+        if not sdcc and package_root:
+            sdcc = str(absolute(package_root) / 'sdcc/bin/sdcc.exe')
         require(sdcc, 'native Arduino SDCC path is missing')
         if not Path(sdcc).is_file():
             sdcc += '.exe'

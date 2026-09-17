@@ -174,6 +174,31 @@ def main():
         invoke('unsupported input', 'compile', executable, work / 'input.txt', obj, 're2', status=4)
         invoke('native C++ failure', 'compile', executable, merged, obj, 're2', *cpp_flags, '-DFAIL=1', status=23)
         assert not list(work.glob('*.stcxx-arguments-*'))
+        # One source-checkout override selects the embedded interpreter from
+        # the frontend component of the unified package, including spaced paths.
+        unified = work / 'unified toolchain'
+        shutil.copytree(frontend, unified / 'frontend')
+        env.pop('STCXX_CPP_TOOLS_ROOT')
+        env['STCXX_TOOLS_ROOT'] = str(unified)
+        invoke('unified package override', 'compile', executable, merged, obj, 're2', *cpp_flags)
+        assert argv()[3] == 'compile-cpp'
+
+        # Installed lookup uses the exact version in arduino_toolchain and
+        # appends frontend/ before checking the Python bootstrap.
+        installed = work / 'data/packages/stc/hardware/mcs251/0.0.5'
+        lock['arduino_toolchain'] = {'packager': 'stc', 'name': 'stcxx-toolchain', 'version': '0.1.0'}
+        lock_path.write_text(json.dumps(lock))
+        shutil.copytree(platform, installed)
+        installed_package = work / 'data/packages/stc/tools/stcxx-toolchain/0.1.0'
+        shutil.copytree(unified, installed_package)
+        wrapper = installed / 'tools/wrapper/stc-windows.ps1'
+        lock_path = installed / 'tools/cpp-cli/toolchain-lock.windows-x86_64.json'
+        env.pop('STCXX_TOOLS_ROOT')
+        invoke('installed unified package', 'compile', executable, merged, obj, 're2', *cpp_flags)
+        lock['arduino_toolchain']['version'] = '9.9.9'
+        lock_path.write_text(json.dumps(lock))
+        invoke('reject missing locked package version', 'compile', executable, merged, obj, 're2', *cpp_flags, status=4)
+        lock['arduino_toolchain']['version'] = '0.1.0'
         lock['windows_frontend']['bootstrap_files']['python/python.exe'] = '0' * 64
         lock_path.write_text(json.dumps(lock))
         invoke('reject changed native runtime', 'compile', executable, merged, obj, 're2', *cpp_flags, status=4)

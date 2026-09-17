@@ -27,7 +27,7 @@ def main():
     if package['host'] != 'windows-x86_64' or digest(archive) != package['archive_sha256']:
         raise ValueError('frontend archive differs from its native build metadata')
     lock = json.loads((ROOT / 'tools/cpp-cli/toolchain-lock.macos-arm64.json').read_text(encoding='utf-8'))
-    tools = json.loads((ROOT / 'tools/toolchain-manifest.json').read_text(encoding='utf-8'))['tools']
+    tools = json.loads((ROOT / 'tools/toolchain-manifest.json').read_text(encoding='utf-8'))['components']
     sdcc_tool = next(t for t in tools if t['id'] == 'sdcc-mcs251')
     windows = next(s for s in sdcc_tool['systems'] if s['host'] == 'x86_64-mingw32')
     expected_sdcc = windows['sha256']
@@ -58,6 +58,7 @@ def main():
         lock['tools'][name]['sha256'] = digest(args.sdcc_root / 'bin' / (name + '.exe'))
     sdcc = lock['tools']['sdcc']
     sdcc['windows_package_archive_sha256'] = expected_sdcc
+    sdcc['native_package_manifest_sha256'] = digest(args.sdcc_root / 'MANIFEST.sha256')
     sdcc['elf_sha256'] = sdcc['sha256']  # Historical key; this host runs a PE executable.
     for name in ('native_package_archive_sha256', 'distribution_archive_sha256', 'distribution_provenance_sha256'):
         sdcc.pop(name, None)
@@ -74,7 +75,8 @@ def main():
     lock['windows_sdcc_files'] = {p.relative_to(args.sdcc_root).as_posix(): digest(p)
                                   for p in sorted((args.sdcc_root / 'bin').iterdir()) if p.is_file()}
     lock['windows_frontend'] = {key: package[key] for key in ('archive_sha256', 'manifest_sha256', 'bootstrap_files')}
-    lock['arduino_frontend']['version'] = '20.1.8-stc.3'
+    # A changed component requires repackaging and rebinding the unified archive.
+    lock.pop('toolchain_package', None)
     driver = {'path': 'tools/cpp-cli/stcxx-cli.py', 'sha256': digest(ROOT / 'tools/cpp-cli/stcxx-cli.py')}
     lock['pipeline_helpers']['windows_cli_driver'] = driver
     lock['pipeline_helpers']['arduino_cli_driver'] = driver

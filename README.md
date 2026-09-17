@@ -1,6 +1,6 @@
 # arduino-stc51
 
-面向 STC **MCS251** 芯片的 Arduino core。当前版本 **0.0.4**，仅维护 10 个型号；所有型号固定使用 `-mmcs251`，Arduino 架构标识为 `mcs251`。
+面向 STC **MCS251** 芯片的 Arduino core。当前版本 **0.0.5**，仅维护 10 个型号；所有型号固定使用 `-mmcs251`，Arduino 架构标识为 `mcs251`。
 
 MCS51 芯片、板项和 C++ 适配路径已移除。旧的 `arduino-stc51:mcs51:…` FQBN 不再适用，需要重新安装当前源码并选择新板项。工程名仍为 `arduino-stc51`。
 
@@ -18,18 +18,18 @@ FQBN 统一为 `stc:mcs251:<variants>`，其中 `<variants>` 是 `boards.txt` �
 https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
 ```
 
-在开发板管理器中安装 **arduino-stc51 0.0.4**，然后选择对应型号。Arduino CLI 可使用：
+在开发板管理器中安装 **arduino-stc51 0.0.5**，然后选择对应型号。Arduino CLI 可使用：
 
 ```powershell
 arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
-arduino-cli core install stc:mcs251@0.0.4 --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
+arduino-cli core install stc:mcs251@0.0.5 --additional-urls https://raw.githubusercontent.com/coloz/arduino-stc51/main/package_arduino-stc51_index.json
 ```
 
-安装资源见 [v0.0.4 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.4)。已安装 0.0.3 的用户刷新开发板索引后升级，并重新编译项目。历史 Release 保留供下载。
+安装资源见 [v0.0.5 Release](https://github.com/coloz/arduino-stc51/releases/tag/v0.0.5)。已安装 0.0.4 的用户刷新开发板索引即可升级，并重新编译项目；FQBN 不变。
 
 从旧包标识 `arduino-stc51` 迁移时，需安装 `stc:mcs251` 并重新选择板卡，将项目和脚本中的旧 FQBN 前缀改为 `stc:mcs251:`；旧包的版本升级不会自动完成迁移。确认新包可用后，可卸载旧包。手动安装源码时，平台目录应为 `<sketchbook>/hardware/stc/mcs251`；开发板管理器安装路径为 `packages/stc/hardware/mcs251/<version>`。
 
-开发板管理器在两端都安装 `sdcc-mcs251`、`stcxx-frontend` 和 `stc-cli` 三项工具。Windows 使用系统 PowerShell 5.1、原生 `.exe` 工具及包内 Python；macOS 使用原生 ARM64 工具。C++ 前端负责 Clang → LLVM-CBE 转换，C 和 C++ 共用本机 SDCC，`stc-cli` 负责 UART 和原生 USB 上传。安装依赖已移除占位包 `stc51-native-macos-host`。0.0.4 仅更新 core 平台包，继续沿用 SDCC `4.6.0-stc.0.0.1-r1`、前端 `20.1.8-stc.3` 和上传器 `0.1.0-stc.1`；索引直接引用 v0.0.2 已发布的工具归档，工具依赖与 0.0.3 保持一致。
+开发板管理器在两端都安装 `stcxx-toolchain` 和 `stc-cli` 两项工具。`stcxx-toolchain` `0.1.0` 将原来的前端和 SDCC 合为一个工具依赖：内部 `frontend/` 包含 Clang、LLVM-CBE 等，`sdcc/` 包含 C 编译器、汇编器、链接器及运行库。Windows 使用系统 PowerShell 5.1、原生 `.exe` 工具及包内 Python；macOS 使用原生 ARM64 工具。该版本保持原组件二进制、许可证和文件校验清单，C++ 编译流程仍为 Clang → LLVM-CBE → SDCC。`stc-cli` `0.1.0-stc.1` 继续负责 UART 和原生 USB 上传。
 
 ## 支持型号
 
@@ -78,7 +78,7 @@ $build.firmware
 
 平台只提供 C++11 模式，所有板项默认启用 C++ 编译链，无需选择语言或附加 `cppcore` 参数。安装脚本不传 FQBN 时默认编译 STC32G8K64、12 MHz 的 C++ Blink。G12K128、G144K246 等完整 Flash 布局依赖发布包中重建的 SDCC 分区功能；旧原版工具包不满足时构建会明确拒绝。详见 [C++ 驱动说明](tools/cpp-cli/README.md)。
 
-源码安装脚本用于维护者调试。脚本会下载并校验锁定的 SDCC 归档，也可通过 `-ToolCacheDirectory` 复用本地归档，或通过 `-ToolManifestPath` 指定已验证的工具清单。打包不会自动发布。版本变化见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
+源码安装脚本用于维护者调试。脚本会下载并校验锁定的统一工具链和上传器归档，也可通过 `-ToolCacheDirectory` 复用本地归档，或通过 `-ToolManifestPath` 指定已验证的工具清单。发布前将本地工具归档目录传给 `-ToolCacheDirectory`。统一工具链打包步骤见 [打包说明](https://github.com/coloz/arduino-stc51/blob/main/scripts/TOOLCHAIN-PACKAGING.md)。打包不会自动发布。版本变化见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。
 
 ## C++ 与 Arduino API
 
