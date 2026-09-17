@@ -12,12 +12,12 @@
         {
           "name": "arduino-stc51",
           "architecture": "mcs251",
-          "version": "0.0.3",
+          "version": "0.0.4",
           "category": "Contributed",
-          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.3/arduino-stc51-0.0.3.tar.bz2",
-          "archiveFileName": "arduino-stc51-0.0.3.tar.bz2",
-          "checksum": "SHA-256:c005078e7d0b7eb6f7d90fac0bbebb9134e391e09df1feea2682fb5e122bce22",
-          "size": "285814",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.4/arduino-stc51-0.0.4.tar.bz2",
+          "archiveFileName": "arduino-stc51-0.0.4.tar.bz2",
+          "checksum": "SHA-256:206b27ff614c0eff7f1e4e7c3d1c3d988373380434aa802436f278f9f4334b96",
+          "size": "330783",
           "boards": [
             {
               "name": "STC32G12K128"
