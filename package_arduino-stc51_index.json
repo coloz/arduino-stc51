@@ -16,8 +16,8 @@
           "category": "Contributed",
           "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.4/arduino-stc51-0.0.4.tar.bz2",
           "archiveFileName": "arduino-stc51-0.0.4.tar.bz2",
-          "checksum": "SHA-256:206b27ff614c0eff7f1e4e7c3d1c3d988373380434aa802436f278f9f4334b96",
-          "size": "330783",
+          "checksum": "SHA-256:db2e96324bdebd42726b21d77d242a380769a6312b26962bf35fb01b8e9cb254",
+          "size": "330298",
           "boards": [
             {
               "name": "STC32G12K128"
