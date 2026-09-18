@@ -62,6 +62,13 @@ private:
     bool _configurationError;
 };
 
-extern HardwareSerial Serial;
+extern HardwareSerial Serial1;
+#define Serial0 Serial1
+#if ARDUINO_USB_CDC_ON_BOOT
+# include "../USBCDC.h"
+# define Serial USBSerial
+#else
+# define Serial Serial1
+#endif
 
 #endif

@@ -2,7 +2,11 @@
 #ifndef STC_HID_H
 #define STC_HID_H
 #include <Arduino.h>
+#if STC_USB_CDC_ONLY
+#error The 16 KB USB CDC profile cannot also include HID; disable CDC or select a larger chip
+#endif
 #include "USB_backend.h"
+#include <USB.h>
 #define _USING_HID 1
 #define HID_REPORT_DESCRIPTOR_TYPE 0x22
 #define HID_REPORT_TYPE_INPUT 1
@@ -39,12 +43,4 @@ public:
     bool RegisterReport(uint8_t id, uint8_t size) { return stc_usb_register_report(id, size) != 0; }
 };
 HID_ &HID();
-class USBDeviceClass {
-public:
-    bool attach() { return stc_usb_begin() != 0; }
-    bool detach() { stc_usb_end(); return true; }
-    bool configured() { return stc_usb_configured() != 0; }
-    void poll() { stc_usb_poll(); }
-};
-extern USBDeviceClass USBDevice;
 #endif

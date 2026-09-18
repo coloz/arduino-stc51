@@ -1,8 +1,8 @@
 # arduino-stc51 C++ core and platform.
-# See README.md and tools/cpp-cli/README.md for compiler usage and support boundaries.
+# See README.md and tools/stcxx-driver/README.md for compiler usage and support boundaries.
 
 name=arduino-stc51
-version=0.0.5
+version=0.0.6
 
 compiler.warning_flags=--less-pedantic
 compiler.warning_flags.none=--less-pedantic
@@ -11,44 +11,30 @@ compiler.warning_flags.more=--less-pedantic -Wp-Wall
 compiler.warning_flags.all=--less-pedantic -Wp-Wall -V
 
 compiler.path={runtime.tools.stcxx-toolchain.path}/sdcc/bin
-compiler.shell.cmd=sh
-compiler.shell.cmd.macosx=/bin/sh
-compiler.shell.cmd.windows=powershell.exe
-compiler.shell.args=
-compiler.shell.args.windows=-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File
-compiler.wrapper.path={runtime.platform.path}/tools/wrapper
-compiler.wrapper.compile="{compiler.wrapper.path}/stc-compile.sh"
-compiler.wrapper.compile.windows="{compiler.wrapper.path}/stc-windows.ps1" compile
-compiler.wrapper.archive="{compiler.wrapper.path}/stc-archive.sh"
-compiler.wrapper.archive.windows="{compiler.wrapper.path}/stc-windows.ps1" archive
-compiler.wrapper.link="{compiler.wrapper.path}/stc-link.sh"
-compiler.wrapper.link.windows="{compiler.wrapper.path}/stc-windows.ps1" link
-compiler.wrapper.size="{compiler.wrapper.path}/stc-size.sh"
-compiler.wrapper.size.windows="{compiler.wrapper.path}/stc-windows.ps1" size
+compiler.driver={runtime.platform.path}/tools/stcxx-driver/stcxx
+compiler.driver.windows={runtime.platform.path}/tools/stcxx-driver/stcxx.exe
 
 compiler.c.cmd=sdcc
-compiler.c.wrapper=sdcc.sh
 compiler.dep.flags=-MMD
 compiler.c.flags=-c --std-sdcc11 --opt-code-size -Ddouble=float --model-{build.memory_model} {compiler.warning_flags} {build.flash_flags}
 compiler.c.elf.cmd=sdcc
-compiler.c.elf.wrapper=sdcc-link.sh
-compiler.c.elf.flags=--code-size {upload.maximum_size} --xram-size {upload.maximum_xdata_size} --model-{build.memory_model} {build.link_flags} {build.flash_flags}
+compiler.c.elf.flags=--code-size {upload.maximum_size} --xram-size {upload.maximum_xdata_size} {build.xram_flags} --model-{build.memory_model} {build.link_flags} {build.flash_flags}
 
 # Every board uses the locked native Clang/LLVM-CBE bridge for C++ and
 # the shared SDCC backend for C hardware drivers, with the MCS251 ABI.
 compiler.cpp.cmd=sdcc
-compiler.cpp.wrapper=sdcc.sh
 compiler.cpp.flags={compiler.c.flags}
 
 compiler.S.flags=-c -g -x assembler-with-cpp
 compiler.ar.path={runtime.tools.stcxx-toolchain.path}/sdcc/bin
 compiler.ar.path.windows={runtime.tools.stcxx-toolchain.path}/sdcc/bin
 compiler.ar.cmd=sdar
-compiler.ar.wrapper=sdar.sh
 compiler.ar.flags=rcs
 compiler.systemincludes="-I{runtime.tools.stcxx-toolchain.path}/sdcc/include" "-I{runtime.tools.stcxx-toolchain.path}/sdcc/include/mcs51"
 
 build.extra_flags=
+build.usb_flags=
+build.xram_flags=
 build.link_flags=
 build.flash_flags=
 build.cpp_core_flags=
@@ -60,31 +46,31 @@ compiler.cpp.extra_flags=
 compiler.S.extra_flags=
 compiler.ar.extra_flags=
 
-recipe.c.o.pattern="{compiler.shell.cmd}" {compiler.shell.args} {compiler.wrapper.compile} "{compiler.path}/{compiler.c.cmd}" "{source_file}" "{object_file}" re1 {compiler.dep.flags} {compiler.c.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.c.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
+recipe.c.o.pattern="{compiler.driver}" --platform "{runtime.platform.path}" compile "{compiler.path}/{compiler.c.cmd}" "{source_file}" "{object_file}" re1 {compiler.dep.flags} {compiler.c.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.usb_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.c.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
 
-recipe.cpp.o.pattern="{compiler.shell.cmd}" {compiler.shell.args} {compiler.wrapper.compile} "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{object_file}" re2 {compiler.dep.flags} {compiler.cpp.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
+recipe.cpp.o.pattern="{compiler.driver}" --platform "{runtime.platform.path}" compile "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{object_file}" re2 {compiler.dep.flags} {compiler.cpp.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.usb_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
 
-recipe.S.o.pattern="{compiler.path}/{compiler.c.cmd}" {compiler.S.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.S.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
+recipe.S.o.pattern="{compiler.path}/{compiler.c.cmd}" {compiler.S.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.usb_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.S.extra_flags} {build.extra_flags} {includes} "{source_file}" -o "{object_file}"
 
-# The pinned Windows compiler includes sdar and its runtime dependencies.
-recipe.ar.pattern="{compiler.shell.cmd}" {compiler.shell.args} {compiler.wrapper.archive} "{compiler.ar.path}/{compiler.ar.cmd}" "{archive_file_path}" "{object_file}" {compiler.ar.flags} {compiler.ar.extra_flags}
+# The native driver packages Arduino core cache sidecars with the SDAR archive.
+recipe.ar.pattern="{compiler.driver}" --platform "{runtime.platform.path}" archive "{compiler.ar.path}/{compiler.ar.cmd}" "{archive_file_path}" "{object_file}" {compiler.ar.flags} {compiler.ar.extra_flags}
 
-recipe.c.combine.pattern="{compiler.shell.cmd}" {compiler.shell.args} {compiler.wrapper.link} "{compiler.path}/{compiler.c.elf.cmd}" {build.target} {compiler.c.elf.flags} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.cpp_link_flags} {build.cpp_target_link_flags} {compiler.c.elf.extra_flags} {object_files} "{build.path}/{archive_file}" --out-fmt-ihx -o "{build.path}/{build.project_name}.hex"
+recipe.c.combine.pattern="{compiler.driver}" --platform "{runtime.platform.path}" link "{compiler.path}/{compiler.c.elf.cmd}" {build.target} {compiler.c.elf.flags} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.cpp_link_flags} {build.cpp_target_link_flags} {compiler.c.elf.extra_flags} {object_files} "{build.path}/{archive_file}" --out-fmt-ihx -o "{build.path}/{build.project_name}.hex"
 
 recipe.output.tmp_file={build.project_name}.hex
 recipe.output.save_file={build.project_name}.{build.variant}.hex
 
 # SDCC writes a human-readable .mem file next to the Intel HEX output. The
-# wrapper includes internal DATA/IDATA usage as well as PDATA and XDATA.
-recipe.size.pattern="{compiler.shell.cmd}" {compiler.shell.args} {compiler.wrapper.size} "{build.path}/{build.project_name}.mem"
+# native driver includes internal DATA/IDATA usage as well as PDATA and XDATA.
+recipe.size.pattern="{compiler.driver}" --platform "{runtime.platform.path}" size "{build.path}/{build.project_name}.mem"
 recipe.size.regex=^STC_PROGRAM_BYTES ([0-9]+)$
 recipe.size.regex.data=^STC_RAM_BYTES ([0-9]+)$
 
 # Arduino CLI/IDE library discovery and prototype generation.
 preproc.includes.flags=-M -MG -MP
-recipe.preproc.includes="{compiler.shell.cmd}" {compiler.shell.args} {compiler.wrapper.compile} "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{preprocessed_file_path}" re11 {preproc.includes.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
+recipe.preproc.includes="{compiler.driver}" --platform "{runtime.platform.path}" compile "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{preprocessed_file_path}" re11 {preproc.includes.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.usb_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
 preproc.macros.flags=-E -dM
-recipe.preproc.macros="{compiler.shell.cmd}" {compiler.shell.args} {compiler.wrapper.compile} "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{preprocessed_file_path}" re12 {preproc.macros.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
+recipe.preproc.macros="{compiler.driver}" --platform "{runtime.platform.path}" compile "{compiler.path}/{compiler.cpp.cmd}" "{source_file}" "{preprocessed_file_path}" re12 {preproc.macros.flags} {build.target} -D{build.mcu_macro} -DF_CPU={build.f_cpu} {build.mode_flags} {build.core_flags} {build.timer_flags} {build.usb_flags} {build.cpp_core_flags} -DARDUINO={runtime.ide.version} -DARDUINO_{build.board} -DARDUINO_ARCH_{build.arch} {compiler.cpp.extra_flags} {build.extra_flags} {includes} {compiler.systemincludes}
 
 # The IDE's Upload action uses the host-native programmer installed by Boards Manager.
 tools.stc-cli.path={runtime.tools.stc-cli.path}

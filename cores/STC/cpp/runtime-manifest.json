@@ -2,7 +2,10 @@
   "schema_version": 1,
   "runtime_abi_version": 1,
   "identity_scope": "runtime-sub-ABI-only",
-  "complete_build_identity_source": "tools/cpp-cli/toolchain-lock.json",
+  "complete_build_identity_source": {
+    "windows-x86_64": "tools/stcxx-driver/toolchain-lock.windows-x86_64.json",
+    "darwin-arm64": "tools/stcxx-driver/toolchain-lock.macos-arm64.json"
+  },
   "complete_build_identity_required_before_link": true,
   "profiles": {
     "mcs251": {

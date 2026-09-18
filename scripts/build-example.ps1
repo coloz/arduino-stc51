@@ -63,7 +63,7 @@ $Version = $VersionLine.Matches[0].Groups[1].Value
 $Package = & (Join-Path $PSScriptRoot 'package-platform.ps1') -Version $Version -OutputDirectory (Join-Path $RunRoot 'package')
 $Platform = Join-Path $Data "packages/stc/hardware/mcs251/$Version"
 New-Item -ItemType Directory -Force -Path $Platform | Out-Null
-& tar -xjf $Package.path -C $Extract
+& tar -xf $Package.path -C $Extract
 Assert-ExitCode 'Platform extraction'
 Copy-Item -Recurse -Force (Join-Path $Extract "arduino-stc51-$Version/*") -Destination $Platform
 
@@ -99,14 +99,20 @@ foreach ($Tool in $Manifest.tools) {
     Assert-Archive -System $System -Archive $Archive
     $ToolExtract = Join-Path $Extract $Tool.id
     $ToolTarget = Join-Path $Data "packages/stc/tools/$($Tool.packageName)/$($Tool.version)"
-    New-Item -ItemType Directory -Force -Path $ToolExtract,$ToolTarget | Out-Null
+    New-Item -ItemType Directory -Force -Path $ToolExtract | Out-Null
     if ($Archive.EndsWith('.zip', [StringComparison]::OrdinalIgnoreCase)) {
         Expand-Archive -LiteralPath $Archive -DestinationPath $ToolExtract
     } else {
         & tar -xf $Archive -C $ToolExtract
         Assert-ExitCode "$($Tool.id) extraction"
     }
-    Copy-Item -Recurse -Force (Join-Path $ToolExtract "$($System.archiveRoot)/*") -Destination $ToolTarget
+    if ($Tool.packageName -eq 'stcxx-toolchain') {
+        & (Join-Path $RepoRoot 'tools/stcxx-driver/stcxx.exe') stage-toolchain (Join-Path $ToolExtract $System.archiveRoot) $ToolTarget
+        Assert-ExitCode 'Stage native compiler toolchain'
+    } else {
+        New-Item -ItemType Directory -Force -Path $ToolTarget | Out-Null
+        Copy-Item -Recurse -Force (Join-Path $ToolExtract "$($System.archiveRoot)/*") -Destination $ToolTarget
+    }
     $InstalledTools += [pscustomobject]@{
         id = $Tool.id; version = $Tool.version; path = $ToolTarget
         archive = $Archive; sha256 = $System.sha256

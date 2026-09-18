@@ -267,15 +267,11 @@
     ],
     "archive_sidecar_selection": {
       "policy": "ctor-aware fixed-point selection from direct modules and actual native unresolved C ABI roots; identical anchored linkonce_odr/weak_odr COMDAT functions and globals coalesce exactly once; all other duplicate or ambiguous definitions fail closed",
-      "selector_path": "tools/cpp-cli/select-cpp-archive-sidecars.py",
-      "selector_sha256": "feb632f85673d4ee85290a3154948e4e5e4078679dbbbcf300f4e68d191468bc",
-      "manifest_binding": "selector path/hash plus complete selection-audit content/hash and selected native/member hashes"
+      "manifest_binding": "Native stcxx audit.json and manifest.json record the adapted C, optimized IR, final HEX and applicable constructor, alignment, storage and root-symbol audit results",
+      "implementation_source": "tools/stcxx-driver/src/link.rs"
     },
     "arduino_cli_bridge_adapter": {
       "scope": "Arduino CLI whole-program LLVM IR and LLVM-CBE fail-closed target adaptation",
-      "helper_path": "tools/cpp-cli/adapt.py",
-      "helper_sha256": "48625caf4298c43a4c22dcf6d5451c73696d94b0734ff586d039eaf1c9bc5ac1",
-      "audit_schema_version": 2,
       "c_abi_preservation_policy": "exact-internalize-public-api-list-file",
       "c_identifier_linkage_policy": "protect-declarations-and-noninternal-definitions",
       "c_identifier_shortening_policy": "final-c-preprocessing-token-sha256-v1",
@@ -284,7 +280,8 @@
       "shortening_replacement_prefix": "stcxx_cbe_id_",
       "shortening_hash_algorithm": "sha256",
       "shortening_hash_domain": "stcxx-cbe-c-identifier-v1",
-      "build_manifest_binding": "exact C ABI preserve-file hash/symbols, retained optimized-IR linkage audit, original/emitted constructor and align-2 symbols, and reversible retained adapted-C token mapping"
+      "build_manifest_binding": "Native stcxx audit.json and manifest.json record the adapted C, optimized IR, final HEX and applicable constructor, alignment, storage and root-symbol audit results",
+      "implementation_source": "tools/stcxx-driver/src/adapter.rs"
     },
     "llvm_itanium_member_function_alignment": {
       "policy": "Preserve every explicit LLVM align-2 function through LLVM-CBE and SDCC; member-function pointer targets must be a subset; select ASxxxx local parity from final relocation and require every final function address to be even",
@@ -296,12 +293,8 @@
         ".even",
         ".odd"
       ],
-      "helper_path": "tools/cpp-cli/align-member-functions.py",
-      "helper_sha256": "8d0dae028092b40f663d9a8548c7e4d50cf505feecfefa19f3f49e8f6818d364",
-      "audit_schema_version": 2,
-      "required_final_phase": "verified",
-      "required_relocation_outcome": "pass",
-      "build_manifest_binding": "helper path/hash plus complete final alignment-audit content/hash and raw/aligned/REL/local-listing/relocated-listing hashes"
+      "build_manifest_binding": "Native stcxx audit.json and manifest.json record the adapted C, optimized IR, final HEX and applicable constructor, alignment, storage and root-symbol audit results",
+      "implementation_source": "tools/stcxx-driver/src/link.rs"
     },
     "arduino_cli_sdcc_warning_audit": {
       "scope": "Arduino CLI generated C compilation diagnostics after the locked whole-program CBE audit",
@@ -309,11 +302,9 @@
       "target_profiles": [
         "mcs251"
       ],
-      "driver_path": "tools/cpp-cli/stcxx-cli.sh",
-      "driver_sha256": "80085a00ea79e64db9f596473776164f3d93b74b15610a2f33a32ecbaa88725a",
-      "audit_count_field": "verified_source_pgm_warning_count",
       "max_verified_source_warning_count": 1,
-      "assembler_address_truncation_policy": "always-unexpected-hard-fail"
+      "assembler_address_truncation_policy": "always-unexpected-hard-fail",
+      "implementation_source": "tools/stcxx-driver/src/adapter.rs"
     },
     "arduino_cli_sdcc_gcse_workaround": {
       "scope": "Arduino CLI LLVM-CBE generated bridge compilation only",
@@ -326,21 +317,17 @@
         "native-c",
         "cpp-placeholder-rel"
       ],
-      "driver_path": "tools/cpp-cli/stcxx-cli.sh",
-      "driver_sha256": "80085a00ea79e64db9f596473776164f3d93b74b15610a2f33a32ecbaa88725a",
-      "build_manifest_binding": "toolchain-lock hash binding the driver and regression plus generated bridge artifact hashes"
+      "build_manifest_binding": "Native stcxx audit.json and manifest.json record the adapted C, optimized IR, final HEX and applicable constructor, alignment, storage and root-symbol audit results",
+      "implementation_source": "tools/stcxx-driver/src/link.rs"
     },
     "llvm_cbe_fail_closed_adapter": {
       "policy": "Only ArduinoJson 7.4.3 V743JB42 AllowAllFilter::operator[] with the exact one-byte integral_constant_OC_10 return definition, two-void-pointer C signature, three StructReturn uses, and an otherwise unused synthetic return alias may be zero-initialized; wrong type/shape/use/function pairings fail closed",
-      "helper_path": "tools/cpp-core-pipeline/audit_and_adapt.py",
-      "helper_sha256": "b58b74005c6d897b6867c66eea3cd96d8e416cf487d15662f637acfa1a0e6b9f",
-      "regression_path": "tools/cpp-core-pipeline/test_typedef_determinism.py",
-      "regression_sha256": "48f8610a8d04fb7e6e73b2bc4780d35f749b6f3ac8746429378fc20193bbb7a0",
       "standalone_source_project": "D:\\Git\\stc51\\stcxx",
       "standalone_source_project_commit": "7f7127e65368eb4fb67c9f93cfb0ecd558ff456b",
       "standalone_bridge_regression_sha256": "8d4ab2140b002754a56b7cbec2d32b3bb610fe1aa92cd9ac08baeea46e8b417d",
       "published_out_lock_sha256": "99d94df0094dec600abebe6e4540425afcc19c407e3155a24be0035f7bc2b075",
-      "published_out_manifest_sha256": "1c2e7b0eba11884a91264eb2b313d2fd445f13ee30d2e44daed7a4321aa224d2"
+      "published_out_manifest_sha256": "1c2e7b0eba11884a91264eb2b313d2fd445f13ee30d2e44daed7a4321aa224d2",
+      "implementation_source": "tools/stcxx-driver/src/adapter.rs"
     },
     "flash_strings": [
       "STCXX_FLASH_STRINGS=1",
@@ -387,8 +374,7 @@
       "link_accounting": "the heap-provider REL XSEG equals the configured arena; the state REL contributes exactly 8 additional XDATA bytes, defines no heap provider, and is selected exactly once",
       "heap_map_provider_audit": {
         "policy": "full symbol names are counted exactly in the REL object; only ASlink map display matching uses its fixed 32-character Global column, after proving all audited displays unique",
-        "helper_path": "tools/cpp-cli/aslink_map_symbols.py",
-        "helper_sha256": "69780e91fdb742cbc441bab710fe6219627550a91600c319750b2ba5dd46534d"
+        "implementation_source": "tools/stcxx-driver/src/link.rs"
       },
       "qualification": "only allocations routed through the stcxx allocator ABI contribute to the reported low-water marks"
     }

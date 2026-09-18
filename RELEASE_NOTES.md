@@ -1,3 +1,20 @@
+# 0.0.6（2026-09-18）
+
+- 本次原生安装包支持 Windows x64 和 Apple Silicon macOS 15+；两端分别构建原生驱动和上传器，索引保留 0.0.5 供回退。
+- 工具依赖更新为 `stcxx-toolchain` `0.2.0` 和 `stc-cli` `0.1.0-stc.2`；上传器增加新 CDC/复合设备的 1200 bps 自动复位支持。FQBN 不变。
+- 移除随附的实验性 Adafruit NeoPixel 库。
+
+- 原生 USB 变体增加 CDC ACM、USB CDC On Boot、USBSerial/SerialUSB 和 Serial1/Serial0；支持 CDC + HID 复合设备、固定收发缓冲和 1200 bps 进入 ISP。16 KB 型号提供独立 CDC 精简配置；G12 启用 CDC 时预留更多 USB 静态 RAM。UART1 与 USB 引脚冲突会被拒绝。
+- G144 增加可选 High bank 64 KiB XRAM 布局。本机样板默认布局出现数据位错误，高地址布局通过 CDC 与 CDC/HID 实测；保留 128 KiB 默认布局，实测范围和 RTS 限制见通信验证记录。
+
+- Arduino 的编译、预处理、归档、链接及大小统计直接调用 Rust 原生 `stcxx.exe` / `stcxx`，输出内部编译命令，构建路径不再启动 PowerShell、shell 或 Python。
+- 增加原生平台/工具链打包入口，安装包不再集成 Python 解释器或 Python 辅助脚本；保留原生 Clang、LLVM-CBE 和 SDCC。
+- 清理旧驱动目录残留、编译器源码补丁及其重建脚本；SDK 使用锁定的预编译工具链，编译器开发归属独立的 `stcxx` 项目。
+- 修复 LLVM IR-only 优化阶段尝试创建 MSP430 后端的警告、SDCC 简单整数内联辅助函数的初始化误报，以及 `--stack-loc` 弃用警告；继续核验 STC ABI 与最终栈布局。
+- 保留编译器 stdout/stderr 通道，使普通 ASlink 回显使用正常输出，真实警告和错误继续显示为诊断。
+- 修复 IDE 第一次编译成功、再次编译复用核心缓存时报告 `SHA-256 mismatch: ...core.lib`：缓存现在携带 C++ 中间文件和堆对象，支持跨 sketch 复用，保留哈希及链接审计。
+- 补充默认共享缓存下连续编译、删除首次构建目录后复用缓存的回归验证。
+
 # 0.0.5（2026-09-17）
 
 - 将 `sdcc-mcs251` 和 `stcxx-frontend` 合并为 `stcxx-toolchain` `0.1.0`，Windows x64 和 Apple Silicon 共用相同的内部目录布局。

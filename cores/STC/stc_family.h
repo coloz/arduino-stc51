@@ -6,6 +6,18 @@
 #ifndef STC_CORE_USB_LAYOUT
 # define STC_CORE_USB_LAYOUT 0
 #endif
+#ifndef ARDUINO_USB_CDC_ON_BOOT
+# define ARDUINO_USB_CDC_ON_BOOT 0
+#endif
+#ifndef STC_USB_CDC_ONLY
+# define STC_USB_CDC_ONLY 0
+#endif
+#ifndef STC_USB_HID_ONLY
+# define STC_USB_HID_ONLY 0
+#endif
+#if ARDUINO_USB_CDC_ON_BOOT && !STC_CORE_USB_LAYOUT
+# error "USB CDC requires a variant with a native USB peripheral"
+#endif
 #ifndef STC_CORE_CAN_LAYOUT
 # define STC_CORE_CAN_LAYOUT 0
 #endif

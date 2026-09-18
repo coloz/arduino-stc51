@@ -21,6 +21,7 @@ void yield(void);
 
 /* Stable C UART boundary implemented by cores/STC/HardwareSerial*.c. */
 void Serial_begin(unsigned long baud);
+bool Serial_active(void);
 void Serial_end(void);
 int Serial_available(void);
 int Serial_availableForWrite(void);

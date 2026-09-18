@@ -81,9 +81,9 @@ void loop() {
 ## 运行约束与兼容范围
 
 - 使用轮询，不占用 USB CPU 中断向量。主循环返回、`delay()` 和 `yield()` 会服务 USB。长时间阻塞的自定义循环必须经常调用 `yield()` 或 `USBDevice.poll()`，否则枚举和通信可能超时。API 仅用于主循环，不在 ISR 中调用。
-- 提供 HID report protocol；不提供 BIOS/UEFI boot protocol、USB Host、CDC/`SerialUSB`、MSC、Feature 报告或远程唤醒。没有完整的 AVR `PluggableUSB` / `USB_*` 底层接口，因此依赖这些内部接口的第三方库需要单独移植。
+- 提供 HID report protocol；可与核心的 [USB CDC / SerialUSB](../USB/README.md) 组合。不提供 BIOS/UEFI boot protocol、USB Host、MSC、Feature 报告或远程唤醒。没有完整的 AVR `PluggableUSB` / `USB_*` 底层接口，因此依赖这些内部接口的第三方库需要单独移植。
 - `AppendDescriptor()`、`SendReport()` 和键鼠常用 API 尽量兼容 Arduino；这里 `HID().begin()` 的返回值采用上述成功/失败约定。`RegisterReport()`、`lastError()` 和原始 OUT 读取是 STC 扩展。
-- HID 固件不实现 `@STCISP#` 自动进入下载协议。重新烧录时按板卡方式进入 ISP；原生 HID 不产生串口 COM 设备。
+- 独立 HID 不产生 COM，也不实现 `@STCISP#`。启用 USB CDC On Boot 后可同时保留 COM 和 1200 bps 下载入口。16 KB 型号的精简配置只能选择独立 HID 或独立 CDC。
 
 默认 VID:PID 为 `1209:0001`，仅用于私人实验，不能用于发布或制造产品，见 [pid.codes 的该 PID 说明](https://pid.codes/1209/0001/)。自有设备通过全局构建选项覆盖 `USB_VID` / `USB_PID`；必须传给库的 C 编译单元，不能只在 `.ino` 中 `#define`。例如，在已有 `build.extra_flags` 上追加 `-DUSB_VID=<自己的VID> -DUSB_PID=<自己的PID>`。
 

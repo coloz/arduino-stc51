@@ -3,7 +3,7 @@
 
 #include "stc_c_hal.h"
 
-HardwareSerial Serial;
+HardwareSerial Serial1;
 
 void HardwareSerial::begin(unsigned long baud, uint16_t configuration)
 {
@@ -14,6 +14,7 @@ void HardwareSerial::begin(unsigned long baud, uint16_t configuration)
     }
     _configurationError = false;
     Serial_begin(baud);
+    _configurationError = !Serial_active();
 }
 
 void HardwareSerial::end()

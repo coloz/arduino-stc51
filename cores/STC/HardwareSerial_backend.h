@@ -16,6 +16,7 @@
  */
 void Serial_begin(unsigned long baud);
 void Serial_end(void);
+bool Serial_active(void);
 int Serial_available(void);
 int Serial_availableForWrite(void);
 int Serial_peek(void);

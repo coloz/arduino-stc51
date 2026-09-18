@@ -8,6 +8,7 @@
 #include "Print.h"
 #include "Stream.h"
 #include "HardwareSerial.h"
+#include "../USBCDC.h"
 #include "IPAddress.h"
 #include "Client.h"
 #include "Server.h"

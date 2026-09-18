@@ -5,6 +5,8 @@ menu.clock=CPU clock (must match ISP configuration)
 menu.memory=SDCC memory model
 menu.uploadcheck=Upload model check
 menu.uploadtransport=Upload method
+menu.cdc=USB CDC On Boot
+menu.xram=XRAM layout
 
 #################### STC32G12K128 ####################
 stc32g12k128.name=STC32G12K128 (experimental MCS251)
@@ -37,6 +39,12 @@ stc32g12k128.upload.maximum_idata_size=0
 stc32g12k128.upload.maximum_xdata_size=8192
 stc32g12k128.upload.maximum_edata_size=4096
 
+stc32g12k128.menu.cdc.disabled=Disabled (Serial = UART1)
+stc32g12k128.menu.cdc.disabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=0
+stc32g12k128.menu.cdc.enabled=Enabled (Serial = USB CDC)
+stc32g12k128.menu.cdc.enabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=1
+
+stc32g12k128.menu.cdc.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=4096UL
 stc32g12k128.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=6144UL
 stc32g12k128.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
 stc32g12k128.compiler.cache_core=false
@@ -79,6 +87,16 @@ stc32g144k246.upload.maximum_idata_size=0
 stc32g144k246.upload.maximum_xdata_size=131072
 stc32g144k246.upload.maximum_edata_size=16384
 
+stc32g144k246.menu.cdc.disabled=Disabled (Serial = UART1)
+stc32g144k246.menu.cdc.disabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=0
+stc32g144k246.menu.cdc.enabled=Enabled (Serial = USB CDC)
+stc32g144k246.menu.cdc.enabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=1
+
+stc32g144k246.menu.xram.default=128 KiB (default)
+stc32g144k246.menu.xram.default.build.xram_flags=
+stc32g144k246.menu.xram.high=High bank 64 KiB (0x020000)
+stc32g144k246.menu.xram.high.build.xram_flags=--xram-loc 0x020000
+stc32g144k246.menu.xram.high.upload.maximum_xdata_size=65536
 stc32g144k246.menu.uploadtransport.auto=Automatic (USB CDC or UART)
 stc32g144k246.menu.uploadtransport.auto.upload.transport=auto
 stc32g144k246.menu.uploadtransport.uart=UART ISP
@@ -227,6 +245,11 @@ ai8051u_34k64.upload.maximum_idata_size=256
 ai8051u_34k64.upload.maximum_xdata_size=32768
 ai8051u_34k64.upload.maximum_edata_size=2048
 
+ai8051u_34k64.menu.cdc.disabled=Disabled (Serial = UART1)
+ai8051u_34k64.menu.cdc.disabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=0
+ai8051u_34k64.menu.cdc.enabled=Enabled (Serial = USB CDC)
+ai8051u_34k64.menu.cdc.enabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=1
+
 ai8051u_34k64.menu.uploadcheck.manual=Use selected model, skip unavailable ID (default)
 ai8051u_34k64.menu.uploadcheck.manual.upload.model_check_flags=--force-unverified-target
 ai8051u_34k64.menu.uploadcheck.detect=Require detected model ID
@@ -276,11 +299,17 @@ stc32g12k64.upload.maximum_idata_size=0
 stc32g12k64.upload.maximum_xdata_size=8192
 stc32g12k64.upload.maximum_edata_size=4096
 
+stc32g12k64.menu.cdc.disabled=Disabled (Serial = UART1)
+stc32g12k64.menu.cdc.disabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=0
+stc32g12k64.menu.cdc.enabled=Enabled (Serial = USB CDC)
+stc32g12k64.menu.cdc.enabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=1
+
 stc32g12k64.menu.uploadcheck.manual=Use selected model, skip unavailable ID (default)
 stc32g12k64.menu.uploadcheck.manual.upload.model_check_flags=--force-unverified-target
 stc32g12k64.menu.uploadcheck.detect=Require detected model ID
 stc32g12k64.menu.uploadcheck.detect.upload.model_check_flags=
 
+stc32g12k64.menu.cdc.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=4096UL
 stc32g12k64.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=6144UL
 stc32g12k64.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1
 stc32g12k64.compiler.cache_core=false
@@ -412,6 +441,11 @@ ai8051u_34k32.upload.maximum_idata_size=256
 ai8051u_34k32.upload.maximum_xdata_size=32768
 ai8051u_34k32.upload.maximum_edata_size=2048
 
+ai8051u_34k32.menu.cdc.disabled=Disabled (Serial = UART1)
+ai8051u_34k32.menu.cdc.disabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=0
+ai8051u_34k32.menu.cdc.enabled=Enabled (Serial = USB CDC)
+ai8051u_34k32.menu.cdc.enabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=1
+
 ai8051u_34k32.menu.uploadcheck.manual=Use selected model, skip unavailable ID (default)
 ai8051u_34k32.menu.uploadcheck.manual.upload.model_check_flags=--force-unverified-target
 ai8051u_34k32.menu.uploadcheck.detect=Require detected model ID
@@ -458,6 +492,11 @@ ai8051u_34k16.upload.maximum_size=16384
 ai8051u_34k16.upload.maximum_idata_size=256
 ai8051u_34k16.upload.maximum_xdata_size=32768
 ai8051u_34k16.upload.maximum_edata_size=2048
+
+ai8051u_34k16.menu.cdc.disabled=Disabled (Serial = UART1)
+ai8051u_34k16.menu.cdc.disabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=0 -DSTC_USB_HID_ONLY=1
+ai8051u_34k16.menu.cdc.enabled=Enabled (Serial = USB CDC)
+ai8051u_34k16.menu.cdc.enabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=1 -DSTC_USB_CDC_ONLY=1 -DSTCXX_CPP_OPT=z
 
 ai8051u_34k16.menu.uploadcheck.manual=Use selected model, skip unavailable ID (default)
 ai8051u_34k16.menu.uploadcheck.manual.upload.model_check_flags=--force-unverified-target

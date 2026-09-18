@@ -60,9 +60,10 @@ def tool_inventory(properties):
         require(any(Path(root) in path.parents for root in roots),
                 f'{key} is outside the inventoried tool directories: {path}')
         executables[key] = {'path': str(path), 'sha256': sha256(path)}
-    require('compiler.shell.cmd' in properties, 'missing Arduino shell property')
-    shell = executable_path(properties['compiler.shell.cmd'])
-    executables['compiler.shell.cmd'] = {'path': str(shell), 'sha256': sha256(shell)}
+    driver_key = 'compiler.driver' if 'compiler.driver' in properties else 'compiler.shell.cmd'
+    require(driver_key in properties, 'missing Arduino compiler driver property')
+    driver = executable_path(properties[driver_key])
+    executables[driver_key] = {'path': str(driver), 'sha256': sha256(driver)}
     return {'files': files, 'executables': executables}
 
 
@@ -189,7 +190,7 @@ def qualify(args, platform, output, report):
         relevant = {key: value for key, value in parsed.items()
                     if key.startswith('runtime.tools.') or key in
                     ('compiler.path', 'compiler.ar.path', 'compiler.c.cmd', 'compiler.cpp.cmd',
-                     'compiler.c.elf.cmd', 'compiler.ar.cmd', 'compiler.shell.cmd')}
+                     'compiler.c.elf.cmd', 'compiler.ar.cmd', 'compiler.driver', 'compiler.shell.cmd')}
         if tool_properties is None:
             tool_properties = relevant
             report['tool_properties'] = relevant

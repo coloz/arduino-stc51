@@ -1,11 +1,8 @@
-"""Exercise unified Arduino dependency bindings and POSIX tool discovery."""
+"""Exercise dependency bindings in the previous published archive format."""
 import importlib.util
 import io
 import json
-import os
 from pathlib import Path
-import shutil
-import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -77,51 +74,6 @@ class CandidateTest(unittest.TestCase):
         self.sdk()
         with self.assertRaisesRegex(ValueError, 'exact Arduino toolchain'):
             self.create()
-
-
-@unittest.skipUnless(os.name == 'posix' and shutil.which('bash'), 'requires a POSIX shell')
-class DiscoveryTest(unittest.TestCase):
-    def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix='stcxx paths ')
-        self.addCleanup(temporary.cleanup)
-        self.root = Path(temporary.name)
-        self.platform = self.root / 'data/packages/stc/hardware/mcs251/0.0.5'
-        self.platform.mkdir(parents=True)
-        self.package = self.root / 'data/packages/stc/tools/stcxx-toolchain/0.1.0'
-        for name in ('frontend/bin', 'sdcc/bin', 'sdcc/include', 'sdcc/lib'):
-            (self.package / name).mkdir(parents=True)
-        (self.package / 'sdcc/bin/sdcc').write_text('#!/bin/sh\nexit 0\n')
-        (self.package / 'sdcc/bin/sdcc').chmod(0o755)
-        self.lock = self.root / 'lock.json'
-        self.lock.write_text(json.dumps({'arduino_toolchain': {
-            'packager': 'stc', 'name': 'stcxx-toolchain', 'version': '0.1.0'}}))
-        self.env = {k: v for k, v in os.environ.items() if not k.startswith('STCXX_')}
-
-    def run_paths(self, extra):
-        script = '. "$1"; stcxx_resolve_tools /unused "$2" "$3" || exit $?; printf "%s\n" "$clang" "$sdcc" "$sdcc_include_root"'
-        return subprocess.run(['bash', '-c', script, 'test', str(ROOT / 'tools/cpp-cli/toolchain-paths.sh'),
-                               str(self.platform), str(self.lock)], env={**self.env, **extra}, capture_output=True, text=True)
-
-    def test_arduino_discovers_the_exact_unified_version(self):
-        result = self.run_paths({'STCXX_ARDUINO_SDCC': str(self.package / 'sdcc/bin/sdcc')})
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.splitlines(), [str(self.package / name) for name in
-                                                      ('frontend/bin/clang', 'sdcc/bin/sdcc', 'sdcc/include')])
-
-    def test_source_checkout_accepts_one_bundle_override(self):
-        self.platform = self.root / 'source checkout'
-        result = self.run_paths({'STCXX_TOOLS_ROOT': str(self.package)})
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.splitlines()[0], str(self.package / 'frontend/bin/clang'))
-        self.assertEqual(result.stdout.splitlines()[1], str(self.package / 'sdcc/bin/sdcc'))
-
-    def test_missing_locked_version_does_not_select_another_version(self):
-        lock = json.loads(self.lock.read_text())
-        lock['arduino_toolchain']['version'] = '9.9.9'
-        self.lock.write_text(json.dumps(lock))
-        result = self.run_paths({'STCXX_ARDUINO_SDCC': str(self.package / 'sdcc/bin/sdcc')})
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('missing locked Arduino toolchain dependency', result.stderr)
 
 
 if __name__ == '__main__':

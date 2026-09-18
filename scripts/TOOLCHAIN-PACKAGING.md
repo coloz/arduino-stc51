@@ -1,56 +1,76 @@
-# Unified STCXX toolchain packages
+# Native STCXX packages
 
-Arduino installs `stcxx-toolchain` and `stc-cli`. The toolchain layout is:
+Build the native driver with Rust and Node (Node is only a maintenance tool):
 
 ```text
-stcxx-toolchain/
-  MANIFEST.sha256
-  toolchain.json
-  frontend/    # Clang, LLVM-CBE, LLVM tools, headers, licenses, Windows Python
-  sdcc/        # SDCC, assembler, linker, C headers, runtime libraries, licenses
+node scripts/build-native-driver.mjs
+tools/stcxx-driver/stcxx.exe package-platform . dist/arduino-stc51-native.zip
+tools/stcxx-driver/stcxx.exe package-toolchain <existing-toolchain-root> dist/stcxx-toolchain-native.zip
 ```
 
-The component builders remain in `stcxx/arduino/scripts/` and this repository's
-`scripts/build-*-toolchain.sh`. Their component archives are build inputs, not
-separate Arduino dependencies. `tools/toolchain-manifest.json` keeps these
-source identities under `components`; only `tools` are installed.
+The existing toolchain root supplies the locked Clang/LLVM-CBE and SDCC binaries.
+The native packager includes only frontend/bin, frontend/lib, sdcc/bin,
+sdcc/include, sdcc/lib, native libexec helpers and the corresponding license notices. It does not run
+or package the old embedded interpreter, scripts, bytecode or build-input trees.
+The platform includes the native driver, its dependency licenses, lock files,
+core, variants, libraries and examples. Arduino invokes stcxx directly.
 
-From the `arduino-stc51` repository, first build or obtain the exact component
-archives recorded in the native SDK locks. For each host, run the bundler
-(Python 3.11+); substitute the actual archive filenames:
+This SDK consumes prebuilt compiler packages. Compiler source patches, source
+rebuild scripts and their dedicated notices are not SDK build inputs and have
+been removed. Compiler development belongs to the separate `stcxx` project;
+the host locks retain binary, ABI and source digest bindings. Packaging an
+existing toolchain still includes the component licenses from that toolchain.
 
-```powershell
-python ../stcxx/arduino/scripts/package-toolchain.py --sdcc <windows-sdcc.zip> --frontend <windows-frontend.tar.bz2> --lock tools/cpp-cli/toolchain-lock.windows-x86_64.json --version 0.1.0 --output dist/release-0.0.5/assets
-python ../stcxx/arduino/scripts/package-toolchain.py --sdcc <macos-sdcc.tar.bz2> --frontend <macos-frontend.tar.bz2> --lock tools/cpp-cli/toolchain-lock.macos-arm64.json --version 0.1.0 --output dist/release-0.0.5/assets
-python scripts/finalize-toolchain.py --assets dist/release-0.0.5/assets --version 0.1.0
+Archives use stable entry order and timestamps. Each ZIP has an adjacent JSON
+report containing its size and SHA-256, and includes a file manifest. Existing
+output ZIPs are never overwritten. Windows binaries statically link the C runtime.
+
+The 0.0.6 Boards Manager release supplies Windows x64 and Apple Silicon native
+packages with stcxx-toolchain 0.2.0 and stc-cli 0.1.0-stc.2. The index retains
+0.0.5 and its original dependencies for rollback. Qualify a native build on Apple Silicon
+before including that host in a release; Windows verification does not qualify macOS.
+The obsolete driver wrappers, lock finalizers and their helper tests have been
+removed. The candidate/release index scripts and `check-native-install.py` still
+inspect the previous published archive format; they do not consume local legacy
+driver sources and are not part of the native build or release procedure.
+
+For native releases, package the platform as `arduino-stc51-<version>.zip`,
+record tool archive sizes, hashes, roots and pinned release URLs in
+`tools/toolchain-manifest.json`, then run:
+
+```text
+python scripts/create-native-release-index.py --platform dist/release-0.0.6/arduino-stc51-0.0.6.zip --assets dist/release-0.0.6 --previous dist/release-0.0.6/previous-index.json --output package_arduino-stc51_index.json
 ```
 
-The bundler validates component archive hashes and complete file manifests,
-preserves executable modes and internal file links, and writes a deterministic
-archive plus a JSON report. It refuses to overwrite an existing output. It can
-package either host on Windows without executing that host's compiler.
-The finalizer validates both outputs, updates native bundle bindings and shared
-adapter hashes, and updates the installable tool manifest. After changing a
-component, update its source/SDK identity first, select a new toolchain version,
-then rebuild and finalize both bundles.
+Save the published index as `previous-index.json` before generating the new one.
+The native index generator verifies every ZIP payload manifest and tool archive
+binding, requires matching host dependencies and driver binaries, and retains
+previous versions. Uploader ZIPs include licenses, `MANIFEST.sha256` and a
+`build-info.json` recording the source commit; publish a source snapshot alongside
+the uploader. Validate installation with Arduino CLI in a separate data directory,
+then use `qualify-release.py` and `check-upload.py` against that installation.
+No packaging or index command publishes a GitHub release automatically.
 
-Copy the two locked `stc-cli` archives into the same assets directory, then:
+To prepare an unpacked native compiler payload:
 
-```powershell
-./scripts/package-platform.ps1 -OutputDirectory dist/release-0.0.5/assets
-python scripts/create-release-index.py --assets dist/release-0.0.5/assets --output dist/release-0.0.5/assets/package_arduino-stc51_candidate_index.json
-python scripts/verify-release-assets.py dist/release-0.0.5/assets/package_arduino-stc51_candidate_index.json dist/release-0.0.5/assets
-python scripts/check-native-install.py --assets dist/release-0.0.5/assets --work dist/release-0.0.5/native-windows --host windows --cli <arduino-cli.exe> --stc <stc-cli.exe>
+```text
+tools/stcxx-driver/stcxx.exe stage-toolchain <existing-toolchain-root> <new-directory>
 ```
 
-On macOS run the same installation check with `--host macos`, native executable
-paths and a fresh work directory. The check serves archives over loopback,
-installs into isolated Arduino data, clears tool overrides, and exercises C/C++
-compilation, linking, cache reuse and offline HEX validation. Packaging on
-Windows alone does not validate execution on macOS. These commands do not publish
-the release or change an existing Arduino installation.
+After extracting and validating a platform ZIP, the Windows local installer can
+replace an existing published installation. Both arguments are unpacked directories:
 
-For source builds, pass `-ToolCacheDirectory dist/release-0.0.5/assets` to
-`scripts/build-example.ps1`. For direct adapter debugging, `STCXX_TOOLS_ROOT`
-selects the extracted bundle root. The existing component overrides
-`STCXX_CPP_TOOLS_ROOT` and `STCXX_SDCC` still select individual locked components.
+```text
+node scripts/install-native-driver.mjs <native-platform-directory> <native-toolchain-directory>
+```
+
+The installer retains the previous platform and toolchain under a unique
+Arduino15-native-backups directory beside Arduino15 and records the paths in
+installation.json. The existing 0.0.5 platform and 0.1.0 tool paths are retained
+for this local override. Reinstalling from Boards Manager restores published
+payloads, so do not confuse this local candidate with a published release.
+
+For source validation use scripts/check-native-driver.mjs. The optional older
+scripts/build-example.ps1 maintenance entry point delegates packaging to the
+native driver and stages only native compiler components. It is not called by
+Arduino recipes. See tools/stcxx-driver/README.md for driver details.

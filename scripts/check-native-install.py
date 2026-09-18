@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -89,6 +90,7 @@ def main():
     local_index.write_text(json.dumps(index), encoding='utf-8')
     config = work / 'arduino-cli.json'
     config.write_text(json.dumps({'directories': {name: str(work / name) for name in ('data', 'downloads', 'user')},
+                                 'build_cache': {'path': str(work / 'cache')},
                                  'board_manager': {'additional_urls': [args.index_url or base + '/' + local_index.name]}}), encoding='utf-8')
     cli = [args.cli.resolve(), '--config-file', config]
     sdk = work / 'data/packages/stc/hardware/mcs251' / version
@@ -126,6 +128,10 @@ def main():
             text = run(label, command)
             require(not re.search(r'warning:.*(?:__has_builtin|__STDC_HOSTED__).*redefined', text),
                     'target macro redefinition warning returned')
+            require(not re.search(r'failed to create target machine|warning 201:.*--stack-loc', text),
+                    'IR-only optimizer or deprecated stack-option warning returned')
+            if example == 'Blink':
+                require(not re.search(r'warning 84:', text), 'CBE inline-helper initialization warning returned')
             require(re.search(r'Sketch uses [1-9][0-9]* bytes', text), 'compiler did not report nonempty firmware')
             firmware = next(build.glob('*.hex'))
             validation = json.loads(run(label + '-hex', [args.stc.resolve(), 'validate', '--expect', model, '--file', firmware,
@@ -137,6 +143,26 @@ def main():
                 before = firmware.read_bytes()
                 run('cpp-cache', [value for value in command if value != '--clean'])
                 require(firmware.read_bytes() == before, 'cached build changed the firmware')
+        # --build-path bypasses Arduino's shared core cache. Exercise the IDE
+        # path too: only core.a survives in that cache, including across sketches.
+        shared_command = [*cli, 'compile', '--verbose', '--fqbn', 'stc:mcs251:stc32g12k128', sdk / 'examples/Blink']
+        run('cpp-shared-cache-first', [*shared_command, '--clean'])
+        sketch_builds = list((work / 'cache/sketches').iterdir())
+        require(len(sketch_builds) == 1, 'expected one default sketch build')
+        first_build = sketch_builds[0].resolve()
+        before = (first_build / 'Blink.ino.hex').read_bytes()
+        text = run('cpp-shared-cache-repeat', shared_command)
+        require('Using precompiled core:' in text, 'repeat build did not exercise the shared core cache')
+        require((first_build / 'Blink.ino.hex').read_bytes() == before, 'shared cache changed firmware')
+        require(first_build.is_relative_to((work / 'cache/sketches').resolve()), 'unsafe regression cleanup path')
+        shutil.rmtree(first_build)
+        other_sketch = work / 'SharedCacheBlink'
+        other_sketch.mkdir()
+        shutil.copyfile(sdk / 'examples/Blink/Blink.ino', other_sketch / 'SharedCacheBlink.ino')
+        text = run('cpp-shared-cache-other-sketch', [*shared_command[:-1], other_sketch])
+        require('Using precompiled core:' in text, 'second sketch did not reuse the shared core cache')
+        other_hex = list((work / 'cache/sketches').glob('*/SharedCacheBlink.ino.hex'))
+        require(len(other_hex) == 1 and other_hex[0].read_bytes() == before, 'cross-sketch cache changed firmware')
         require(all((sdk / name).read_bytes() == value for name, value in files.items()), 'build modified installed platform')
         report['status'] = 'PASS'
         report.pop('active', None)

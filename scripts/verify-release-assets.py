@@ -23,15 +23,18 @@ def verify_file(path, asset):
     require(digest.hexdigest() == asset['sha256'], f'SHA-256 mismatch: {path}')
 
 
-def verify(manifest_path, directory, platform_archive=None):
+def verify(manifest_path, directory, platform_archive=None, version=None):
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
     if 'packages' in manifest:
         packages = manifest['packages']
         require(isinstance(packages, list) and len(packages) == 1, 'Expected one Arduino package')
         package = packages[0]
-        platforms = package.get('platforms', [])
+        platforms = [p for p in package.get('platforms', []) if version is None or p['version'] == version]
         require(len(platforms) == 1, 'Expected one published platform version')
-        rows = platforms + [system for tool in package.get('tools', []) for system in tool['systems']]
+        dependencies = {(d['name'], d['version']) for d in platforms[0]['toolsDependencies']}
+        selected_tools = [t for t in package.get('tools', []) if (t['name'], t['version']) in dependencies]
+        require({(t['name'], t['version']) for t in selected_tools} == dependencies, 'Missing tool dependency')
+        rows = platforms + [system for tool in selected_tools for system in tool['systems']]
         assets = {}
         for row in rows:
             checksum = row.get('checksum', '')
@@ -65,7 +68,7 @@ def verify(manifest_path, directory, platform_archive=None):
         verify_file(directory / asset['name'], asset)
         print('PASS', asset['name'])
     if platform_archive:
-        name = f"arduino-stc51-{manifest['version']}.tar.bz2"
+        name = platform_archive.name
         require(name in names, f'Missing platform asset: {name}')
         verify_file(platform_archive, next(asset for asset in assets if asset['name'] == name))
     print(f'Verified {len(assets)} immutable release assets')
@@ -76,9 +79,10 @@ def main():
     parser.add_argument('manifest', type=Path, help='Arduino package index or internal asset manifest')
     parser.add_argument('directory', type=Path)
     parser.add_argument('--platform-archive', type=Path)
+    parser.add_argument('--version', help='select a platform version from a multi-version index')
     args = parser.parse_args()
     try:
-        verify(args.manifest, args.directory, args.platform_archive)
+        verify(args.manifest, args.directory, args.platform_archive, args.version)
     except (ValueError, OSError) as error:
         print(f'FAIL: {error}', file=sys.stderr)
         return 1

@@ -2,6 +2,9 @@
 
 #include "cpp/stcxx_runtime.h"
 void __stcxx_heap_init(void);
+#if ARDUINO_USB_CDC_ON_BOOT
+void stc_cdc_boot(void) STC_REENTRANT;
+#endif
 
 /*
  * SDCC emits the interrupt vector table from declarations visible in the
@@ -35,6 +38,10 @@ int main(void)
     __stcxx_run_global_ctors();
     init();
     initVariant();
+#if ARDUINO_USB_CDC_ON_BOOT
+    /* Defer attachment until the first USB poll so setup can register HID. */
+    stc_cdc_boot();
+#endif
     setup();
 
     for (;;) {

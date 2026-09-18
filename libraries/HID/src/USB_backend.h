@@ -1,16 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 #ifndef STC_USB_BACKEND_H
 #define STC_USB_BACKEND_H
-#include <Arduino.h>
-#define STC_USB_OK 0
-#define STC_USB_UNSUPPORTED 1
-#define STC_USB_INVALID 2
-#define STC_USB_NOT_CONFIGURED 3
-#define STC_USB_TIMEOUT 4
-#define STC_USB_DESCRIPTOR_FULL 5
-#define STC_USB_BUSY 6
+#include <stc_usb.h>
 #define STC_USB_REPORT_IDS 16u
-#define STC_USB_PACKET_SIZE 64u
 #ifdef __cplusplus
 extern "C" {
 #endif

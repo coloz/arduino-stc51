@@ -1,5 +1,0 @@
-.build/
-.build-*/
-.gate-*/
-__pycache__/
-.adapter-regression.json

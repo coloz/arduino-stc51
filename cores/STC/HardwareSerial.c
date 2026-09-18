@@ -2,6 +2,7 @@
 #include "HardwareSerial_private.h"
 #include "stc_sfr.h"
 #include "wiring_digital_private.h"
+#include "stc_usb_service.h"
 
 /* Timer1 baud generation uses the board-selected clock divider. */
 #ifndef STC_SERIAL_TIMER1_CLOCK_DIVIDER
@@ -239,6 +240,10 @@ void Serial_begin(unsigned long baud)
     uint16_t reload;
     uint8_t double_baud;
 
+#if STC_CORE_USB_LAYOUT
+    if (stc_usb_active) return;
+#endif
+
     if (stc_serial_calculate_reload(baud, &reload, &double_baud) == 0u) {
         return;
     }
@@ -288,6 +293,9 @@ void Serial_begin(unsigned long baud)
 # endif
     SCON = STC_SCON_MODE1 | STC_SCON_REN;
     stc_uart1_started = 1u;
+#if STC_CORE_USB_LAYOUT
+    stc_usb_uart1_active = 1u;
+#endif
 # if STC_CORE_SERIAL_BUFFERED_RX
     IE |= STC_IE_ES;
 # endif
@@ -311,6 +319,9 @@ void Serial_end(void)
     TCON &= (uint8_t)~(STC_TCON_TR1 | STC_SERIAL_TF1);
     SCON &= (uint8_t)~(STC_SCON_REN | STC_SCON_RI | STC_SCON_TI);
     stc_uart1_started = 0u;
+#if STC_CORE_USB_LAYOUT
+    stc_usb_uart1_active = 0u;
+#endif
 
 # if STC_CORE_SERIAL_BUFFERED_RX
     stc_serial_reset_rx();
@@ -375,6 +386,15 @@ size_t Serial_write(uint8_t value)
 #else
     (void)value;
     return 0u;
+#endif
+}
+
+bool Serial_active(void)
+{
+#if STC_CORE_HAS_UART1
+    return stc_uart1_started != 0u;
+#else
+    return false;
 #endif
 }
 

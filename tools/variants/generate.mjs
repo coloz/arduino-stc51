@@ -581,6 +581,8 @@ function renderBoards(devices) {
     "menu.memory=SDCC memory model",
     "menu.uploadcheck=Upload model check",
     "menu.uploadtransport=Upload method",
+    "menu.cdc=USB CDC On Boot",
+    "menu.xram=XRAM layout",
     "",
   ];
   for (const device of devices) {
@@ -626,8 +628,23 @@ function renderBoards(devices) {
       "",
     );
 
+    if (device.capabilities.usb_layout) {
+      lines.push(
+        `${board}.menu.cdc.disabled=Disabled (Serial = UART1)`,
+        `${board}.menu.cdc.disabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=0${device.maximum_code_bytes <= 16384 ? " -DSTC_USB_HID_ONLY=1" : ""}`,
+        `${board}.menu.cdc.enabled=Enabled (Serial = USB CDC)`,
+        `${board}.menu.cdc.enabled.build.usb_flags=-DARDUINO_USB_CDC_ON_BOOT=1${device.maximum_code_bytes <= 16384 ? " -DSTC_USB_CDC_ONLY=1 -DSTCXX_CPP_OPT=z" : ""}`,
+        "",
+      );
+    }
+
     if (device.id === "stc32g144k246") {
       lines.push(
+        `${board}.menu.xram.default=128 KiB (default)`,
+        `${board}.menu.xram.default.build.xram_flags=`,
+        `${board}.menu.xram.high=High bank 64 KiB (0x020000)`,
+        `${board}.menu.xram.high.build.xram_flags=--xram-loc 0x020000`,
+        `${board}.menu.xram.high.upload.maximum_xdata_size=65536`,
         `${board}.menu.uploadtransport.auto=Automatic (USB CDC or UART)`,
         `${board}.menu.uploadtransport.auto.upload.transport=auto`,
         `${board}.menu.uploadtransport.uart=UART ISP`,
@@ -652,6 +669,10 @@ function renderBoards(devices) {
     }
 
     const heapContractFlags = renderCppHeapContractFlags(device);
+    if (device.capabilities.usb_layout && device.xdata_bytes <= 8192) {
+      const usbHeap = Math.min(device.cpp_heap_bytes, device.xdata_bytes - 4096);
+      lines.push(`${board}.menu.cdc.enabled.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=${usbHeap}UL${heapContractFlags}`);
+    }
     lines.push(
       `${board}.build.cpp_core_flags=--stack-auto -DSTCXX_CPP_CORE=1 -DSTCXX_FLASH_STRINGS=0 -DSTCXX_ENFORCE_NO_EXCEPTIONS_RTTI=1 -DSTCXX_HEAP_SIZE=${device.cpp_heap_bytes}UL${heapContractFlags}`,
       `${board}.build.cpp_link_flags=--stack-auto -DSTCXX_CPP_CORE=1${heapContractFlags}`,
