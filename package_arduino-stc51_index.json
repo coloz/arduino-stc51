@@ -16,8 +16,8 @@
           "category": "Contributed",
           "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.6/arduino-stc51-0.0.6.zip",
           "archiveFileName": "arduino-stc51-0.0.6.zip",
-          "checksum": "SHA-256:ed675f486034f4127b618dc7964300295160b751af0a3e02113d322528841445",
-          "size": "2086396",
+          "checksum": "SHA-256:d03a138361fc3a510f0d6a76b8364e4f4e099644584a0ec2282d89225889df08",
+          "size": "3493886",
           "boards": [
             {
               "name": "STC32G12K128"
@@ -129,6 +129,13 @@
               "archiveFileName": "stc-cli-0.1.0-windows-x86_64-r2.zip",
               "checksum": "SHA-256:04753bc28570ec370cc19709e70b15d446d1c497fc6fd1b5b8653a373b9f3fef",
               "size": "612109"
+            },
+            {
+              "host": "arm64-apple-darwin",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.6/stc-cli-0.1.0-macos-arm64-r2.zip",
+              "archiveFileName": "stc-cli-0.1.0-macos-arm64-r2.zip",
+              "checksum": "SHA-256:a8923e5da31432d24d3dccf9325dbf6132bbc0b646c731b547049674de0bc97c",
+              "size": "619305"
             }
           ]
         },
@@ -142,6 +149,13 @@
               "archiveFileName": "stcxx-toolchain-0.2.0-windows-x86_64.zip",
               "checksum": "SHA-256:be68defce3155093585a72d3926e36682df498dcfa6a85ce7b2831e577008359",
               "size": "100009229"
+            },
+            {
+              "host": "arm64-apple-darwin",
+              "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.6/stcxx-toolchain-0.2.0-macos-arm64.zip",
+              "archiveFileName": "stcxx-toolchain-0.2.0-macos-arm64.zip",
+              "checksum": "SHA-256:83027e7276809c7c9c10bc038a23eaf907cd9dd80fa44b936cfe84f302e15d4c",
+              "size": "66612921"
             }
           ]
         },

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 3,
-  "asOf": "2026-09-17",
-  "hostSupport": "Native Windows x64; Apple Silicon remains on platform 0.0.5",
+  "asOf": "2026-09-18",
+  "hostSupport": "Native Windows x64 and Apple Silicon macOS 15+",
   "tools": [
     {
       "id": "stcxx-toolchain",
@@ -17,6 +17,14 @@
           "size": 100009229,
           "sha256": "be68defce3155093585a72d3926e36682df498dcfa6a85ce7b2831e577008359",
           "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.6/stcxx-toolchain-0.2.0-windows-x86_64.zip"
+        },
+        {
+          "host": "arm64-apple-darwin",
+          "archiveFileName": "stcxx-toolchain-0.2.0-macos-arm64.zip",
+          "archiveRoot": "stcxx-toolchain",
+          "size": 66612921,
+          "sha256": "83027e7276809c7c9c10bc038a23eaf907cd9dd80fa44b936cfe84f302e15d4c",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.6/stcxx-toolchain-0.2.0-macos-arm64.zip"
         }
       ]
     },
@@ -35,6 +43,14 @@
           "size": 612109,
           "sha256": "04753bc28570ec370cc19709e70b15d446d1c497fc6fd1b5b8653a373b9f3fef",
           "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.6/stc-cli-0.1.0-windows-x86_64-r2.zip"
+        },
+        {
+          "host": "arm64-apple-darwin",
+          "archiveFileName": "stc-cli-0.1.0-macos-arm64-r2.zip",
+          "archiveRoot": "stc-cli-0.1.0-macos-arm64-r2",
+          "size": 619305,
+          "sha256": "a8923e5da31432d24d3dccf9325dbf6132bbc0b646c731b547049674de0bc97c",
+          "url": "https://github.com/coloz/arduino-stc51/releases/download/v0.0.6/stc-cli-0.1.0-macos-arm64-r2.zip"
         }
       ],
       "sourceCommit": "79d4e948862f968539681c5bd9fab120d1315861"
